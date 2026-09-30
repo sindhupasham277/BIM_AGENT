@@ -1,0 +1,163 @@
+{
+    "query_elements": {
+        "name": "query_elements",
+        "description": "Query elements of a category after applying optional filters and return selected parameter fields.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "filters": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "parameter": {
+                                "type": "string"
+                            },
+                            "operator": {
+                                "type": "string",
+                                "enum": [
+                                    "==",
+                                    "!=",
+                                    ">",
+                                    "<",
+                                    ">=",
+                                    "<=",
+                                    "contains",
+                                    "is_null",
+                                    "is_not_null"
+                                ]
+                            },
+                            "value": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "parameter",
+                            "operator",
+                            "value"
+                        ]
+                    }
+                },
+                "return_fields": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": ["category"]
+        }
+    },
+
+    "aggregate_elements": {
+        "name": "aggregate_elements",
+        "description": "Aggregate elements of a category (count, sum, avg, min, max) after applying optional filters, optionally grouped by a parameter.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "filters": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "parameter": {
+                                "type": "string"
+                            },
+                            "operator": {
+                                "type": "string",
+                                "enum": [
+                                    "==",
+                                    "!=",
+                                    ">",
+                                    "<",
+                                    ">=",
+                                    "<=",
+                                    "contains",
+                                    "is_null",
+                                    "is_not_null"
+                                ]
+                            },
+                            "value": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "parameter",
+                            "operator",
+                            "value"
+                        ]
+                    }
+                },
+                "aggregate": {
+                    "type": "string",
+                    "enum": [
+                        "count",
+                        "sum",
+                        "avg",
+                        "min",
+                        "max"
+                    ]
+                },
+                "aggregate_field": {
+                    "type": "string"
+                },
+                "group_by": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "category",
+                "aggregate"
+            ]
+        }
+    },
+
+    "list_audit_rules": {
+        "name": "list_audit_rules",
+        "description": "List all available BIM audit rules.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+
+    "run_audit": {
+        "name": "run_audit",
+        "description": "Run a specific BIM audit rule and return the elements that violate it.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "rule_name": {
+                    "type": "string",
+                    "description": "The exact name of the audit rule to run."
+                }
+            },
+            "required": [
+                "rule_name"
+            ]
+        }
+    },
+
+  "run_generated_snippet": {
+  "name": "run_generated_snippet",
+  "description": "Run a short read-only Python snippet against the current Revit model when the request requires relationships, combining categories, comparisons, or multi-step logic that cannot be handled by query_elements, aggregate_elements, or run_audit.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "code": {
+        "type": "string",
+        "description": "Short Python code using only revit_ro. The code must assign the final answer to a variable named result."
+      }
+    },
+    "required": ["code"],
+    "additionalProperties": false
+  }
+}
+}

@@ -1,19 +1,579 @@
+import os
+import json
+import re
+
 from fastapi import FastAPI
 from pydantic import BaseModel
+from openai import OpenAI
+import requests
+
+
+# ============================================================
+# FastAPI app
+# ============================================================
 
 app = FastAPI()
 
+client = OpenAI(api_key=os.environ["BTP_API"])
+
+
+# ============================================================
+# Load tool schemas
+# ============================================================
+
+with open("tool_schemas.json", "r") as f:
+    TOOL_SCHEMAS = json.load(f)
+
+
+OPENAI_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": tool["name"],
+            "description": tool["description"],
+            "parameters": tool["input_schema"]
+        }
+    }
+    for tool in TOOL_SCHEMAS.values()
+]
+
+
+# ============================================================
+# Request model
+# ============================================================
+
 class MessagePayload(BaseModel):
+    session_id: str
     user_message: str
+    image_base64: str | list[str] | None = None
+
+
+# ============================================================
+# Brain-server sessions
+# ============================================================
+
+_sessions = {}
+
+
+# ============================================================
+# Tool audit log
+# ============================================================
+
+AUDIT_LOG = (
+    r"C:\Users\sindh\AppData\Roaming\pyRevit\Extensions"
+    r"\btp_agent.extension\BTP.tab\Agent.panel\step5_tool_audit.txt"
+)
+
+
+def write_audit(text):
+    with open(AUDIT_LOG, "a", encoding="utf-8") as audit:
+        audit.write(text + "\n")
+
+
+# ============================================================
+# Get live session prompt from Revit / pyRevit
+# ============================================================
+
+def start_revit_session(session_id):
+
+    response = requests.post(
+        "http://127.0.0.1:48884/bim-brain/start_session",
+        json={
+            "session_id": session_id
+        },
+        timeout=60
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    if "system_prompt" not in data:
+        raise ValueError(
+            "Revit start_session response does not contain system_prompt"
+        )
+
+    return data["system_prompt"]
+
+
+# ============================================================
+# Call Revit tools
+# ============================================================
+
+def call_revit_tool(name, arguments):
+
+    if name == "query_elements":
+
+        endpoint = (
+            "http://127.0.0.1:48884/bim-brain/query"
+        )
+
+    elif name == "aggregate_elements":
+
+        endpoint = (
+            "http://127.0.0.1:48884/bim-brain/aggregate"
+        )
+
+    elif name == "list_audit_rules":
+
+        return [
+            {
+                "rule_name": "missing_fire_rating",
+                "description": "Find doors without a fire rating"
+            },
+            {
+                "rule_name": "missing_room_number",
+                "description": "Find rooms without room numbers"
+            },
+            {
+                "rule_name": "missing_column_type_mark",
+                "description": "Find columns without type marks"
+            },
+            {
+                "rule_name": "missing_wall_mark",
+                "description": "Find walls without a Mark"
+            },
+            {
+                "rule_name": "missing_room_name",
+                "description": "Find rooms without a Name"
+            }
+        ]
+
+    elif name == "run_audit":
+
+        endpoint = (
+            "http://127.0.0.1:48884/bim-brain/audit"
+        )
+
+    elif name == "run_generated_snippet":
+
+        endpoint = (
+            "http://127.0.0.1:48884/bim-brain/generated_snippet"
+        )
+
+    else:
+
+        raise ValueError(
+            "Unknown tool: {}".format(name)
+        )
+
+    response = requests.post(
+        endpoint,
+        json=arguments,
+        timeout=60
+    )
+
+    print(
+        "RAW RESPONSE FROM PYREVIT:",
+        response.text
+    )
+
+    response.raise_for_status()
+
+    return response.json()
+
+
+# ============================================================
+# Validate exact parameter names
+# ============================================================
+
+def validate_parameter_names(user_message, arguments):
+
+    quoted_values = re.findall(
+        r'"([^"]+)"',
+        user_message
+    )
+
+    if not quoted_values:
+        return None
+
+    # Collect values already used as filter values.
+    # These must NOT be treated as parameter names.
+
+    filter_values = set()
+
+    for f in arguments.get("filters", []):
+
+        value = f.get("value")
+
+        if value is not None:
+            filter_values.add(str(value))
+
+    # Check quoted text that is NOT already a filter value.
+
+    for requested_param in quoted_values:
+
+        if requested_param in filter_values:
+            continue
+
+        # If the quoted text matches an actual argument parameter,
+        # it is valid.
+
+        for f in arguments.get("filters", []):
+
+            if f.get("parameter") == requested_param:
+                return None
+
+        if arguments.get("aggregate_field") == requested_param:
+            return None
+
+        if arguments.get("group_by") == requested_param:
+            return None
+
+        # It is a quoted term being used as a parameter,
+        # but the tool selected a different parameter.
+
+        return (
+            'The requested parameter "{}" is not available '
+            'with that exact name in the model schema.'
+        ).format(requested_param)
+
+    return None
+
+
+# ============================================================
+# /chat
+# ============================================================
 
 @app.post("/chat")
 def handle_message(payload: MessagePayload):
-    # Echo back the message with confirmation from the external process
+
+    # --------------------------------------------------------
+    # Create a new session
+    # --------------------------------------------------------
+
+    if payload.session_id not in _sessions:
+
+        system_prompt = start_revit_session(
+            payload.session_id
+        )
+
+        _sessions[payload.session_id] = {
+            "system_prompt": system_prompt,
+            "messages": []
+        }
+
+    session = _sessions[payload.session_id]
+
+
+    # --------------------------------------------------------
+    # Build messages
+    #
+    # Prior conversation history IS included, so follow-up
+    # questions like "are you sure?" can refer back to what
+    # was just discussed.
+    # --------------------------------------------------------
+
+    messages = [
+        {
+            "role": "system",
+            "content": session["system_prompt"]
+        }
+    ]
+
+    messages.extend(
+        session["messages"]
+    )
+
+
+    # --------------------------------------------------------
+    # Normalize image input
+    #
+    # Supports:
+    #   None          -> no images
+    #   "abc..."      -> one image
+    #   ["abc...", ...] -> multiple images
+    # --------------------------------------------------------
+
+    images = payload.image_base64
+
+    if images is None:
+
+        images = []
+
+    elif isinstance(images, str):
+
+        images = [images]
+
+
+    # --------------------------------------------------------
+    # Add user message
+    #
+    # One user message can now contain:
+    #   text + zero images
+    #   text + one image
+    #   text + multiple images
+    # --------------------------------------------------------
+
+    if images:
+
+        content = [
+            {
+                "type": "text",
+                "text": payload.user_message
+            }
+        ]
+
+        for image_base64 in images:
+
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": (
+                            "data:image/png;base64,"
+                            + image_base64
+                        )
+                    }
+                }
+            )
+
+        messages.append(
+            {
+                "role": "user",
+                "content": content
+            }
+        )
+
+    else:
+
+        messages.append(
+            {
+                "role": "user",
+                "content": payload.user_message
+            }
+        )
+
+
+    # --------------------------------------------------------
+    # Tool-call loop
+    # --------------------------------------------------------
+
+    if images:
+
+        # ----------------------------------------------------
+        # Image turn — no Revit tools
+        # ----------------------------------------------------
+
+        response = client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=messages
+        )
+
+        message = response.choices[0].message
+
+        answer = message.content
+
+        messages.append(message)
+
+    else:
+
+        # ----------------------------------------------------
+        # Existing text/tool path
+        # ----------------------------------------------------
+
+        while True:
+
+            response = client.chat.completions.create(
+                model="gpt-5-mini",
+                messages=messages,
+                tools=OPENAI_TOOLS,
+                tool_choice="auto"
+            )
+
+            message = response.choices[0].message
+
+
+            # ------------------------------------------------
+            # No more tool calls
+            # ------------------------------------------------
+
+            if not message.tool_calls:
+
+                answer = message.content
+
+                messages.append(message)
+
+                break
+
+
+            # ------------------------------------------------
+            # Add assistant tool-call message
+            # ------------------------------------------------
+
+            messages.append(message)
+
+
+            # ------------------------------------------------
+            # Execute every requested tool
+            # ------------------------------------------------
+
+            for tool_call in message.tool_calls:
+
+                arguments = json.loads(
+                    tool_call.function.arguments
+                )
+
+
+                # --------------------------------------------
+                # Console audit
+                # --------------------------------------------
+
+                print(
+                    "TOOL:",
+                    tool_call.function.name
+                )
+
+                print(
+                    "ARGUMENTS:",
+                    arguments
+                )
+
+                if tool_call.function.name == "run_generated_snippet":
+
+                    print(
+                        "=== GENERATED SNIPPET ==="
+                    )
+
+                    print(
+                        arguments.get("code")
+                    )
+
+
+                # --------------------------------------------
+                # File audit
+                # --------------------------------------------
+
+                write_audit(
+                    "SESSION: " + payload.session_id
+                )
+
+                write_audit(
+                    "USER: " + payload.user_message
+                )
+
+                write_audit(
+                    "TOOL: " + tool_call.function.name
+                )
+
+                write_audit(
+                    "ARGUMENTS: "
+                    + json.dumps(
+                        arguments,
+                        ensure_ascii=False
+                    )
+                )
+
+
+                # --------------------------------------------
+                # Exact parameter validation
+                # --------------------------------------------
+
+                validation_error = validate_parameter_names(
+                    payload.user_message,
+                    arguments
+                )
+
+                if validation_error:
+
+                    answer = validation_error
+
+                    write_audit(
+                        "VALIDATION ERROR: "
+                        + validation_error
+                    )
+
+                    write_audit(
+                        "----------------------------------------"
+                    )
+
+                    # Do not execute the incorrect tool call.
+
+                    break
+
+
+                # --------------------------------------------
+                # Execute Revit tool
+                # --------------------------------------------
+
+                result = call_revit_tool(
+                    tool_call.function.name,
+                    arguments
+                )
+
+
+                print(
+                    "RESULT:",
+                    result
+                )
+
+
+                # --------------------------------------------
+                # Log result
+                # --------------------------------------------
+
+                write_audit(
+                    "RESULT: "
+                    + json.dumps(
+                        result,
+                        ensure_ascii=False
+                    )
+                )
+
+                write_audit(
+                    "----------------------------------------"
+                )
+
+
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": json.dumps(result)
+                    }
+                )
+
+            else:
+
+                # All requested tools executed successfully.
+
+                continue
+
+
+            # Validation failed.
+
+            break
+
+
+    # --------------------------------------------------------
+    # Save conversation history for next turn.
+    #
+    # Runs regardless of image vs text branch.
+    # --------------------------------------------------------
+
+    session["messages"] = messages[1:]
+
+
+    # --------------------------------------------------------
+    # Response
+    # --------------------------------------------------------
+
     return {
         "status": "success",
-        "response": f"Brain received your message: '{payload.user_message}'"
+        "response": answer
     }
 
+
+# ============================================================
+# Start server
+# ============================================================
+
 if __name__ == "__main__":
+
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+
+    uvicorn.run(
+        app,
+        host="127.0.0.1",
+        port=8000
+    )
