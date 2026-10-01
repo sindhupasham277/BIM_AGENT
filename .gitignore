@@ -10,3 +10,13 @@ __pycache__/
 
 # Agent memory
 agent_memory.db
+
+chat_crash_log.txt
+logs/
+schema_output.json
+step5_full_log.txt
+step5_results.csv
+*.rvt
+*.rfa
+*_backup/
+agent_memory.db
