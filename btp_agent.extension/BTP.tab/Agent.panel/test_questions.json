@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "question": "How many doors are in the model?"
+  },
+  {
+    "id": 2,
+    "question": "How many windows are there?"
+  },
+  {
+    "id": 3,
+    "question": "How many doors have Width greater than 1.5?"
+  },
+  {
+    "id": 4,
+    "question": "How many doors have Width less than 1.0?"
+  },
+  {
+    "id": 5,
+    "question": "How many doors have a Fire Rating containing \"2\"?"
+  },
+  {
+    "id": 6,
+    "question": "List all doors with their Marks and Widths."
+  },
+  {
+    "id": 7,
+    "question": "List doors with Fire Rating \"2 HR\"."
+  },
+  {
+    "id": 8,
+    "question": "What is the total wall Length?"
+  },
+  {
+    "id": 9,
+    "question": "What's the average door Width?"
+  },
+  {
+    "id": 10,
+    "question": "What is the narrowest door by Width?"
+  },
+  {
+    "id": 11,
+    "question": "What is the largest wall by Length?"
+  },
+  {
+    "id": 12,
+    "question": "How many doors are there, grouped by Level?"
+  },
+  {
+    "id": 13,
+    "question": "Group doors by Fire Rating and give counts."
+  },
+  {
+    "id": 14,
+    "question": "What is the average Width of doors that have a Fire Rating?"
+  },
+  {
+    "id": 15,
+    "question": "How many walls have Length greater than 20?"
+  },
+  {
+    "id": 16,
+    "question": "How many doors do NOT have a Fire Rating?"
+  },
+  {
+    "id": 17,
+    "question": "Show me all doors on Level \"L1\"."
+  },
+  {
+    "id": 18,
+    "question": "How many stairs are there?"
+  },
+  {
+    "id": 19,
+    "question": "What is the average \"U-Value\" of the windows?"
+  },
+  {
+    "id": 20,
+    "question": "How many doors are there?"
+  }
+]

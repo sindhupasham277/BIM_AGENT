@@ -1,0 +1,429 @@
+from pyrevit import routes
+from Autodesk.Revit.DB import (
+    FilteredElementCollector,
+    BuiltInCategory,
+    StorageType
+)
+
+# ============================================================
+# 1. CATEGORY MAPPING
+# ============================================================
+
+CATEGORY_MAP = {
+    "Doors": BuiltInCategory.OST_Doors,
+    "Rooms": BuiltInCategory.OST_Rooms,
+    "Walls": BuiltInCategory.OST_Walls,
+    "Columns": BuiltInCategory.OST_StructuralColumns,
+}
+
+
+# ============================================================
+# 2. VALUE EXTRACTION
+#    Includes Type Parameter fallback
+# ============================================================
+
+def get_param_value(doc, el, param_name):
+
+    p = el.LookupParameter(param_name)
+
+    # Type parameter fallback
+    if p is None:
+        type_id = el.GetTypeId()
+
+        if type_id:
+            type_el = doc.GetElement(type_id)
+
+            if type_el:
+                p = type_el.LookupParameter(param_name)
+
+    if p is None or not p.HasValue:
+        return None
+
+    st = p.StorageType
+
+    if st == StorageType.String:
+        return p.AsString()
+
+    elif st == StorageType.Integer:
+        return p.AsInteger()
+
+    elif st == StorageType.Double:
+        return p.AsDouble()
+
+    elif st == StorageType.ElementId:
+        return p.AsValueString()
+
+    return None
+
+
+# ============================================================
+# 3. FILTER OPERATOR & EVALUATION ENGINE
+# ============================================================
+
+def safe_float(val):
+
+    try:
+        return float(val)
+
+    except (TypeError, ValueError):
+        return None
+
+
+OPS = {
+
+    "eq":
+        lambda v, t: v == t,
+
+    "neq":
+        lambda v, t: v != t,
+
+    "is_null":
+        lambda v, t: v is None,
+
+    "is_not_null":
+        lambda v, t: v is not None,
+
+    "gt":
+        lambda v, t:
+            safe_float(v) is not None
+            and safe_float(t) is not None
+            and safe_float(v) > safe_float(t),
+
+    "lt":
+        lambda v, t:
+            safe_float(v) is not None
+            and safe_float(t) is not None
+            and safe_float(v) < safe_float(t),
+
+    "contains":
+        lambda v, t:
+            v is not None
+            and t is not None
+            and str(t).lower() in str(v).lower(),
+}
+
+
+def passes_filters(doc, el, filters):
+
+    for f in filters:
+
+        val = get_param_value(
+            doc,
+            el,
+            f["param"]
+        )
+
+        op_key = f["op"]
+
+        target = f.get("value")
+
+        if not OPS[op_key](val, target):
+            return False
+
+    return True
+
+
+# ============================================================
+# 4. SCHEMA INTROSPECTION
+# ============================================================
+
+def get_schema(doc):
+
+    schema = {}
+
+    for cat_name, bic in CATEGORY_MAP.items():
+
+        collector = (
+            FilteredElementCollector(doc)
+            .OfCategory(bic)
+            .WhereElementIsNotElementType()
+        )
+
+        param_types = {}
+
+        # Instance parameters
+        for el in collector:
+
+            for p in el.Parameters:
+
+                p_name = p.Definition.Name
+
+                if p_name not in param_types:
+
+                    param_types[p_name] = str(
+                        p.StorageType
+                    )
+
+            # Type parameters
+            type_id = el.GetTypeId()
+
+            if type_id:
+
+                type_el = doc.GetElement(type_id)
+
+                if type_el:
+
+                    for p in type_el.Parameters:
+
+                        p_name = p.Definition.Name
+
+                        if p_name not in param_types:
+
+                            param_types[p_name] = str(
+                                p.StorageType
+                            )
+
+        schema[cat_name] = param_types
+
+    return {
+        "categories": schema
+    }
+
+
+# ============================================================
+# 5. QUERY
+# ============================================================
+
+def query_elements(
+    doc,
+    category,
+    filters,
+    fields
+):
+
+    bic = CATEGORY_MAP[category]
+
+    collector = (
+        FilteredElementCollector(doc)
+        .OfCategory(bic)
+        .WhereElementIsNotElementType()
+    )
+
+    results = []
+    for el in collector:
+     if passes_filters(doc, el, filters):
+
+        row = {}
+
+        for field in fields:
+            row[field] = get_param_value(
+                doc,
+                el,
+                field
+            )
+
+        # Revit element ID - reserved system field
+        row["_id"] = el.Id.Value
+
+        results.append(row)
+    return results
+
+
+# ============================================================
+# 6. AGGREGATE
+# ============================================================
+
+def aggregate_elements(
+    doc,
+    category,
+    filters,
+    group_by,
+    metric,
+    field
+):
+
+    bic = CATEGORY_MAP[category]
+
+    collector = (
+        FilteredElementCollector(doc)
+        .OfCategory(bic)
+        .WhereElementIsNotElementType()
+    )
+
+    matched = [
+        el
+        for el in collector
+        if passes_filters(
+            doc,
+            el,
+            filters
+        )
+    ]
+
+    def compute(elements):
+
+        # COUNT does not require a field
+        if metric == "count":
+
+            return len(elements)
+
+        values = [
+            get_param_value(
+                doc,
+                e,
+                field
+            )
+            for e in elements
+            if field
+        ]
+
+        valid_values = [
+            v
+            for v in values
+            if v is not None
+            and isinstance(v, (int, float))
+        ]
+
+        if not valid_values:
+            return None
+
+        if metric == "sum":
+
+            return sum(valid_values)
+
+        if metric == "avg":
+
+            return (
+                sum(valid_values)
+                / float(len(valid_values))
+            )
+
+        if metric == "min":
+
+            return min(valid_values)
+
+        if metric == "max":
+
+            return max(valid_values)
+
+        return None
+
+    # No grouping
+    if not group_by:
+
+        return {
+            "result": compute(matched)
+        }
+
+    # Grouping
+    groups = {}
+
+    for el in matched:
+
+        key = get_param_value(
+            doc,
+            el,
+            group_by
+        )
+
+        key_str = (
+            str(key)
+            if key is not None
+            else "Unassigned"
+        )
+
+        groups.setdefault(
+            key_str,
+            []
+        ).append(el)
+
+    return {
+        "groups": {
+            k: compute(v)
+            for k, v in groups.items()
+        }
+    }
+
+
+# ============================================================
+# 7. ROUTE SERVER
+# ============================================================
+
+api = routes.API("bim-brain")
+
+
+# ============================================================
+# 8. ERROR HANDLING
+# ============================================================
+
+def handle_errors(func):
+
+    def wrapper(doc, request):
+
+        try:
+
+            return func(
+                doc,
+                request
+            )
+
+        except Exception as e:
+
+            return routes.make_response(
+                data={
+                    "error": str(e)
+                },
+                status=500
+            )
+
+    return wrapper
+
+
+# ============================================================
+# 9. /schema
+# ============================================================
+
+@api.route(
+    "/schema",
+    methods=["GET"]
+)
+@handle_errors
+def route_schema(doc, request):
+
+    return get_schema(doc)
+
+
+# ============================================================
+# 10. /query
+# ============================================================
+
+@api.route(
+    "/query",
+    methods=["POST"]
+)
+@handle_errors
+def route_query(doc, request):
+
+    data = request.data
+
+    return {
+        "results": query_elements(
+            doc,
+            data["category"],
+            data.get("filters", []),
+            data.get("fields", [])
+        )
+    }
+
+
+# ============================================================
+# 11. /aggregate
+# ============================================================
+
+@api.route(
+    "/aggregate",
+    methods=["POST"]
+)
+@handle_errors
+def route_aggregate(doc, request):
+
+    data = request.data
+
+    return aggregate_elements(
+        doc,
+        data["category"],
+        data.get("filters", []),
+        data.get("group_by"),
+        data["metric"],
+        data.get("field")
+    ) 
