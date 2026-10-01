@@ -48,10 +48,11 @@
                     }
                 }
             },
-            "required": ["category"]
+            "required": [
+                "category"
+            ]
         }
     },
-
     "aggregate_elements": {
         "name": "aggregate_elements",
         "description": "Aggregate elements of a category (count, sum, avg, min, max) after applying optional filters, optionally grouped by a parameter.",
@@ -117,7 +118,6 @@
             ]
         }
     },
-
     "list_audit_rules": {
         "name": "list_audit_rules",
         "description": "List all available BIM audit rules.",
@@ -127,7 +127,6 @@
             "required": []
         }
     },
-
     "run_audit": {
         "name": "run_audit",
         "description": "Run a specific BIM audit rule and return the elements that violate it.",
@@ -144,20 +143,56 @@
             ]
         }
     },
-
-  "run_generated_snippet": {
-  "name": "run_generated_snippet",
-  "description": "Run a short read-only Python snippet against the current Revit model when the request requires relationships, combining categories, comparisons, or multi-step logic that cannot be handled by query_elements, aggregate_elements, or run_audit.",
-  "input_schema": {
-    "type": "object",
-    "properties": {
-      "code": {
-        "type": "string",
-        "description": "Short Python code using only revit_ro. The code must assign the final answer to a variable named result."
-      }
+    "run_generated_snippet": {
+        "name": "run_generated_snippet",
+        "description": "Run a short read-only Python snippet against the current Revit model when the request requires relationships, combining categories, comparisons, or multi-step logic that cannot be handled by query_elements, aggregate_elements, or run_audit.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "description": "Short Python code using only revit_ro. The code must assign the final answer to a variable named result."
+                }
+            },
+            "required": [
+                "code"
+            ],
+            "additionalProperties": false
+        }
     },
-    "required": ["code"],
-    "additionalProperties": false
-  }
-}
+    "propose_set_parameter": {
+        "name": "propose_set_parameter",
+        "description": "Propose setting ONE parameter to ONE value on specific elements. This does NOT change the model: it creates a proposal the user must confirm with a button. element_ids must be the _id values returned by earlier query_elements or run_audit results. If the user has not said which value to use, ask.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "element_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "param_name": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                },
+                "audit_name": {
+                    "type": "string",
+                    "description": "Optional. The audit rule this fix is for, e.g. missing_fire_rating."
+                }
+            },
+            "required": [
+                "category",
+                "element_ids",
+                "param_name",
+                "value"
+            ],
+            "additionalProperties": false
+        }
+    }
 }

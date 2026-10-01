@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from openai import OpenAI
 import requests
 
+import proposals
+
 
 # ============================================================
 # FastAPI app
@@ -249,9 +251,13 @@ def handle_message(payload: MessagePayload):
         )
 
         _sessions[payload.session_id] = {
-            "system_prompt": system_prompt,
+            "system_prompt": system_prompt + proposals.PROMPT_RULES,
             "messages": []
         }
+
+        _sessions[payload.session_id].update(
+            proposals.new_session_state()
+        )
 
     session = _sessions[payload.session_id]
 
@@ -469,10 +475,14 @@ def handle_message(payload: MessagePayload):
                 # Exact parameter validation
                 # --------------------------------------------
 
-                validation_error = validate_parameter_names(
-                    payload.user_message,
-                    arguments
-                )
+                validation_error = None
+
+                if tool_call.function.name != "propose_set_parameter":
+
+                    validation_error = validate_parameter_names(
+                        payload.user_message,
+                        arguments
+                    )
 
                 if validation_error:
 
@@ -496,10 +506,28 @@ def handle_message(payload: MessagePayload):
                 # Execute Revit tool
                 # --------------------------------------------
 
-                result = call_revit_tool(
-                    tool_call.function.name,
-                    arguments
-                )
+                tool_name = tool_call.function.name
+
+                if tool_name == "propose_set_parameter":
+
+                    # Creates a PROPOSAL only. Never changes the model.
+                    try:
+                        result = proposals.propose_set_parameter(
+                            session,
+                            **arguments
+                        )
+                    except (ValueError, TypeError, RuntimeError) as ex:
+                        result = {"error": str(ex)}
+
+                else:
+
+                    result = call_revit_tool(
+                        tool_name,
+                        arguments
+                    )
+
+                    if tool_name in ("query_elements", "run_audit"):
+                        session["seen_ids"] |= proposals.collect_ids(result)
 
 
                 print(
@@ -558,9 +586,13 @@ def handle_message(payload: MessagePayload):
     # Response
     # --------------------------------------------------------
 
+    pending_cards = session["outbox"]
+    session["outbox"] = []
+
     return {
         "status": "success",
-        "response": answer
+        "response": answer,
+        "proposals": pending_cards
     }
 
 
