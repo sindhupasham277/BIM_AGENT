@@ -237,6 +237,45 @@ def validate_parameter_names(user_message, arguments):
 # /chat
 # ============================================================
 
+# ============================================================
+# Tool registry. EVERY tool call goes through dispatch_tool().
+# There is deliberately NO entry that applies a change.
+# ============================================================
+
+TOOL_REGISTRY = {
+    "query_elements":        {"layer": "generic_engine", "kind": "query"},
+    "aggregate_elements":    {"layer": "generic_engine", "kind": "query"},
+    "list_audit_rules":      {"layer": "generic_engine", "kind": "audit"},
+    "run_audit":             {"layer": "generic_engine", "kind": "audit"},
+    "run_generated_snippet": {"layer": "code_gen",       "kind": "query"},
+    "propose_set_parameter": {"layer": "write_function", "kind": "proposal"},
+}
+
+
+def dispatch_tool(name, arguments, session):
+
+    entry = TOOL_REGISTRY.get(name)
+
+    if entry is None:
+        return {"error": "'%s' is not an available tool" % name}
+
+    if name == "propose_set_parameter":
+
+        # Creates a PROPOSAL only. Never changes the model.
+        try:
+            return proposals.propose_set_parameter(session, **arguments)
+        except (ValueError, TypeError, RuntimeError) as ex:
+            return {"error": str(ex)}
+
+    result = call_revit_tool(name, arguments)
+
+    if name in ("query_elements", "run_audit"):
+        session["seen_ids"] |= proposals.collect_ids(result)
+
+    return result
+
+
+# /chat route
 @app.post("/chat")
 def handle_message(payload: MessagePayload):
 
@@ -506,28 +545,11 @@ def handle_message(payload: MessagePayload):
                 # Execute Revit tool
                 # --------------------------------------------
 
-                tool_name = tool_call.function.name
-
-                if tool_name == "propose_set_parameter":
-
-                    # Creates a PROPOSAL only. Never changes the model.
-                    try:
-                        result = proposals.propose_set_parameter(
-                            session,
-                            **arguments
-                        )
-                    except (ValueError, TypeError, RuntimeError) as ex:
-                        result = {"error": str(ex)}
-
-                else:
-
-                    result = call_revit_tool(
-                        tool_name,
-                        arguments
-                    )
-
-                    if tool_name in ("query_elements", "run_audit"):
-                        session["seen_ids"] |= proposals.collect_ids(result)
+                result = dispatch_tool(
+                    tool_call.function.name,
+                    arguments,
+                    session
+                )
 
 
                 print(
