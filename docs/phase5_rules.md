@@ -11,3 +11,5 @@ Report-only rules (no automated fix, listed as a limitation):
 - missing_column_type_mark: 0 violations in the test model, not exercised in Phase 5
 
 Test model: test_fix.rvt (working copy). Rollback: test_original_backup.rvt (never opened).
+
+Assumption (Rule B): Revit allows duplicate room names, so one shared value does not create a new violation. Duplicate room numbers are flagged by Revit, so missing_room_number stays report-only.
