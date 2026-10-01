@@ -721,3 +721,47 @@ def route_generated_snippet(doc, request):
     )
 
     return result
+
+# ============================================================
+# /fix_preview  (READ-ONLY: builds a plan, never changes the model)
+# ============================================================
+
+@api.route("/fix_preview", methods=["POST"])
+def route_fix_preview(doc, request):
+    try:
+        import sys
+        LIB = r"C:\Users\sindh\AppData\Roaming\pyRevit\Extensions\btp_agent.extension\lib"
+        if LIB not in sys.path:
+            sys.path.append(LIB)
+        import fix_plan
+
+        data = request.data
+        function = data["function"]
+        args = data["args"]
+
+        if function != "set_parameter":
+            return routes.make_response(
+                data={"error": "unknown function: %r" % function},
+                status=400
+            )
+
+        return fix_plan.plan_set_parameter(
+            doc,
+            args["category"],
+            args["element_ids"],
+            args["param_name"],
+            args["value"]
+        )
+
+    except KeyError as e:
+        return routes.make_response(
+            data={"error": "missing required field: " + str(e)},
+            status=400
+        )
+
+    except Exception as e:
+        import traceback
+        return routes.make_response(
+            data={"error": traceback.format_exc()},
+            status=500
+        )
