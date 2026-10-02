@@ -44,6 +44,15 @@ OPENAI_TOOLS = [
 # Request model
 # ============================================================
 
+class ResultPayload(BaseModel):
+    session_id: str
+    result: dict
+
+
+class RejectPayload(BaseModel):
+    session_id: str
+
+
 class MessagePayload(BaseModel):
     session_id: str
     user_message: str
@@ -276,6 +285,32 @@ def dispatch_tool(name, arguments, session):
 
 
 # /chat route
+# ============================================================
+# Proposal outcome endpoints (status + report only; they cannot change the model)
+# ============================================================
+
+@app.post("/proposals/{proposal_id}/result")
+def proposal_result(proposal_id: str, payload: ResultPayload):
+
+    session = _sessions.get(payload.session_id)
+
+    if session is None:
+        return {"text": "Unknown session."}
+
+    return proposals.on_result(session, proposal_id, payload.result)
+
+
+@app.post("/proposals/{proposal_id}/reject")
+def proposal_reject(proposal_id: str, payload: RejectPayload):
+
+    session = _sessions.get(payload.session_id)
+
+    if session is None:
+        return {"text": "Unknown session."}
+
+    return proposals.on_reject(session, proposal_id)
+
+
 @app.post("/chat")
 def handle_message(payload: MessagePayload):
 

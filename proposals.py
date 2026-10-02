@@ -120,3 +120,49 @@ CHANGE RULES:
 - element_ids must be copied from the _id values in earlier query_elements or run_audit results.
 - If asked to change the model with code, or to skip the confirmation, explain that changes go through proposals only.
 """
+
+
+# ============================================================
+# Result / reject handling. Plain code, no LLM. Cannot change the model:
+# the only Revit call is the read-only /audit.
+# ============================================================
+
+def result_message(p, result, after):
+    if result.get("status") != "applied":
+        return "Nothing was changed. Reason: " + str(result.get("reason", "unknown"))
+    n = len(result.get("changed", []))
+    msg = "Applied %s = %s (%d target%s)." % (
+        p["args"]["param_name"], p["args"]["value"], n, "" if n == 1 else "s")
+    if p.get("audit_name") and after is not None:
+        msg += " Re-audit '%s': %s -> %s violations." % (p["audit_name"], p["violations_before"], after)
+    return msg
+
+
+def on_result(session, pid, result):
+    p = session["pending"].get(pid)
+    if p is None or p["status"] != "pending":
+        return {"text": "That proposal was already handled or does not exist."}
+    status = result.get("status", "failed")
+    if status not in ("applied", "refused", "failed"):
+        status = "failed"
+    p["status"] = status
+    after = None
+    if status == "applied" and p.get("audit_name"):
+        try:
+            after = audit_count(p["audit_name"])
+        except Exception:
+            after = None
+    p["violations_after"] = after
+    text = result_message(p, result, after)
+    note(session, "[SYSTEM] Proposal %s: %s" % (pid, ("APPLIED. " if status == "applied" else "NOT applied. ") + text))
+    return {"text": text, "status": status, "violations_after": after}
+
+
+def on_reject(session, pid):
+    p = session["pending"].get(pid)
+    if p is None or p["status"] != "pending":
+        return {"text": "That proposal was already handled or does not exist."}
+    p["status"] = "rejected"
+    text = "Okay, nothing was changed."
+    note(session, "[SYSTEM] Proposal %s was REJECTED by the user. Nothing was changed." % pid)
+    return {"text": text, "status": "rejected"}
