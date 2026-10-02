@@ -1269,3 +1269,27 @@ TOOL: run_audit
 ARGUMENTS: {"rule_name": "missing_room_name"}
 RESULT: {"count": 1, "rule_name": "missing_room_name", "description": "Find rooms without a Name", "results": [{"_id": "1675865"}]}
 ----------------------------------------
+SESSION: e2e-step3
+USER: Run the missing_fire_rating audit.
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_fire_rating"}
+RESULT: {"results": [{"_id": "1674636"}], "count": 1, "description": "Find doors without a fire rating", "rule_name": "missing_fire_rating"}
+----------------------------------------
+SESSION: e2e-step3
+USER: Set the fire rating of those doors to 2H.
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-4c21ed", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------
+SESSION: e2e-dispatch
+USER: Run the missing_fire_rating audit.
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_fire_rating"}
+RESULT: {"results": [{"_id": "1674636"}], "count": 1, "description": "Find doors without a fire rating", "rule_name": "missing_fire_rating"}
+----------------------------------------
+SESSION: e2e-dispatch
+USER: Set the fire rating of those doors to 2H.
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-b33baa", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------
