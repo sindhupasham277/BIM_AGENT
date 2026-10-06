@@ -1347,3 +1347,105 @@ TOOL: propose_set_parameter
 ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
 RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-d83cd2", "note": "NOT applied. The user must click Confirm on the card."}
 ----------------------------------------
+SESSION: revit_btp_session
+USER: Which doors have no fire rating?
+TOOL: query_elements
+ARGUMENTS: {"category": "Doors", "filters": [{"parameter": "Fire Rating", "operator": "is_null", "value": ""}], "return_fields": ["Mark", "Level", "Family and Type", "Fire Rating"]}
+RESULT: {"results": [{"Fire Rating": null, "_id": "1674636", "Family and Type": "M_Door-Passage-Single-Vision_Lite: d1", "Level": "L1", "Mark": "102"}]}
+----------------------------------------
+SESSION: revit_btp_session
+USER: set their fire rating to 2H
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-bcff5b", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Which rooms have no name
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_room_name"}
+RESULT: {"count": 2, "results": [{"_id": "1675865"}, {"_id": "1679598"}], "description": "Find rooms without a Name", "rule_name": "missing_room_name"}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Which rooms have no name
+TOOL: query_elements
+ARGUMENTS: {"category": "Rooms", "filters": [{"parameter": "Name", "operator": "is_null", "value": ""}], "return_fields": ["Number", "Level", "Area", "Name"]}
+RESULT: {"results": []}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Which rooms have no name
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_room_name"}
+RESULT: {"count": 2, "results": [{"_id": "1675865"}, {"_id": "1679598"}], "description": "Find rooms without a Name", "rule_name": "missing_room_name"}
+----------------------------------------
+SESSION: revit_btp_session
+USER: only one room doesnt have room name
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_room_name"}
+RESULT: {"count": 2, "results": [{"_id": "1675865"}, {"_id": "1679598"}], "description": "Find rooms without a Name", "rule_name": "missing_room_name"}
+----------------------------------------
+SESSION: revit_btp_session
+USER: only one room doesnt have room name
+TOOL: run_generated_snippet
+ARGUMENTS: {"code": "rooms = revit_ro.get_elements(\"Rooms\")\ntargets = {\"1675865\", \"1679598\"}\nout = []\nfor r in rooms:\n    if str(r[\"id\"]) in targets:\n        out.append({\n            \"id\": r[\"id\"],\n            \"Number\": revit_ro.get_param(r[\"id\"], \"Number\"),\n            \"Level\": revit_ro.get_param(r[\"id\"], \"Level\"),\n            \"Area\": revit_ro.get_param(r[\"id\"], \"Area\"),\n            \"Name\": revit_ro.get_param(r[\"id\"], \"Name\"),\n        })\nresult = out"}
+RESULT: {"message": "Disallowed construct: Set", "status": "rejected"}
+----------------------------------------
+SESSION: revit_btp_session
+USER: only one room doesnt have room name
+TOOL: run_generated_snippet
+ARGUMENTS: {"code": "rooms = revit_ro.get_elements(\"Rooms\")\ntargets = [1675865, 1679598]\nout = []\nfor r in rooms:\n    if r[\"id\"] in targets:\n        out.append({\n            \"id\": r[\"id\"],\n            \"Number\": revit_ro.get_param(r[\"id\"], \"Number\"),\n            \"Level\": revit_ro.get_param(r[\"id\"], \"Level\"),\n            \"Area\": revit_ro.get_param(r[\"id\"], \"Area\"),\n            \"Name\": revit_ro.get_param(r[\"id\"], \"Name\"),\n        })\nresult = out"}
+RESULT: {"result": [{"Level": null, "Name": "", "Number": "101", "Area": null, "id": "1675865"}, {"Level": 30, "Name": "", "Number": "103", "Area": 6086.345506024346, "id": "1679598"}], "status": "ok"}
+----------------------------------------
+SESSION: revit_btp_session
+USER: proceed
+TOOL: query_elements
+ARGUMENTS: {"category": "Rooms", "filters": [{"parameter": "Number", "operator": "==", "value": "103"}], "return_fields": ["Number", "Name", "Level", "Area"]}
+RESULT: {"results": [{"_id": "1679598", "Area": 565.44, "Level": "L1", "Name": "", "Number": "103"}]}
+----------------------------------------
+SESSION: revit_btp_session
+USER: proceed
+TOOL: query_elements
+ARGUMENTS: {"category": "Rooms", "filters": [{"parameter": "Number", "operator": "==", "value": "104"}], "return_fields": ["Number", "Name", "Level", "Area"]}
+RESULT: {"results": [{"_id": "1679601", "Area": 32.63999999999998, "Level": "L1", "Name": "Room 2", "Number": "104"}]}
+----------------------------------------
+SESSION: revit_btp_session
+USER: no wtell me Which rooms have no name
+TOOL: query_elements
+ARGUMENTS: {"category": "Rooms", "filters": [{"parameter": "Name", "operator": "is_null", "value": ""}], "return_fields": ["Number", "Level", "Area", "Name"]}
+RESULT: {"results": []}
+----------------------------------------
+SESSION: revit_btp_session
+USER: no wtell me Which rooms have no name
+TOOL: query_elements
+ARGUMENTS: {"category": "Rooms", "filters": [{"parameter": "Name", "operator": "==", "value": ""}], "return_fields": ["Number", "Level", "Area", "Name"]}
+RESULT: {"results": [{"_id": "1675865", "Area": null, "Level": null, "Name": "", "Number": "101"}, {"_id": "1679598", "Area": 565.44, "Level": "L1", "Name": "", "Number": "103"}]}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Set their name to Office.
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Rooms", "element_ids": [1675865, 1679598], "param_name": "Name", "value": "Office", "audit_name": "missing_room_name"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-a937f9", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Which doors have no fire rating
+TOOL: query_elements
+ARGUMENTS: {"category": "Doors", "filters": [{"parameter": "Fire Rating", "operator": "is_null", "value": ""}], "return_fields": ["Mark", "Level", "Family and Type", "Fire Rating"]}
+RESULT: {"results": [{"Fire Rating": null, "_id": "1674636", "Family and Type": "M_Door-Passage-Single-Vision_Lite: d1", "Level": "L1", "Mark": "102"}]}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Set their fire rating to 2H.
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-eed522", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Which doors have no fire rating
+TOOL: query_elements
+ARGUMENTS: {"category": "Doors", "filters": [{"parameter": "Fire Rating", "operator": "is_null", "value": ""}], "return_fields": ["Mark", "Level", "Family and Type", "Fire Rating"]}
+RESULT: {"results": [{"Fire Rating": null, "_id": "1674636", "Family and Type": "M_Door-Passage-Single-Vision_Lite: d1", "Level": "L1", "Mark": "102"}]}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Set their fire rating to 2H
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-22a821", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------
