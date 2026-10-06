@@ -1,4 +1,4 @@
-﻿#! python3
+#! python3
 # -*- coding: utf-8 -*-
 
 import clr
@@ -325,7 +325,7 @@ class ChatForm(Form):
 
         self.online_dot = Label()
 
-        self.online_dot.Text = "â—"
+        self.online_dot.Text = "●"
 
         self.online_dot.Location = Point(
             505,
@@ -739,7 +739,7 @@ class ChatForm(Form):
         welcome_title = Label()
 
         welcome_title.Text = (
-            "Hi! Iâ€™m your BIM assistant ðŸ‘‹"
+            "Hi! I’m your BIM assistant 👋"
         )
 
         welcome_title.Location = Point(
@@ -829,7 +829,7 @@ class ChatForm(Form):
 
 
     # ========================================================
-    # ENTER KEY â†’ SEND
+    # ENTER KEY → SEND
     # ========================================================
 
     def question_box_key_down(
