@@ -1293,3 +1293,57 @@ TOOL: propose_set_parameter
 ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
 RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-b33baa", "note": "NOT applied. The user must click Confirm on the card."}
 ----------------------------------------
+SESSION: revit_btp_session
+USER: Run the missing_fire_rating audit.
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_fire_rating"}
+RESULT: {"description": "Find doors without a fire rating", "count": 1, "results": [{"_id": "1674636"}], "rule_name": "missing_fire_rating"}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Run the missing_fire_rating audit.
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_fire_rating"}
+RESULT: {"description": "Find doors without a fire rating", "count": 1, "results": [{"_id": "1674636"}], "rule_name": "missing_fire_rating"}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Set the fire rating of those doors to 2H.
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-13e63c", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Run the missing_fire_rating audit.
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_fire_rating"}
+RESULT: {"results": [{"_id": "1674636"}], "rule_name": "missing_fire_rating", "description": "Find doors without a fire rating", "count": 1}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Run the missing_fire_rating audit.
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_fire_rating"}
+RESULT: {"rule_name": "missing_fire_rating", "description": "Find doors without a fire rating", "results": [{"_id": "1674636"}], "count": 1}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Set the fire rating of those doors to 2H.
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-f3e2f4", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Set the fire rating of those doors to 2H.
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-167088", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Run the missing_fire_rating audit
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_fire_rating"}
+RESULT: {"rule_name": "missing_fire_rating", "description": "Find doors without a fire rating", "results": [{"_id": "1674636"}], "count": 1}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Set the fire rating of those doors to 2H.
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-d83cd2", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------

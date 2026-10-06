@@ -1,4 +1,4 @@
-#! python3
+﻿#! python3
 # -*- coding: utf-8 -*-
 
 import clr
@@ -119,7 +119,8 @@ user32.GetAsyncKeyState.restype = ctypes.c_short
 
 shared = {
     "finished": False,
-    "answer": None
+    "answer": None,
+    "proposals": []
 }
 
 
@@ -324,7 +325,7 @@ class ChatForm(Form):
 
         self.online_dot = Label()
 
-        self.online_dot.Text = "●"
+        self.online_dot.Text = "â—"
 
         self.online_dot.Location = Point(
             505,
@@ -738,7 +739,7 @@ class ChatForm(Form):
         welcome_title = Label()
 
         welcome_title.Text = (
-            "Hi! I’m your BIM assistant 👋"
+            "Hi! Iâ€™m your BIM assistant ðŸ‘‹"
         )
 
         welcome_title.Location = Point(
@@ -828,7 +829,7 @@ class ChatForm(Form):
 
 
     # ========================================================
-    # ENTER KEY → SEND
+    # ENTER KEY â†’ SEND
     # ========================================================
 
     def question_box_key_down(
@@ -1908,6 +1909,7 @@ class ChatForm(Form):
         shared["finished"] = False
 
         shared["answer"] = None
+        shared["proposals"] = []
 
         # ----------------------------------------------------
         # START BACKGROUND REQUEST
@@ -1998,6 +2000,7 @@ class ChatForm(Form):
                 )
             )
 
+            shared["proposals"] = result.get("proposals") or []
             answer = result.get(
                 "response",
                 "No response received."
@@ -2095,6 +2098,281 @@ class ChatForm(Form):
 # START CHAT
 # ============================================================
 
+# ============================================================
+# PHASE 5 (step 4): PROPOSAL CARDS + CONFIRM / REJECT
+# A change can be applied ONLY through fix_handler (ExternalEvent),
+# and only after a Confirm click on a card.
+# ============================================================
+
+import os as _os
+import sys as _sys
+import traceback as _tb
+
+_LIB = r"C:\Users\sindh\AppData\Roaming\pyRevit\Extensions\btp_agent.extension\lib"
+if _LIB not in _sys.path:
+    _sys.path.append(_LIB)
+
+BRAIN_URL = "http://127.0.0.1:8000"
+BRAIN_SESSION_ID = "revit_btp_session"
+FAKE_PROPOSAL_FILE = r"C:\Users\sindh\OneDrive\Desktop\BTP\BIM_AGENT\logs\fake_proposal.json"
+
+_PANEL = {
+    "proposals": {}, "cards": {}, "timer": None, "inbox": [],
+    "handler": None, "event": None, "error": None, "current": None
+}
+_LOCK = threading.Lock()
+
+def _post_json(path, body):
+    data = json.dumps(body, default=str).encode("utf-8")
+    req = urllib.request.Request(
+        BRAIN_URL + path, data=data,
+        headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _report_worker(kind, pid, result):
+    # background thread: talks to the brain, never touches the UI
+    try:
+        if kind == "result":
+            reply = _post_json(
+                "/proposals/%s/result" % pid,
+                {"session_id": BRAIN_SESSION_ID, "result": result}
+            )
+        else:
+            reply = _post_json(
+                "/proposals/%s/reject" % pid,
+                {"session_id": BRAIN_SESSION_ID}
+            )
+        text = str(reply.get("text", "Done."))
+    except Exception as ex:
+        text = "[Report error] " + str(ex)
+    with _LOCK:
+        _PANEL["inbox"].append({"pid": pid, "kind": kind, "text": text})
+
+
+def _on_fix_done(result):
+    # runs on Revit's thread right after the Transaction: only start a thread
+    try:
+        _fix_handler.log("panel: apply finished, status=" + str(result.get("status")))
+    except Exception:
+        pass
+    t = threading.Thread(
+        target=_report_worker,
+        args=("result", _PANEL["current"], result)
+    )
+    t.daemon = True
+    t.start()
+
+
+try:
+    import fix_handler as _fix_handler
+    _h, _e = _fix_handler.create_apply_event(_on_fix_done)
+    _PANEL["handler"] = _h
+    _PANEL["event"] = _e
+except Exception:
+    _PANEL["error"] = _tb.format_exc()
+
+
+# The Revit API import above can shadow WinForms/Drawing names (e.g. Color).
+# Re-bind the names this panel uses to the System.* versions.
+from System.Drawing import (
+    Point, Size, Color, Font, FontStyle, Bitmap, Rectangle, ContentAlignment
+)
+from System.Windows.Forms import (
+    Form, Label, TextBox, Button, Panel, FlowLayoutPanel, PictureBox,
+    Padding, BorderStyle, FlatStyle, Keys
+)
+
+
+def _append_proposal_card(self, p):
+    pid = p["proposal_id"]
+    p["_state"] = "pending"
+    _PANEL["proposals"][pid] = p
+    args = p["args"]
+    items = p.get("items") or []
+
+    container = Panel()
+    container.Width = 498
+    container.Margin = Padding(0, 4, 0, 12)
+    container.BackColor = Color.FromArgb(255, 248, 225)
+
+    pos = [8]
+
+    def add_label(text, bold=False, color=None, height=20):
+        lbl = Label()
+        lbl.Text = text
+        lbl.AutoSize = False
+        lbl.Location = Point(12, pos[0])
+        lbl.Size = Size(472, height)
+        lbl.Font = Font("Segoe UI", 9.0, Enum.ToObject(FontStyle, 1 if bold else 0))
+        lbl.ForeColor = color if color is not None else Color.FromArgb(51, 65, 85)
+        container.Controls.Add(lbl)
+        pos[0] += height
+        return lbl
+
+    add_label("PROPOSED CHANGE  (%s)" % pid, bold=True)
+    add_label("Set '%s' = '%s' on %s" % (args["param_name"], args["value"], args["category"]))
+    for it in items:
+        add_label(
+            "- %s [%s]:  '%s'  ->  '%s'" % (it.get("label"), it.get("scope"), it.get("old"), it.get("new")),
+            height=36
+        )
+    type_total = 0
+    has_type = False
+    for it in items:
+        if it.get("scope") == "type":
+            has_type = True
+            type_total += int(it.get("affected", 1))
+    if has_type:
+        add_label(
+            "TYPE-level change: affects %d elements in total" % type_total,
+            bold=True, color=Color.FromArgb(185, 28, 28), height=22
+        )
+    add_label("Nothing is applied until you click Confirm.", height=20)
+
+    confirm = Button()
+    confirm.Text = "Confirm"
+    confirm.Location = Point(12, pos[0] + 4)
+    confirm.Size = Size(110, 30)
+    reject = Button()
+    reject.Text = "Reject"
+    reject.Location = Point(130, pos[0] + 4)
+    reject.Size = Size(110, 30)
+    status = Label()
+    status.Text = ""
+    status.AutoSize = False
+    status.Location = Point(250, pos[0] + 9)
+    status.Size = Size(230, 22)
+    container.Controls.Add(confirm)
+    container.Controls.Add(reject)
+    container.Controls.Add(status)
+    container.Height = pos[0] + 4 + 30 + 10
+
+    def make_confirm(x):
+        return lambda s, e: self._on_confirm(x)
+
+    def make_reject(x):
+        return lambda s, e: self._on_reject(x)
+
+    confirm.Click += make_confirm(pid)
+    reject.Click += make_reject(pid)
+    _PANEL["cards"][pid] = {"confirm": confirm, "reject": reject, "status": status}
+
+    self.chat_panel.Controls.Add(container)
+    self.scroll_chat_to_bottom()
+
+
+def _ensure_report_timer(self):
+    if _PANEL["timer"] is not None:
+        return
+    from System.Windows.Forms import Timer
+    t = Timer()
+    t.Interval = 300
+    t.Tick += self._on_report_tick
+    t.Start()
+    _PANEL["timer"] = t
+
+
+def _on_report_tick(self, sender, args):
+    with _LOCK:
+        items = list(_PANEL["inbox"])
+        _PANEL["inbox"].clear()
+    for it in items:
+        card = _PANEL["cards"].get(it["pid"])
+        p = _PANEL["proposals"].get(it["pid"])
+        if card is not None and p is not None:
+            if it["kind"] == "reject":
+                card["status"].Text = "Rejected"
+            elif it["text"].startswith("Applied"):
+                p["_state"] = "applied"
+                card["status"].Text = "Applied"
+            else:
+                p["_state"] = "not applied"
+                card["status"].Text = "Not applied"
+        self.append_assistant_message("BTP Assistant: " + it["text"])
+
+
+def _on_confirm(self, pid):
+    card = _PANEL["cards"].get(pid)
+    p = _PANEL["proposals"].get(pid)
+    if card is None or p is None or p.get("_state") != "pending":
+        return
+    if _PANEL["event"] is None or _PANEL["handler"] is None:
+        card["status"].Text = "Apply unavailable (see log)"
+        return
+    p["_state"] = "applying"
+    card["confirm"].Enabled = False
+    card["reject"].Enabled = False
+    card["status"].Text = "Applying..."
+    _PANEL["current"] = pid
+    _PANEL["handler"].request = {
+        "function": p["function"],
+        "args": p["args"],
+        "expected_old": p["expected_old"]
+    }
+    _PANEL["event"].Raise()
+    self._ensure_report_timer()
+
+
+def _on_reject(self, pid):
+    card = _PANEL["cards"].get(pid)
+    p = _PANEL["proposals"].get(pid)
+    if card is None or p is None or p.get("_state") != "pending":
+        return
+    p["_state"] = "rejected"
+    card["confirm"].Enabled = False
+    card["reject"].Enabled = False
+    card["status"].Text = "Rejecting..."
+    t = threading.Thread(target=_report_worker, args=("reject", pid, None))
+    t.daemon = True
+    t.start()
+    self._ensure_report_timer()
+
+
+ChatForm._append_proposal_card = _append_proposal_card
+ChatForm._ensure_report_timer = _ensure_report_timer
+ChatForm._on_report_tick = _on_report_tick
+ChatForm._on_confirm = _on_confirm
+ChatForm._on_reject = _on_reject
+
+_orig_check_response = ChatForm.check_response
+
+
+def _check_response_with_cards(self, sender, args):
+    was_finished = shared["finished"]
+    _orig_check_response(self, sender, args)
+    if was_finished:
+        props = shared.get("proposals") or []
+        shared["proposals"] = []
+        for p in props:
+            try:
+                self._append_proposal_card(p)
+            except Exception as ex:
+                self.append_assistant_message("BTP Assistant: [Card error] " + str(ex))
+
+
+ChatForm.check_response = _check_response_with_cards
+
+
+def _show_fake_proposal_if_any(form):
+    # test hook: draws one card from logs\fake_proposal.json, then deletes the file
+    try:
+        if not _os.path.exists(FAKE_PROPOSAL_FILE):
+            return
+        with open(FAKE_PROPOSAL_FILE, "r", encoding="utf-8-sig") as f:
+            p = json.load(f)
+        _os.remove(FAKE_PROPOSAL_FILE)
+        form._append_proposal_card(p)
+    except Exception as ex:
+        try:
+            form.append_assistant_message("BTP Assistant: [Fake proposal error] " + str(ex))
+        except Exception:
+            pass
+
+
 chat = ChatForm()
 
 chat.Show()
+_show_fake_proposal_if_any(chat)
