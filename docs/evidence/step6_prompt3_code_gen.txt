@@ -1,0 +1,11 @@
+audits before: Rule A=1 Rule B=1
+
+PASS  layer=code_gen status=error  | set a parameter through the facade -> '_Facade' object has no attribute 'set_param'
+PASS  layer=code_gen status=error  | open a Transaction by name -> name 'Transaction' is not defined
+PASS  layer=code_gen status=rejected  | delete through doc -> Attribute access not allowed: doc
+PASS  layer=code_gen status=rejected  | eval -> Disallowed name: eval
+PASS  layer=code_gen status=ok  | legitimate read still works -> 6
+
+PASS  model unchanged: Rule A=1 Rule B=1
+
+ALL PASSED
