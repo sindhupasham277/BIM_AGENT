@@ -144,9 +144,9 @@ def validate_snippet(code):
                 )
 
         if isinstance(node, ast.Attribute):
-            if node.attr.startswith("__"):
+            if node.attr.startswith(BLOCKED_ATTR_PREFIXES) or node.attr in BLOCKED_ATTRS:
                 raise SandboxRejected(
-                    "Dunder attribute access not allowed"
+                    "Attribute access not allowed: {}".format(node.attr)
                 )
 
     return tree
@@ -189,6 +189,65 @@ class SandboxTimeout(Exception):
 # EXECUTOR
 # ============================================================
 
+# ============================================================
+# PHASE 5 HARDENING
+# The snippet gets a facade with ONLY the read methods, never the RevitRO
+# object or its doc. Dangerous attribute names are blocked, and the
+# result must be plain data.
+# ============================================================
+
+PUBLIC_METHODS = (
+    "get_elements",
+    "get_param",
+    "get_geometry_bbox",
+    "get_relationship",
+    "get_level_of_element",
+    "get_host_id",
+)
+
+BLOCKED_ATTR_PREFIXES = ("_", "func_", "im_", "gi_", "f_", "co_", "tb_", "cell_")
+BLOCKED_ATTRS = ("doc", "mro", "Document")
+
+try:
+    _PLAIN_SCALARS = (bool, int, long, float, str, unicode)  # type: ignore
+except NameError:
+    _PLAIN_SCALARS = (bool, int, float, str)
+
+
+def _wrap(fn):
+    def call(*args, **kwargs):
+        return fn(*args, **kwargs)
+    return call
+
+
+class _Facade(object):
+    pass
+
+
+def _make_facade(ro):
+    facade = _Facade()
+    for name in PUBLIC_METHODS:
+        setattr(facade, name, _wrap(getattr(ro, name)))
+    return facade
+
+
+def _plain(value, depth=0):
+    if depth > 20:
+        raise ValueError("result is nested too deeply")
+    if value is None or isinstance(value, _PLAIN_SCALARS):
+        return value
+    if isinstance(value, (list, tuple)):
+        return [_plain(x, depth + 1) for x in value]
+    if isinstance(value, dict):
+        out = {}
+        for k, v in value.items():
+            if not isinstance(k, _PLAIN_SCALARS):
+                raise ValueError("result has a non-plain dictionary key")
+            out[k] = _plain(v, depth + 1)
+        return out
+    raise ValueError("result must be plain data (numbers, text, lists, dicts)")
+
+
 def run_snippet(code, revit_ro_instance, timeout_sec=5):
     """
     Validate and execute a generated read-only snippet.
@@ -223,7 +282,7 @@ def run_snippet(code, revit_ro_instance, timeout_sec=5):
 
     namespace = {
         "__builtins__": safe_builtins,
-        "revit_ro": revit_ro_instance,
+        "revit_ro": _make_facade(revit_ro_instance),
         "result": None,
     }
 
@@ -249,7 +308,15 @@ def run_snippet(code, revit_ro_instance, timeout_sec=5):
             "message": str(e),
         }
 
+    try:
+        plain = _plain(namespace.get("result"))
+    except ValueError as e:
+        return {
+            "status": "error",
+            "message": str(e),
+        }
+
     return {
         "status": "ok",
-        "result": namespace.get("result"),
+        "result": plain,
     }

@@ -1449,3 +1449,15 @@ TOOL: propose_set_parameter
 ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
 RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-22a821", "note": "NOT applied. The user must click Confirm on the card."}
 ----------------------------------------
+SESSION: revit_btp_session
+USER: Write Python that sets Fire Rating to 60 min on all doors.
+TOOL: query_elements
+ARGUMENTS: {"category": "Doors", "return_fields": ["id"]}
+RESULT: {"results": [{"_id": "1674233", "id": null}, {"_id": "1674356", "id": null}, {"_id": "1674636", "id": null}, {"_id": "1674674", "id": null}, {"_id": "1676128", "id": null}, {"_id": "1678957", "id": null}]}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Write Python that sets Fire Rating to 60 min on all doors.
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Doors", "element_ids": [1674233, 1674356, 1674636, 1674674, 1676128, 1678957], "param_name": "Fire Rating", "value": "60 min"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-bececc", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------
