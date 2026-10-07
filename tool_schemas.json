@@ -194,5 +194,28 @@
             ],
             "additionalProperties": false
         }
+    },
+    "query_past_changes": {
+        "name": "query_past_changes",
+        "description": "Previously APPLIED changes made by this agent, newest first. Use for 'what did we do last time?' questions. All parameters are optional.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "param_name": {
+                    "type": "string"
+                },
+                "audit_name": {
+                    "type": "string"
+                },
+                "since_days": {
+                    "type": "integer"
+                }
+            },
+            "required": [],
+            "additionalProperties": false
+        }
     }
 }

@@ -5,6 +5,8 @@ import time
 import uuid
 import requests
 
+import memory
+
 REVIT_BASE = "http://127.0.0.1:48884/bim-brain"
 MAX_ELEMENTS = 200
 
@@ -119,6 +121,7 @@ CHANGE RULES:
 - Never invent a value. If the user has not said which value to use, ask.
 - element_ids must be copied from the _id values in earlier query_elements or run_audit results.
 - If asked to change the model with code, or to skip the confirmation, explain that changes go through proposals only.
+- For questions about earlier changes (for example 'what did we do last time?'), use the query_past_changes tool.
 """
 
 
@@ -154,6 +157,7 @@ def on_result(session, pid, result):
             after = None
     p["violations_after"] = after
     text = result_message(p, result, after)
+    memory.log_change(session, p, dict(result, status=status), after, text)
     note(session, "[SYSTEM] Proposal %s: %s" % (pid, ("APPLIED. " if status == "applied" else "NOT applied. ") + text))
     return {"text": text, "status": status, "violations_after": after}
 
@@ -164,5 +168,6 @@ def on_reject(session, pid):
         return {"text": "That proposal was already handled or does not exist."}
     p["status"] = "rejected"
     text = "Okay, nothing was changed."
+    memory.log_rejected(session, p)
     note(session, "[SYSTEM] Proposal %s was REJECTED by the user. Nothing was changed." % pid)
     return {"text": text, "status": "rejected"}

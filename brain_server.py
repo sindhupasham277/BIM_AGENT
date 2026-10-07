@@ -7,6 +7,9 @@ from pydantic import BaseModel
 from openai import OpenAI
 import requests
 
+import time
+
+import memory
 import proposals
 
 
@@ -258,10 +261,11 @@ TOOL_REGISTRY = {
     "run_audit":             {"layer": "generic_engine", "kind": "audit"},
     "run_generated_snippet": {"layer": "code_gen",       "kind": "query"},
     "propose_set_parameter": {"layer": "write_function", "kind": "proposal"},
+    "query_past_changes":    {"layer": "memory",         "kind": "memory"},
 }
 
 
-def dispatch_tool(name, arguments, session):
+def _dispatch_core(name, arguments, session):
 
     entry = TOOL_REGISTRY.get(name)
 
@@ -276,11 +280,80 @@ def dispatch_tool(name, arguments, session):
         except (ValueError, TypeError, RuntimeError) as ex:
             return {"error": str(ex)}
 
+    if name == "query_past_changes":
+
+        # Read-only memory lookup: fixed SQL, the caller supplies values only.
+        try:
+            return memory.query_past_changes(session, **arguments)
+        except (ValueError, TypeError) as ex:
+            return {"error": str(ex)}
+
     result = call_revit_tool(name, arguments)
 
     if name in ("query_elements", "run_audit"):
         session["seen_ids"] |= proposals.collect_ids(result)
 
+    return result
+
+
+def _status_of(result):
+    if isinstance(result, dict):
+        if result.get("error"):
+            return "error"
+        s = result.get("status")
+        if s == "rejected":
+            return "refused"
+        if s in ("ok", "error", "timeout"):
+            return s
+        if s == "pending_user_confirmation":
+            return "pending"
+        if s == "invalid":
+            return "error"
+    return "ok"
+
+
+def _summary_of(result):
+    if isinstance(result, dict) and isinstance(result.get("results"), list):
+        return "%d rows" % len(result["results"])
+    try:
+        return json.dumps(result, default=str)[:500]
+    except Exception:
+        return str(result)[:500]
+
+
+def dispatch_tool(name, arguments, session):
+    """EVERY tool call goes through here, so every call is logged exactly once."""
+
+    t0 = time.time()
+    entry = TOOL_REGISTRY.get(name)
+
+    if entry is None:
+        memory.log(session, "refused", "none", name,
+                   json.dumps(arguments, default=str), "refused",
+                   "not an available tool")
+        return {"error": "'%s' is not an available tool" % name}
+
+    code_or_args = (
+        arguments.get("code")
+        if name == "run_generated_snippet" and isinstance(arguments, dict)
+        else json.dumps(arguments, default=str)
+    )
+    audit_name = None
+    if isinstance(arguments, dict):
+        audit_name = arguments.get("rule_name") or arguments.get("audit_name")
+
+    try:
+        result = _dispatch_core(name, arguments, session)
+    except Exception as ex:
+        memory.log(session, entry["kind"], entry["layer"], name, code_or_args,
+                   "error", str(ex)[:500], audit_name=audit_name,
+                   duration_ms=int((time.time() - t0) * 1000))
+        raise
+
+    memory.log(session, entry["kind"], entry["layer"], name, code_or_args,
+               _status_of(result), _summary_of(result), audit_name=audit_name,
+               proposal_id=(result.get("proposal_id") if isinstance(result, dict) else None),
+               duration_ms=int((time.time() - t0) * 1000))
     return result
 
 
@@ -334,6 +407,8 @@ def handle_message(payload: MessagePayload):
         )
 
     session = _sessions[payload.session_id]
+    session["session_id"] = payload.session_id
+    session["last_user_text"] = payload.user_message
 
 
     # --------------------------------------------------------
@@ -551,7 +626,7 @@ def handle_message(payload: MessagePayload):
 
                 validation_error = None
 
-                if tool_call.function.name != "propose_set_parameter":
+                if tool_call.function.name not in ("propose_set_parameter", "query_past_changes"):
 
                     validation_error = validate_parameter_names(
                         payload.user_message,
@@ -660,6 +735,8 @@ def handle_message(payload: MessagePayload):
 if __name__ == "__main__":
 
     import uvicorn
+
+    memory.init()
 
     uvicorn.run(
         app,
