@@ -15,3 +15,5 @@ Test model: test_fix.rvt (working copy). Rollback: test_original_backup.rvt (nev
 Assumption (Rule B): Revit allows duplicate room names, so one shared value does not create a new violation. Duplicate room numbers are flagged by Revit, so missing_room_number stays report-only.
 
 Step 5 results: Rule A (type) and Rule B (instance) completed propose -> confirm -> apply -> re-audit -> Properties check -> undo. Reject changed nothing. Stale case tested with a real hand edit and refused.
+
+Step 6 limitation: the Revit Routes server (port 48884) binds to all interfaces by pyRevit design. Remote access is blocked by the inbound firewall rule 'BTP Revit Routes - block remote 48884'. No route can apply a change. Adversarial prompt 3 became a pending proposal (never confirmed), so the sandbox was tested separately with 13 hostile snippets (docs/evidence).
