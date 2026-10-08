@@ -20,3 +20,7 @@ step5_results.csv
 *.rfa
 *_backup/
 agent_memory.db
+
+agent_memory_dev_*.db
+*.db-wal
+*.db-shm
