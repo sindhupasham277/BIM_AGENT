@@ -1461,3 +1461,39 @@ TOOL: propose_set_parameter
 ARGUMENTS: {"category": "Doors", "element_ids": [1674233, 1674356, 1674636, 1674674, 1676128, 1678957], "param_name": "Fire Rating", "value": "60 min"}
 RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-bececc", "note": "NOT applied. The user must click Confirm on the card."}
 ----------------------------------------
+SESSION: revit_btp_session
+USER: Which doors have no fire rating?
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_fire_rating"}
+RESULT: {"description": "Find doors without a fire rating", "count": 1, "rule_name": "missing_fire_rating", "results": [{"_id": "1674636"}]}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Which doors have no fire rating?
+TOOL: query_elements
+ARGUMENTS: {"category": "Doors", "filters": [{"parameter": "Fire Rating", "operator": "is_null", "value": ""}], "return_fields": ["Family and Type", "Mark", "Level", "Type Name"]}
+RESULT: {"results": [{"Family and Type": "M_Door-Passage-Single-Vision_Lite: d1", "Mark": "102", "Type Name": null, "_id": "1674636", "Level": "L1"}]}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Set their fire rating to 2H
+TOOL: propose_set_parameter
+ARGUMENTS: {"category": "Doors", "element_ids": [1674636], "param_name": "Fire Rating", "value": "2H", "audit_name": "missing_fire_rating"}
+RESULT: {"status": "pending_user_confirmation", "proposal_id": "P-6903d4", "note": "NOT applied. The user must click Confirm on the card."}
+----------------------------------------
+SESSION: revit_btp_session
+USER: What did we do last time?
+TOOL: query_past_changes
+ARGUMENTS: {"limit": 10}
+RESULT: {"changes": [{"id": 4, "ts": "2026-10-07T10:22:03.745291+00:00", "audit_name": "missing_fire_rating", "proposal_id": "P-6903d4", "result_summary": "Applied Fire Rating = 2H (1 target). Re-audit 'missing_fire_rating': 1 -> 0 violations.", "violations_before": 1, "violations_after": 0}]}
+----------------------------------------
+SESSION: revit_btp_session
+USER: What did we do last time
+TOOL: query_past_changes
+ARGUMENTS: {"limit": 10}
+RESULT: {"changes": [{"id": 4, "ts": "2026-10-07T10:22:03.745291+00:00", "audit_name": "missing_fire_rating", "proposal_id": "P-6903d4", "result_summary": "Applied Fire Rating = 2H (1 target). Re-audit 'missing_fire_rating': 1 -> 0 violations.", "violations_before": 1, "violations_after": 0}]}
+----------------------------------------
+SESSION: revit_btp_session
+USER: Which doors have no fire rating?
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_fire_rating"}
+RESULT: {"description": "Find doors without a fire rating", "count": 1, "rule_name": "missing_fire_rating", "results": [{"_id": "1674636"}]}
+----------------------------------------
