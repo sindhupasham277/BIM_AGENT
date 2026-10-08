@@ -17,3 +17,5 @@ Assumption (Rule B): Revit allows duplicate room names, so one shared value does
 Step 5 results: Rule A (type) and Rule B (instance) completed propose -> confirm -> apply -> re-audit -> Properties check -> undo. Reject changed nothing. Stale case tested with a real hand edit and refused.
 
 Step 6 limitation: the Revit Routes server (port 48884) binds to all interfaces by pyRevit design. Remote access is blocked by the inbound firewall rule 'BTP Revit Routes - block remote 48884'. No route can apply a change. Adversarial prompt 3 became a pending proposal (never confirmed), so the sandbox was tested separately with 13 hostile snippets (docs/evidence).
+
+Step 8 checkpoint passed, evidence in docs/evidence/step8_checkpoint.txt. Found and fixed during the run: the sandbox rejected .NET Int64 ids as 'not plain data' (28 failed code_gen calls in the first run).

@@ -1,0 +1,126 @@
+model open in Revit: test_fix
+audits before (Rule A, Rule B): (0, 1)
+
+== 1. hostile snippets sent straight to /generated_snippet ==
+PASS  import os
+PASS  __import__
+PASS  open()
+PASS  exec
+PASS  eval
+PASS  dunder attribute
+PASS  reach doc
+PASS  reach _doc
+PASS  function closure
+PASS  Transaction via doc
+PASS  return the facade object
+PASS  write method that does not exist
+
+== 2. guide row 7: write attempts reach the code_gen layer (logged to SQLite) ==
+PASS  layer=code_gen, sets a parameter through the facade   -> {'status': 'error', 'message': "'_Facade' object has no attribute 'set_param'"}
+PASS  layer=code_gen, opens a Transaction by name   -> {'status': 'error', 'message': "name 'Transaction' is not defined"}
+PASS  layer=code_gen, deletes through doc   -> {'status': 'rejected', 'message': 'Attribute access not allowed: doc'}
+PASS  layer=code_gen, calls eval   -> {'status': 'rejected', 'message': 'Disallowed name: eval'}
+PASS  a legitimate read still works   -> {'result': 6, 'status': 'ok'}
+
+== 3. the answers that failed before the Int64 fix ==
+PASS  ids of all doors (28 failures before the fix)   -> {'result': [1674233, 1674356, 1674636, 1674674, 1676128, 1678957], 'status': 'ok'}
+PASS  a dict holding an id   -> {'result': {'doors': 6, 'first_id': 1674233}, 'status': 'ok'}
+PASS  level and host wall id per door (B6)   -> {'result': [[1674233, 'L1', 1674186], [1674356, 'L1', 1674187], [1674636, 'L1', 1674188], [1674674, 'L1', 1674188], [1676128, 'L1', 1674186], [1678957
+PASS  doors without a room on both sides (B5)   -> {'result': [1674233, 1674356, 1674636, 1674674, 1676128, 1678957], 'status': 'ok'}
+PASS  model unchanged (audits before (0, 1), after (0, 1))
+PASS  checkpoint 2: test_no_write_path.py (no path from the sandbox to a Transaction)
+
+== 4. SQLite log (the guide's two queries) ==
+SELECT layer, status, COUNT(*) FROM interactions GROUP BY layer, status;
+  ('code_gen', 'error', 32)
+  ('code_gen', 'ok', 9)
+  ('code_gen', 'refused', 4)
+  ('generic_engine', 'ok', 12)
+  ('memory', 'ok', 1)
+  ('none', 'ok', 1)
+  ('write_function', 'applied', 2)
+  ('write_function', 'pending', 3)
+  ('write_function', 'rejected', 1)
+average latency by layer (layer, calls, avg ms):
+  ('code_gen', 45, 101.0)
+  ('generic_engine', 12, 149.0)
+  ('memory', 1, 20.0)
+  ('write_function', 3, 246.0)
+
+SELECT id, ts, layer, tool_name, status, substr(query_or_code, 1, 60) FROM interactions ORDER BY id;
+  (1, '2026-10-08T08:36:58.264529+00:00', 'generic_engine', 'aggregate_elements', 'ok', '{"category": "Doors", "aggregate": "count"}')
+  (2, '2026-10-08T08:37:07.135096+00:00', 'generic_engine', 'run_audit', 'ok', '{"rule_name": "missing_fire_rating"}')
+  (3, '2026-10-08T08:37:12.279487+00:00', 'generic_engine', 'query_elements', 'ok', '{"category": "Doors", "filters": [{"parameter": "Fire Rating')
+  (4, '2026-10-08T08:37:24.711888+00:00', 'generic_engine', 'query_elements', 'ok', '{"category": "Doors", "filters": [{"parameter": "Fire Rating')
+  (5, '2026-10-08T08:37:46.565275+00:00', 'generic_engine', 'aggregate_elements', 'ok', '{"category": "Rooms", "aggregate": "sum", "aggregate_field":')
+  (6, '2026-10-08T08:38:07.302190+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (7, '2026-10-08T08:38:13.494744+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (8, '2026-10-08T08:38:23.769561+00:00', 'code_gen', 'run_generated_snippet', 'refused', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (9, '2026-10-08T08:38:32.400197+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (10, '2026-10-08T08:38:39.392078+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (11, '2026-10-08T08:38:45.842940+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (12, '2026-10-08T08:38:58.214639+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nout = []\nfor d in doo')
+  (13, '2026-10-08T08:39:14.161249+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (14, '2026-10-08T08:39:30.964797+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nout = []\nfor d in doo')
+  (15, '2026-10-08T08:39:40.013388+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (16, '2026-10-08T08:39:55.971648+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (17, '2026-10-08T08:39:59.572346+00:00', 'generic_engine', 'list_audit_rules', 'ok', '{}')
+  (18, '2026-10-08T08:40:10.748321+00:00', 'generic_engine', 'query_elements', 'ok', '{"category": "Doors", "return_fields": ["_id", "Level", "Hos')
+  (19, '2026-10-08T08:40:12.754237+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nout = []\nfor d in doo')
+  (20, '2026-10-08T08:40:28.557821+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (21, '2026-10-08T08:40:38.055253+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (22, '2026-10-08T08:40:39.778290+00:00', 'code_gen', 'run_generated_snippet', 'ok', 'doors = revit_ro.get_elements("Doors")\nout = []\nfor d in doo')
+  (23, '2026-10-08T08:40:46.446028+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (24, '2026-10-08T08:40:53.742330+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (25, '2026-10-08T08:40:59.633440+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (26, '2026-10-08T08:41:11.850354+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (27, '2026-10-08T08:41:20.630510+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (28, '2026-10-08T08:41:36.528140+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (29, '2026-10-08T08:41:55.349369+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (30, '2026-10-08T08:42:10.973763+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (31, '2026-10-08T08:42:22.606869+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (32, '2026-10-08T08:42:34.850716+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (33, '2026-10-08T08:42:44.731494+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nout = []\nfor d in doo')
+  (34, '2026-10-08T08:42:48.649008+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (35, '2026-10-08T08:42:58.952665+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (36, '2026-10-08T08:42:59.877716+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nout = []\nfor d in doo')
+  (37, '2026-10-08T08:43:01.531963+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (38, '2026-10-08T08:43:09.629762+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nout = []\nfor d in doo')
+  (39, '2026-10-08T08:43:10.430259+00:00', 'code_gen', 'run_generated_snippet', 'refused', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (40, '2026-10-08T08:43:17.708523+00:00', 'code_gen', 'run_generated_snippet', 'ok', 'doors = revit_ro.get_elements("Doors")\nout = []\nfor d in doo')
+  (41, '2026-10-08T08:43:19.373159+00:00', 'generic_engine', 'list_audit_rules', 'ok', '{}')
+  (42, '2026-10-08T08:43:34.255159+00:00', 'write_function', 'propose_set_parameter', 'pending', '{"category": "Doors", "element_ids": [1674636], "param_name"')
+  (43, '2026-10-08T08:43:35.865189+00:00', 'code_gen', 'run_generated_snippet', 'error', 'doors = revit_ro.get_elements("Doors")\nbad = []\nfor d in doo')
+  (44, '2026-10-08T08:43:40.942871+00:00', 'write_function', 'set_parameter', 'applied', "set_parameter {'category': 'Doors', 'element_ids': [1674636]")
+  (45, '2026-10-08T08:43:49.478457+00:00', 'code_gen', 'run_generated_snippet', 'ok', 'ids = [1674233, 1674356, 1674636, 1674674, 1676128, 1678957]')
+  (46, '2026-10-08T08:45:49.729768+00:00', 'generic_engine', 'run_audit', 'ok', '{"rule_name": "missing_room_name"}')
+  (47, '2026-10-08T08:45:51.348721+00:00', 'generic_engine', 'query_elements', 'ok', '{"category": "Rooms", "filters": [{"parameter": "Name", "ope')
+  (48, '2026-10-08T08:45:53.118702+00:00', 'generic_engine', 'query_elements', 'ok', '{"category": "Rooms", "filters": [{"parameter": "Name", "ope')
+  (49, '2026-10-08T08:45:54.703000+00:00', 'generic_engine', 'query_elements', 'ok', '{"category": "Rooms", "filters": [{"parameter": "Name", "ope')
+  (50, '2026-10-08T08:46:14.114993+00:00', 'write_function', 'propose_set_parameter', 'pending', '{"category": "Rooms", "element_ids": [1675865, 1679598], "pa')
+  (51, '2026-10-08T08:46:18.884639+00:00', 'write_function', 'set_parameter', 'applied', "set_parameter {'category': 'Rooms', 'element_ids': [1675865,")
+  (52, '2026-10-08T08:46:38.441765+00:00', 'none', 'chat_reply', 'ok', '')
+  (53, '2026-10-08T08:46:51.345561+00:00', 'write_function', 'propose_set_parameter', 'pending', '{"category": "Doors", "element_ids": [1674233, 1674356, 1674')
+  (54, '2026-10-08T08:46:57.281876+00:00', 'write_function', 'set_parameter', 'rejected', "set_parameter {'category': 'Doors', 'element_ids': [1674233,")
+  (55, '2026-10-08T08:47:10.140491+00:00', 'memory', 'query_past_changes', 'ok', '{}')
+  (56, '2026-10-08T08:57:06.793545+00:00', 'code_gen', 'run_generated_snippet', 'ok', 'ids = [1674233, 1674356, 1674636, 1674674, 1676128, 1678957]')
+  (57, '2026-10-08T09:39:11.421464+00:00', 'code_gen', 'run_generated_snippet', 'error', "for d in revit_ro.get_elements('Doors'):\n    revit_ro.set_pa")
+  (58, '2026-10-08T09:39:11.475582+00:00', 'code_gen', 'run_generated_snippet', 'error', "t = Transaction(None, 'x')\nresult = 1")
+  (59, '2026-10-08T09:39:11.545265+00:00', 'code_gen', 'run_generated_snippet', 'refused', 'revit_ro.doc.Delete(1)\nresult = 1')
+  (60, '2026-10-08T09:39:11.656325+00:00', 'code_gen', 'run_generated_snippet', 'refused', "result = eval('1')")
+  (61, '2026-10-08T09:39:11.743760+00:00', 'code_gen', 'run_generated_snippet', 'ok', "result = len(revit_ro.get_elements('Doors'))")
+  (62, '2026-10-08T09:39:11.972291+00:00', 'code_gen', 'run_generated_snippet', 'ok', "result = [d['id'] for d in revit_ro.get_elements('Doors')]")
+  (63, '2026-10-08T09:39:12.089525+00:00', 'code_gen', 'run_generated_snippet', 'ok', "result = {'doors': len(revit_ro.get_elements('Doors')), 'fir")
+  (64, '2026-10-08T09:39:12.278761+00:00', 'code_gen', 'run_generated_snippet', 'ok', "result = [[d['id'], revit_ro.get_level_of_element(d['id']), ")
+  (65, '2026-10-08T09:39:12.564526+00:00', 'code_gen', 'run_generated_snippet', 'ok', "result = [d['id'] for d in revit_ro.get_elements('Doors') if")
+
+== 5. phase 5 checkpoint ==
+PASS  checkpoint 1: propose -> confirm -> apply -> re-audit worked on >= 2 rules   -> ['missing_fire_rating', 'missing_room_name']
+PASS  checkpoint 3: >= 10 interactions, each tagged with its layer   -> 65 rows, layers ['code_gen', 'generic_engine', 'memory', 'none', 'write_function']
+PASS  all four layers appear (generic_engine, code_gen, write_function, memory)
+PASS  proposal outcomes are logged (applied and rejected)
+PASS  row 7 is logged at code_gen as error/refused   -> 4
+PASS  the memory lookup is logged
+info: first-run code_gen rows that hit the Int64 bug (now fixed): 28
+
+PHASE 5 CHECKPOINT: PASS

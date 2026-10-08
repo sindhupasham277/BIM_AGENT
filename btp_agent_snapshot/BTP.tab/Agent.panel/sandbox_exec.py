@@ -231,21 +231,50 @@ def _make_facade(ro):
     return facade
 
 
+_CLR_INTS = ("Int64", "Int32", "Int16", "UInt64", "UInt32", "UInt16", "Byte", "SByte")
+_CLR_FLOATS = ("Double", "Single", "Decimal")
+
+
+def _scalar(value):
+    # A plain Python scalar, or ValueError. ElementId.Value is a .NET Int64 (not a
+    # Python int), so CLR numbers are converted; Revit objects never are.
+    if value is None or isinstance(value, _PLAIN_SCALARS):
+        return value
+    tname = type(value).__name__
+    if tname in _CLR_INTS:
+        return int(str(value))
+    if tname in _CLR_FLOATS:
+        return float(str(value))
+    if getattr(type(value), "__module__", "") == "System":
+        s = str(value)
+        try:
+            return int(s)
+        except ValueError:
+            return float(s)
+    raise ValueError("not a scalar: " + tname)
+
+
 def _plain(value, depth=0):
     if depth > 20:
         raise ValueError("result is nested too deeply")
-    if value is None or isinstance(value, _PLAIN_SCALARS):
-        return value
-    if isinstance(value, (list, tuple)):
+    try:
+        return _scalar(value)
+    except ValueError:
+        pass
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [_plain(x, depth + 1) for x in value]
+    if type(value).__name__ in ("generator", "xrange", "range", "dict_keys", "dict_values", "dict_items", "enumerate"):
         return [_plain(x, depth + 1) for x in value]
     if isinstance(value, dict):
         out = {}
         for k, v in value.items():
-            if not isinstance(k, _PLAIN_SCALARS):
+            try:
+                key = _scalar(k)
+            except ValueError:
                 raise ValueError("result has a non-plain dictionary key")
-            out[k] = _plain(v, depth + 1)
+            out[key] = _plain(v, depth + 1)
         return out
-    raise ValueError("result must be plain data (numbers, text, lists, dicts)")
+    raise ValueError("result must be plain data (numbers, text, lists, dicts); found type: " + type(value).__name__)
 
 
 def run_snippet(code, revit_ro_instance, timeout_sec=5):
