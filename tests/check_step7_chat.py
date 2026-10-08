@@ -41,8 +41,8 @@ def turn(sid, text):
     b.handle_message(b.MessagePayload(session_id=sid, user_message=text))
     return rows()[n:]
 
+script[:] = [Msg("Hello! I can help with your Revit model.")]
 new = turn("chat-1", "Hello there")
-script[:] = []
 check("plain chat turn: 1 row, kind chat, layer none", len(new) == 1 and new[0][1] == "chat" and new[0][2] == "none" and new[0][5] == "Hello there", new)
 
 script[:] = [Msg(None, [TC("c1", "run_audit", {"rule_name": "missing_fire_rating"})]), Msg("1 door")]

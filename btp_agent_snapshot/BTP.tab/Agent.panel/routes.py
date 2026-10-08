@@ -765,3 +765,18 @@ def route_fix_preview(doc, request):
             data={"error": traceback.format_exc()},
             status=500
         )
+
+
+# ============================================================
+# /model_info  (READ-ONLY: returns the title of the open model)
+# ============================================================
+
+@api.route("/model_info", methods=["GET"])
+def route_model_info(doc, request):
+    try:
+        return {"title": doc.Title}
+    except Exception as e:
+        return routes.make_response(
+            data={"error": str(e)},
+            status=500
+        )

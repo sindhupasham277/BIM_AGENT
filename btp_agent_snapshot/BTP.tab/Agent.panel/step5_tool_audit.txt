@@ -1497,3 +1497,15 @@ TOOL: run_audit
 ARGUMENTS: {"rule_name": "missing_fire_rating"}
 RESULT: {"description": "Find doors without a fire rating", "count": 1, "rule_name": "missing_fire_rating", "results": [{"_id": "1674636"}]}
 ----------------------------------------
+SESSION: chat-1
+USER: Run the audit
+TOOL: run_audit
+ARGUMENTS: {"rule_name": "missing_fire_rating"}
+RESULT: {"rule_name": "missing_fire_rating", "description": "Find doors without a fire rating", "count": 1, "results": [{"_id": "1674636"}]}
+----------------------------------------
+SESSION: chat-1
+USER: Show doors where "Foo Bar" is empty
+TOOL: query_elements
+ARGUMENTS: {"category": "Doors", "filters": [{"parameter": "Fire Rating", "operator": "is_null", "value": ""}]}
+VALIDATION ERROR: The requested parameter "Foo Bar" is not available with that exact name in the model schema.
+----------------------------------------

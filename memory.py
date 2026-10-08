@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS interactions (
   session_id        TEXT NOT NULL,
   model_name        TEXT,
   user_text         TEXT,
-  kind              TEXT NOT NULL CHECK (kind IN ('query','audit','proposal','change','memory','refused')),
+  kind              TEXT NOT NULL CHECK (kind IN ('query','audit','proposal','change','memory','refused','chat')),
   layer             TEXT NOT NULL CHECK (layer IN ('generic_engine','code_gen','write_function','memory','none')),
   tool_name         TEXT,
   query_or_code     TEXT,

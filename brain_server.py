@@ -324,6 +324,9 @@ def _summary_of(result):
 def dispatch_tool(name, arguments, session):
     """EVERY tool call goes through here, so every call is logged exactly once."""
 
+    if isinstance(session, dict):
+        session["turn_logged"] = True
+
     t0 = time.time()
     entry = TOOL_REGISTRY.get(name)
 
@@ -355,6 +358,17 @@ def dispatch_tool(name, arguments, session):
                proposal_id=(result.get("proposal_id") if isinstance(result, dict) else None),
                duration_ms=int((time.time() - t0) * 1000))
     return result
+
+
+def fetch_model_name():
+    """Title of the open Revit model, from the read-only /model_info route."""
+    try:
+        r = requests.get("http://127.0.0.1:48884/bim-brain/model_info", timeout=5)
+        r.raise_for_status()
+        title = r.json().get("title")
+        return str(title) if title else None
+    except Exception:
+        return None
 
 
 # /chat route
@@ -409,6 +423,8 @@ def handle_message(payload: MessagePayload):
     session = _sessions[payload.session_id]
     session["session_id"] = payload.session_id
     session["last_user_text"] = payload.user_message
+    session["turn_logged"] = False
+    session["model_name"] = fetch_model_name()
 
 
     # --------------------------------------------------------
@@ -637,6 +653,15 @@ def handle_message(payload: MessagePayload):
 
                     answer = validation_error
 
+                    session["turn_logged"] = True
+                    memory.log(
+                        session, "refused",
+                        TOOL_REGISTRY.get(tool_call.function.name, {}).get("layer", "none"),
+                        tool_call.function.name,
+                        json.dumps(arguments, default=str),
+                        "refused", str(validation_error)[:500]
+                    )
+
                     write_audit(
                         "VALIDATION ERROR: "
                         + validation_error
@@ -717,6 +742,10 @@ def handle_message(payload: MessagePayload):
     # --------------------------------------------------------
     # Response
     # --------------------------------------------------------
+
+    if not session.get("turn_logged"):
+        # a chat turn where no tool was called still produces a row
+        memory.log(session, "chat", "none", "chat_reply", "", "ok", str(answer)[:500])
 
     pending_cards = session["outbox"]
     session["outbox"] = []
