@@ -24,3 +24,7 @@ agent_memory.db
 agent_memory_dev_*.db
 *.db-wal
 *.db-shm
+
+agent_memory_dev_*.db
+*.db-wal
+*.db-shm

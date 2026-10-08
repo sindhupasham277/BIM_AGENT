@@ -1,6 +1,7 @@
 # memory.py  (brain side)  SQLite log of every interaction. Append-only.
 # No Revit imports: this file cannot reach the write layer.
 import os
+import getpass
 import sqlite3
 import pathlib
 import datetime
@@ -25,7 +26,9 @@ CREATE TABLE IF NOT EXISTS interactions (
   proposal_id       TEXT,
   violations_before INTEGER,
   violations_after  INTEGER,
-  duration_ms       INTEGER
+  duration_ms       INTEGER,
+  user_name         TEXT,
+  confirmation      TEXT
 );
 CREATE TABLE IF NOT EXISTS change_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,6 +48,24 @@ def _con(path=None):
 def init(path=None):
     with closing(_con(path)) as con, con:
         con.executescript(SCHEMA)
+        cols = [r[1] for r in con.execute("PRAGMA table_info(interactions)")]
+        if "user_name" not in cols:
+            con.execute("ALTER TABLE interactions ADD COLUMN user_name TEXT")
+        if "confirmation" not in cols:
+            con.execute("ALTER TABLE interactions ADD COLUMN confirmation TEXT")
+
+
+def _user():
+    try:
+        return getpass.getuser()
+    except Exception:
+        return None
+
+
+def _confirmation(kind, status):
+    if kind != "change":
+        return "n/a"
+    return "rejected" if status == "rejected" else "confirmed"
 
 
 def log(session, kind, layer, tool_name, query_or_code, status, result_summary="",
@@ -58,11 +79,13 @@ def log(session, kind, layer, tool_name, query_or_code, status, result_summary="
             cur = con.execute(
                 "INSERT INTO interactions (ts, session_id, model_name, user_text, kind, layer,"
                 " tool_name, query_or_code, result_summary, status, audit_name, proposal_id,"
-                " violations_before, violations_after, duration_ms) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " violations_before, violations_after, duration_ms, user_name, confirmation)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (now, str(s.get("session_id", "unknown")), s.get("model_name"), s.get("last_user_text"),
                  kind, layer, tool_name,
                  (query_or_code or "")[:20000], (result_summary or "")[:500], status,
-                 audit_name, proposal_id, before, after, duration_ms))
+                 audit_name, proposal_id, before, after, duration_ms,
+                 _user(), _confirmation(kind, status)))
             if items:
                 con.executemany(
                     "INSERT INTO change_items (interaction_id, element_id, scope, param_name,"
