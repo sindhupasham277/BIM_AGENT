@@ -2375,4 +2375,3 @@ def _show_fake_proposal_if_any(form):
 chat = ChatForm()
 
 chat.Show()
-_show_fake_proposal_if_any(chat)
