@@ -28,3 +28,8 @@ agent_memory_dev_*.db
 agent_memory_dev_*.db
 *.db-wal
 *.db-shm
+
+# eval Revit models
+eval/models/*.rvt
+eval/models/*.rvt.*
+eval/models/working/
