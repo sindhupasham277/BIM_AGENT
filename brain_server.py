@@ -1,6 +1,7 @@
 import os
 import json
 import re
+from llm_config import LLM_MODEL
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -527,7 +528,7 @@ def handle_message(payload: MessagePayload):
         # ----------------------------------------------------
 
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model=LLM_MODEL,
             messages=messages
         )
 
@@ -546,7 +547,7 @@ def handle_message(payload: MessagePayload):
         while True:
 
             response = client.chat.completions.create(
-                model="gpt-5-mini",
+                model=LLM_MODEL,
                 messages=messages,
                 tools=OPENAI_TOOLS,
                 tool_choice="auto"
