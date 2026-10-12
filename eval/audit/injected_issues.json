@@ -1,0 +1,65 @@
+{
+  "model_file": "Model_B_injected.rvt",
+  "model_a_sha256": "BB42705CB798139983EE80C5746E0FC2BC0647A8D01DA9F64910BF6682ED1AAF",
+  "model_b_sha256": "B1C5D6ACAAD973D1A2938DF27ACA83A3304F8C8364EFE8BA546DC3AC70479C75",
+  "created": "2026-10-12",
+  "notes": "Element IDs are instance IDs. Rules 1 and 5 are injected through a defect type, so every instance on that type is flagged.",
+  "rules": {
+    "missing_fire_rating": {
+      "category": "Doors",
+      "injected_ids": [
+        1674233,
+        1674356,
+        1674636,
+        1674674
+      ],
+      "decoy_ids": [
+        1678957
+      ]
+    },
+    "missing_room_name": {
+      "category": "Rooms",
+      "injected_ids": [
+        1680622,
+        1682933,
+        1682936
+      ],
+      "decoy_ids": [
+        1682939
+      ]
+    },
+    "missing_room_number": {
+      "category": "Rooms",
+      "injected_ids": [
+        1682942,
+        1682945,
+        1682948
+      ],
+      "decoy_ids": [
+        1679601
+      ]
+    },
+    "missing_wall_mark": {
+      "category": "Walls",
+      "injected_ids": [
+        1682824,
+        1682569,
+        1682134
+      ],
+      "decoy_ids": [
+        1675759
+      ]
+    },
+    "missing_column_type_mark": {
+      "category": "Structural Columns",
+      "injected_ids": [
+        1678294,
+        1681147,
+        1681264
+      ],
+      "decoy_ids": [
+        1681116
+      ]
+    }
+  }
+}
