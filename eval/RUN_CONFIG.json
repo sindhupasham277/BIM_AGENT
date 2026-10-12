@@ -1,11 +1,11 @@
 {
-  "date_frozen": "2026-10-10",
+  "date_frozen": "2026-10-12",
   "git_tag": "phase5-complete",
   "git_commit": "051090a",
   "eval_branch": "phase6-eval",
   "llm_model_alias": "gpt-5-mini",
   "llm_model_resolved": "gpt-5-mini-2025-08-07",
-  "temperature": "model default; not configurable on gpt-5-mini",
+  "temperature": "not set (model default)",
   "max_tokens": "not set (API default)",
   "sandbox_timeout_seconds": 5,
   "bridge_http_timeout_seconds": 60,
@@ -16,5 +16,7 @@
   "machine": "Intel Core i5-1155G7 @ 2.50GHz, 16 GB RAM",
   "network_note": "home wifi",
   "model_a_sha256": "BB42705CB798139983EE80C5746E0FC2BC0647A8D01DA9F64910BF6682ED1AAF",
-  "model_b_sha256": "B1C5D6ACAAD973D1A2938DF27ACA83A3304F8C8364EFE8BA546DC3AC70479C75"
+  "model_b_sha256": "B1C5D6ACAAD973D1A2938DF27ACA83A3304F8C8364EFE8BA546DC3AC70479C75",
+  "code_commit_evaluated": "500962a",
+  "code_note": "phase5-complete (051090a) plus config-only commit 500962a, no behaviour change"
 }
