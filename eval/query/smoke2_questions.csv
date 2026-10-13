@@ -1,0 +1,4 @@
+﻿id,conversation,turn,question,ground_truth,expected_layer
+T1,T1,1,How many walls are there?,11,generic_engine
+T1,T1,2,How many of those are Basic Wall: Generic type?,11,generic_engine
+X1,X1,1,How many doors are hosted in walls longer than 4 m?,n/a,code_gen

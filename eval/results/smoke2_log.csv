@@ -1,0 +1,47 @@
+﻿id,question,turn,layer,tool_call_or_code,agent_answer,ground_truth,correct,t_total,t_llm,t_revit,conversation,expected_layer,status,tools,proposals,model_title,session_id,run_label,ts
+T1,How many walls are there?,1,generic_engine,"aggregate_elements: {""category"": ""Walls"", ""aggregate"": ""count""}",There are 11 walls in the model.,11,,3.918,3.854,0.064,T1,generic_engine,ok,aggregate_elements,0,A_working,eval-T1-ca0ac6e4,smoke2,2026-10-13T11:57:47
+T1,How many of those are Basic Wall: Generic type?,2,generic_engine,"aggregate_elements: {""category"": ""Walls"", ""filters"": [{""parameter"": ""Type Name"", ""operator"": ""=="", ""value"": ""Basic Wall: Generic type""}], ""aggregate"": ""count""}","0 walls are of the ""Basic Wall: Generic type"" type.",11,,5.469,5.343,0.126,T1,generic_engine,ok,aggregate_elements,0,A_working,eval-T1-ca0ac6e4,smoke2,2026-10-13T11:57:53
+X1,How many doors are hosted in walls longer than 4 m?,1,code_gen,"run_generated_snippet: walls = revit_ro.get_elements(""Walls"")
+lengths = []
+for w in walls:
+    l = revit_ro.get_param(w[""id""], ""Length"")
+    if l is not None:
+        lengths.append(l)
+count_ft = 0
+count_m = 0
+for l in lengths:
+    if l > 13:
+        count_ft += 1
+    if l > 4:
+        count_m += 1
+unit_is_feet = count_ft > count_m
+threshold = 13.123359580052493 if unit_is_feet else 4
+
+doors = revit_ro.get_elements(""Doors"")
+matching = []
+for d in doors:
+    host = revit_ro.get_host_id(d[""id""])
+    if host is None:
+        continue
+    hl = revit_ro.get_param(host, ""Length"")
+    if hl is None:
+        continue
+    if hl > threshold:
+        matching.append(d[""id""])
+
+result = {""assumed_units"": ""feet"" if unit_is_feet else ""meters"", ""threshold_used"": threshold, ""door_count"": len(matching), ""door_ids"": matching} || run_generated_snippet: doors = revit_ro.get_elements(""Doors"")
+matching = []
+for d in doors:
+    host = revit_ro.get_host_id(d[""id""])
+    if host is None:
+        continue
+    hl = revit_ro.get_param(host, ""Length"")
+    if hl is None:
+        continue
+    if hl > 4:
+        matching.append(d[""id""])
+result = {""threshold_m"": 4, ""door_count"": len(matching), ""door_ids"": matching}","There are 8 doors hosted in walls with Length > 4 (using the wall ""Length"" parameter, compared to 4 in the model units).
+
+Door element IDs: [1674233, 1674356, 1674636, 1674674, 1676128, 1678957, 1681335, 1681355]
+
+Would you like names/levels or the host wall IDs for these doors, or should I re-run interpreting ""4 m"" explicitly (convert to model units if the project uses feet)?",n/a,,27.369,26.377,0.992,X1,code_gen,refused+ok,run_generated_snippet + run_generated_snippet,0,A_working,eval-X1-8b6f21eb,smoke2,2026-10-13T11:58:20
