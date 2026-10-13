@@ -34,3 +34,4 @@ eval/models/*.rvt
 eval/models/*.rvt.*
 eval/models/working/
 eval/results/eval_memory.db*
+eval/results/*.db

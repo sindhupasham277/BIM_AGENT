@@ -1,0 +1,25 @@
+OVERALL
+  all 20 turns                 n=20  accuracy=13.5/20 (68%)  fully correct=12  routing=17/20
+
+BY QUESTION GROUP
+  code_gen                     n= 7  accuracy= 3.5/7 (50%)  fully correct=3  routing=4/7
+  generic                      n= 8  accuracy= 5.0/8 (62%)  fully correct=4  routing=8/8
+  multi_turn                   n= 5  accuracy= 5.0/5 (100%)  fully correct=5  routing=5/5
+
+BY LOGGED LAYER
+  code_gen                     n= 4  accuracy= 0.5/4 (12%)  fully correct=0  routing=4/4
+  generic_engine               n=15  accuracy=12.0/15 (80%)  fully correct=11  routing=13/15
+  generic_engine+code_gen      n= 1  accuracy= 1.0/1 (100%)  fully correct=1  routing=0/1
+
+FAILURES, PARTIAL SCORES AND ROUTING MISSES
+  G3     score=0.5  routing=1 layer=generic_engine           unit not stated
+  G4     score=0    routing=1 layer=generic_engine           wrong field name
+  G7     score=0.5  routing=1 layer=generic_engine           unit not stated
+  G8     score=0    routing=1 layer=generic_engine           wrong field name
+  C1     score=1    routing=0 layer=generic_engine           routing: expected code_gen
+  C2     score=0.5  routing=1 layer=code_gen                 bad snippet
+  C3     score=0    routing=1 layer=code_gen                 bad snippet
+  C4     score=1    routing=0 layer=generic_engine+code_gen  routing: expected code_gen
+  C5     score=1    routing=0 layer=generic_engine           routing: expected code_gen
+  C6     score=0    routing=1 layer=code_gen                 bad snippet
+  C7     score=0    routing=1 layer=code_gen                 bad snippet
