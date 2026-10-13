@@ -33,3 +33,4 @@ agent_memory_dev_*.db
 eval/models/*.rvt
 eval/models/*.rvt.*
 eval/models/working/
+eval/results/eval_memory.db*
