@@ -1,0 +1,7 @@
+﻿"id","conversation","turn","question","ground_truth","expected_layer"
+"G1-CM","G1-CM","1","What is the total number of rooms in the building?","8","generic_engine"
+"G2-CM","G2-CM","1","How many doors in the model are rated for 2H fire resistance?","1","generic_engine"
+"G3-CM","G3-CM","1","What is the combined area of all the rooms in the building?","661 m2","generic_engine"
+"G5-CM","G5-CM","1","What is the total count of structural columns in the model?","6","generic_engine"
+"C1-CM","C1-CM","1","How many walls have a length greater than 5 metres?","9 walls","code_gen"
+"C2-CM","C2-CM","1","Which room has the highest number of doors?","Room 1 (Number 105)","code_gen"
