@@ -1,0 +1,10 @@
+model: A_working | mode: clean
+rule                        exp   TP   FP   FN  prec   rec  decoy  t_audit
+missing_fire_rating           0    0    0    0   n/a   n/a      0    0.02s
+missing_room_name             0    0    0    0   n/a   n/a      0    0.02s
+missing_room_number           0    0    0    0   n/a   n/a      0    0.02s
+missing_wall_mark             0    0    0    0   n/a   n/a      0    0.03s
+missing_column_type_mark      0    0    0    0   n/a   n/a      0    0.03s
+OVERALL (micro)               0    0    0    0   n/a   n/a
+
+No mismatches.
