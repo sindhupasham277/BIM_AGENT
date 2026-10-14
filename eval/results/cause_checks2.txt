@@ -1,0 +1,31 @@
+active model: A_working
+
+=== category names in the schema
+["Columns", "Doors", "Rooms", "Walls", "Windows"]
+
+=== sandbox get_elements('Columns')
+{"status": "ok", "result": {"count": 0, "elements": []}}
+
+=== sandbox get_elements('Structural Columns')
+{"status": "ok", "result": {"count": 0, "elements": []}}
+
+=== sandbox get_elements('StructuralColumns')
+{"status": "ok", "result": {"count": 0, "elements": []}}
+
+=== sandbox get_elements('Column')
+{"status": "ok", "result": {"count": 0, "elements": []}}
+
+=== sandbox get_elements('Structural Column')
+{"status": "ok", "result": {"count": 0, "elements": []}}
+
+=== raw element fields: Doors
+{"status": "ok", "result": [{"category": "Doors", "name": "d1", "id": 1674233}, {"category": "Doors", "name": "d1", "id": 1674356}, {"category": "Doors", "name": "d1", "id": 1674636}, {"category": "Doors", "name": "d1", "id": 1674674}, {"category": "Doors", "name": "d1", "id": 1676128}, {"category": "Doors", "name": "900 x 2000mm", "id": 1678957}, {"category": "Doors", "name": "d1", "id": 1681335}, {"category": "Doors", "name": "d1", "id": 1681355}]}
+
+=== raw bbox: first door
+{"status": "ok", "result": {"min": [-5.634135075746352, 35.21048830797607, -3.2862601528904634e-14], "max": [1.3181287037812206, 42.38798174629951, 6.889763779527559]}}
+
+=== raw bbox: first wall
+{"status": "ok", "result": {"min": [-40.26651696551012, 41.69014710062701, 0.0], "max": [58.814847863886186, 42.34631507962963, 11.811023622047244]}}
+
+=== raw bbox: first room
+{"status": "ok", "result": {"min": [42.410648388820576, 19.380435814537773, 0.0], "max": [58.15867988488357, 41.690147100627016, 10.0]}}
