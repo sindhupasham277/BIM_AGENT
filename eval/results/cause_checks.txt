@@ -1,0 +1,32 @@
+bridge base: http://127.0.0.1:48884/bim-brain
+active model: A_working
+
+=== schema
+schema saved: schema_A.json (11281 bytes)
+Doors entry in schema (first 1800 chars):
+{"Family Name": "String", "Phase Created": "ElementId", "Bottom Rail": "Double", "Threshold Offset": "Double", "Rough Height": "Double", "Comments": "String", "Head Height": "Double", "Head": "String", "Thermal Transmittance (U)": "Double", "Jamb": "String", "MFOpeningWidth": "Double", "Assembly Description": "String", "Manufacturer": "String", "Sill Height": "Double", "Type Id": "ElementId", "Glass Stop Material": "ElementId", "Define Thermal Properties by": "Integer", "Exterior Pull Material": "ElementId", "Image": "ElementId", "Panel Material": "ElementId", "Export Type to IFC As": "String", "Panic Bar Material": "ElementId", "Top Rail": "Double", "Family": "ElementId", "Rough Width": "Double", "Keynote": "String", "Level": "ElementId", "Construction Type": "String", "Dry Wall Frame": "Integer", "MFOpeningHeight": "Double", "Swing Angle": "Double", "Operation": "String", "Frame Material": "String", "Frame Finish": "String", "Hardware": "String", "Masonry Inset": "Double", "Analytic Construction": "String", "Under Cut": "String", "Material": "String", "Model": "String", "Masonry Frame": "Integer", "Fire Rating": "String", "Design Option": "ElementId", "Lock Rail": "Double", "Glazing": "ElementId", "Phase Demolished": "ElementId", "Description": "String", "URL": "String", "Type IfcGUID": "String", "Classification Title": "String", "Family and Type": "ElementId", "IFC Predefined Type": "String", "Type Image": "ElementId", "Width": "Double", "Solar Heat Gain Coefficient": "Double", "Classification Number": "String", "Host Id": "ElementId", "Threshold Material": "ElementId", "Assembly Code": "String", "Type IFC Predefined Type": "String", "Export to IFC": "Integer", "IfcGUID": "String", "Height": "Double", "Cost": "Double", "Strike Height": "Double", "Threshold Length": "
+
+=== Doors: get_param 'Type Name'
+{"status": "ok", "result": [{"value": null, "id": 1674233}, {"value": null, "id": 1674356}, {"value": null, "id": 1674636}, {"value": null, "id": 1674674}, {"value": null, "id": 1676128}, {"value": null, "id": 1678957}, {"value": null, "id": 1681335}, {"value": null, "id": 1681355}]}
+
+=== Doors: get_param 'Family and Type'
+{"status": "ok", "result": [{"value": 1680293, "id": 1674233}, {"value": 1680293, "id": 1674356}, {"value": 1680293, "id": 1674636}, {"value": 1680293, "id": 1674674}, {"value": 1680293, "id": 1676128}, {"value": 1448341, "id": 1678957}, {"value": 1680293, "id": 1681335}, {"value": 1680293, "id": 1681355}]}
+
+=== Doors: get_param 'Type'
+{"status": "ok", "result": [{"value": 1680293, "id": 1674233}, {"value": 1680293, "id": 1674356}, {"value": 1680293, "id": 1674636}, {"value": 1680293, "id": 1674674}, {"value": 1680293, "id": 1676128}, {"value": 1448341, "id": 1678957}, {"value": 1680293, "id": 1681335}, {"value": 1680293, "id": 1681355}]}
+
+=== Doors: get_param 'Family'
+{"status": "ok", "result": [{"value": 1680293, "id": 1674233}, {"value": 1680293, "id": 1674356}, {"value": 1680293, "id": 1674636}, {"value": 1680293, "id": 1674674}, {"value": 1680293, "id": 1676128}, {"value": 1448341, "id": 1678957}, {"value": 1680293, "id": 1681335}, {"value": 1680293, "id": 1681355}]}
+
+=== Columns: bbox and Type Mark
+{"status": "ok", "result": {"columns": [], "count": 0}}
+
+=== Rooms: name field vs Name parameter
+{"status": "ok", "result": [{"number": "104", "param_name": "Room 2", "id": 1679601, "element_name": null}, {"number": "105", "param_name": "Room 1", "id": 1680622, "element_name": null}, {"number": "106", "param_name": "Room 3", "id": 1682933, "element_name": null}, {"number": "107", "param_name": "Room 4", "id": 1682936, "element_name": null}, {"number": "108", "param_name": "Room 5", "id": 1682939, "element_name": null}, {"number": "109", "param_name": "Room 6", "id": 1682942, "element_name": null}, {"number": "110", "param_name": "Room 8", "id": 1682945, "element_name": null}, {"number": "111", "param_name": "Room 7", "id": 1682948, "element_name": null}]}
+
+=== Doors to columns: bbox-centre distances
+{"message": "expected index value, got str", "status": "error"}
+
+=== Columns: farthest pair
+{"status": "ok", "result": {"max_d2_ft2": 0.0, "points": 0}}
+farthest columns by bbox centres: 0.00 m (assuming feet), points=0  (hand-measured ground truth: 30 m)
