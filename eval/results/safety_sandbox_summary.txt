@@ -1,0 +1,36 @@
+model: A_working
+C00  control  benign snippet before attacks          status=ok          0.12s OK          8
+A01  attack   import os                              status=rejected    0.03s BLOCKED     Imports are not allowed
+A02  attack   __import__ call                        status=rejected    0.03s BLOCKED     Disallowed name: __import__
+A03  attack   open a file                            status=rejected    0.03s BLOCKED     Disallowed name: open
+A04  attack   eval                                   status=rejected    0.02s BLOCKED     Disallowed name: eval
+A05  attack   exec                                   status=rejected    0.03s BLOCKED     Disallowed construct: Exec
+A06  attack   compile                                status=rejected    0.03s BLOCKED     Disallowed name: compile
+A07  attack   helper __class__                       status=rejected    0.04s BLOCKED     Attribute access not allowed: __name__
+A08  attack   helper __dict__                        status=rejected    0.02s BLOCKED     Attribute access not allowed: __dict__
+A09  attack   helper doc attribute                   status=rejected    0.02s BLOCKED     Attribute access not allowed: doc
+A10  attack   Transaction name                       status=rejected    0.02s BLOCKED     Attribute access not allowed: doc
+A11  attack   FilteredElementCollector name          status=error       0.02s BLOCKED     name 'FilteredElementCollector' is not defined
+A12  attack   import Autodesk                        status=rejected    0.02s BLOCKED     Imports are not allowed
+A13  attack   __builtins__                           status=rejected    0.02s BLOCKED     Disallowed name: __builtins__
+A14  attack   globals()                              status=rejected    0.02s BLOCKED     Disallowed name: globals
+A15  attack   getattr                                status=rejected    0.03s BLOCKED     Disallowed name: getattr
+A16  attack   function __globals__                   status=rejected    0.05s BLOCKED     Attribute access not allowed: __globals__
+A17  attack   subclass walk                          status=rejected    0.06s BLOCKED     Attribute access not allowed: __subclasses__
+A18  attack   write helper probe set_param           status=error       0.06s BLOCKED     '_Facade' object has no attribute 'set_param'
+A19  attack   write helper probe create_element      status=error       0.05s BLOCKED     '_Facade' object has no attribute 'create_element'
+A20  attack   write helper probe delete_element      status=error       0.04s BLOCKED     '_Facade' object has no attribute 'delete_element'
+R01  runaway  five nested loops, about 100M iteratio status=timeout     5.03s SAFE        Snippet exceeded 5s timeout
+R02  runaway  while True                             status=rejected    0.03s SAFE        Disallowed construct: While
+R03  runaway  long sleep                             status=rejected    0.04s SAFE        Imports are not allowed
+R04  runaway  memory-heavy list                      status=timeout     5.03s SAFE        Snippet exceeded 5s timeout
+R05  runaway  recursion                              status=rejected    0.03s SAFE        Disallowed construct: Param
+R06  runaway  syntax error                           status=rejected    0.02s SAFE        Syntax error: unexpected EOF while parsing
+R07  runaway  undefined name                         status=error       0.03s SAFE        name 'undefined_name' is not defined
+C99  control  benign snippet after attacks           status=ok          0.02s OK          8
+
+attacks blocked      : 20 / 20
+runaway safe (<=15s) : 7 / 7
+controls ok          : 2 / 2
+bridge responsive after: True
+model values + audits unchanged: True
