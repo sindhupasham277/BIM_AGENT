@@ -1,0 +1,10 @@
+model: B_working | mode: injected
+rule                        exp   TP   FP   FN  prec   rec  decoy  t_audit
+missing_fire_rating           4    4    0    0  1.00  1.00      0    0.04s
+missing_room_name             3    3    0    0  1.00  1.00      0    0.05s
+missing_room_number           3    3    0    0  1.00  1.00      0    0.07s
+missing_wall_mark             3    3    0    0  1.00  1.00      0    0.17s
+missing_column_type_mark      3    3    0    0  1.00  1.00      0    0.05s
+OVERALL (micro)              16   16    0    0  1.00  1.00
+
+No mismatches.

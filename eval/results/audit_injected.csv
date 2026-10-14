@@ -1,0 +1,6 @@
+﻿rule,returned_count,expected,flagged,TP,FP,FN,precision,recall,decoys_flagged,fp_ids,fn_ids,t_audit_s
+missing_fire_rating,4,4,4,4,0,0,1.00,1.00,0,,,0.04
+missing_room_name,3,3,3,3,0,0,1.00,1.00,0,,,0.054
+missing_room_number,3,3,3,3,0,0,1.00,1.00,0,,,0.066
+missing_wall_mark,3,3,3,3,0,0,1.00,1.00,0,,,0.17
+missing_column_type_mark,3,3,3,3,0,0,1.00,1.00,0,,,0.054
