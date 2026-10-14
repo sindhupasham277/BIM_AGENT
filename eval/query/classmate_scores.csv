@@ -1,0 +1,7 @@
+﻿"id","correct","cause","note"
+"G1-CM","1","",""
+"G2-CM","1","",""
+"G3-CM","0.5","unit not stated","661.28 within 1 percent of 661 m2; unit given as model units"
+"G5-CM","1","",""
+"C1-CM","1","","Answered by generic_engine instead of code_gen; answer correct"
+"C2-CM","1","","Room name returned this time; official run returned null name"

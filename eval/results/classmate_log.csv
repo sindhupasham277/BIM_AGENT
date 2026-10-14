@@ -1,0 +1,48 @@
+﻿id,question,turn,layer,tool_call_or_code,agent_answer,ground_truth,correct,t_total,t_llm,t_revit,conversation,expected_layer,status,tools,proposals,model_title,session_id,run_label,ts
+G1-CM,What is the total number of rooms in the building?,1,generic_engine,"aggregate_elements: {""category"": ""Rooms"", ""aggregate"": ""count""}",There are 8 rooms in the building.,8,,12.478,12.264,0.214,G1-CM,generic_engine,ok,aggregate_elements,0,A_working,eval-G1-CM-9102696a,classmate,2026-10-14T09:41:13
+G2-CM,How many doors in the model are rated for 2H fire resistance?,1,generic_engine,"aggregate_elements: {""category"": ""Doors"", ""filters"": [{""parameter"": ""Fire Rating"", ""operator"": ""=="", ""value"": ""2H""}], ""aggregate"": ""count""}","There is 1 door in the model with a Fire Rating of ""2H"".",1,,4.755,4.686,0.069,G2-CM,generic_engine,ok,aggregate_elements,0,A_working,eval-G2-CM-1391e46e,classmate,2026-10-14T09:41:18
+G3-CM,What is the combined area of all the rooms in the building?,1,generic_engine,"aggregate_elements: {""category"": ""Rooms"", ""aggregate"": ""sum"", ""aggregate_field"": ""Area""}",The combined area of all rooms is 661.28 (model units).,661 m2,,4.554,4.481,0.073,G3-CM,generic_engine,ok,aggregate_elements,0,A_working,eval-G3-CM-a07e0850,classmate,2026-10-14T09:41:22
+G5-CM,What is the total count of structural columns in the model?,1,generic_engine,"aggregate_elements: {""category"": ""Columns"", ""aggregate"": ""count""}",There are 6 structural columns in the model.,6,,3.575,3.528,0.047,G5-CM,generic_engine,ok,aggregate_elements,0,A_working,eval-G5-CM-b3664821,classmate,2026-10-14T09:41:26
+C1-CM,How many walls have a length greater than 5 metres?,1,generic_engine,"aggregate_elements: {""category"": ""Walls"", ""filters"": [{""parameter"": ""Length"", ""operator"": "">"", ""value"": ""5""}], ""aggregate"": ""count""}",There are 9 walls with a Length greater than 5 metres.,9 walls,,5.024,4.965,0.059,C1-CM,code_gen,ok,aggregate_elements,0,A_working,eval-C1-CM-8dfb565e,classmate,2026-10-14T09:41:31
+C2-CM,Which room has the highest number of doors?,1,code_gen,"run_generated_snippet: doors = revit_ro.get_elements(""Doors"")
+counts = {}
+for d in doors:
+    rel = revit_ro.get_relationship(d[""id""], ""rooms_bounding_door"")
+    if rel is None:
+        continue
+    for k in (""from_room_id"", ""to_room_id""):
+        rid = rel.get(k)
+        if rid is not None:
+            counts[rid] = counts.get(rid, 0) + 1
+if not counts:
+    result = []
+else:
+    maxc = max(counts.values())
+    winners = []
+    for rid, c in counts.items():
+        if c == maxc:
+            name = revit_ro.get_param(rid, ""Name"")
+            number = revit_ro.get_param(rid, ""Number"")
+            winners.append({""room_id"": rid, ""name"": name, ""number"": number, ""door_count"": c})
+    result = winners || run_generated_snippet: doors = revit_ro.get_elements(""Doors"")
+counts = {}
+for d in doors:
+    rel = revit_ro.get_relationship(d[""id""], ""rooms_bounding_door"")
+    if rel is None:
+        continue
+    for key in (""from_room_id"", ""to_room_id""):
+        rid = rel.get(key)
+        if rid is None:
+            continue
+        counts[rid] = counts.get(rid, 0) + 1
+if len(counts) == 0:
+    result = []
+else:
+    maxc = max(counts.values())
+    winners = []
+    for rid, c in counts.items():
+        if c == maxc:
+            name = revit_ro.get_param(rid, ""Name"")
+            number = revit_ro.get_param(rid, ""Number"")
+            winners.append({""room_id"": rid, ""name"": name, ""number"": number, ""door_count"": c})
+    result = winners","Room 105 (ID 1680622, Name: ""Room 1"") has the most doors — 3 doors.",Room 1 (Number 105),,15.414,12.73,2.684,C2-CM,code_gen,refused+ok,run_generated_snippet + run_generated_snippet,0,A_working,eval-C2-CM-5de3b8f6,classmate,2026-10-14T09:41:46

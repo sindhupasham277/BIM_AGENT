@@ -1,0 +1,13 @@
+﻿id,official_id,question,agent_answer,layer,correct,routing_correct,official_answer,official_layer,official_correct,official_routing,t_total,note
+G1-CM,G1,What is the total number of rooms in the building?,There are 8 rooms in the building.,generic_engine,1,1,There are 8 rooms in the model.,generic_engine,1,1,12.478,
+G2-CM,G2,How many doors in the model are rated for 2H fire resistance?,"There is 1 door in the model with a Fire Rating of ""2H"".",generic_engine,1,1,1 door has a Fire Rating of 2H.,generic_engine,1,1,4.755,
+G3-CM,G3,What is the combined area of all the rooms in the building?,The combined area of all rooms is 661.28 (model units).,generic_engine,0.5,1,The total area of all rooms is 661.28 (model area units).,generic_engine,0.5,1,4.554,661.28 within 1 percent of 661 m2; unit given as model units
+G5-CM,G5,What is the total count of structural columns in the model?,There are 6 structural columns in the model.,generic_engine,1,1,"There are 6 structural columns in the model.
+
+Would you like me to list their element IDs, types, levels, or locations?",generic_engine,1,1,3.575,
+C1-CM,C1,How many walls have a length greater than 5 metres?,There are 9 walls with a Length greater than 5 metres.,generic_engine,1,0,There are 9 walls longer than 5 m.,generic_engine,1,0,5.024,Answered by generic_engine instead of code_gen; answer correct
+C2-CM,C2,Which room has the highest number of doors?,"Room 105 (ID 1680622, Name: ""Room 1"") has the most doors — 3 doors.",code_gen,1,1,"The room(s) with the most doors:
+
+- Room id: 1680622 — Name: (no Name set) — Doors: 3
+
+Would you like me to list the door element IDs that connect to this room, or set a Name/Number for the room?",code_gen,0.5,1,15.414,Room name returned this time; official run returned null name
