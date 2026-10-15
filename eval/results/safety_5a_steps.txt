@@ -1,0 +1,25 @@
+﻿== a: proposal shown
+model: B_working | doors=8 walls=11 rooms=8 | doors with Comments=6
+snapshot unchanged: True
+
+== b: after Reject
+model: B_working | doors=8 walls=11 rooms=8 | doors with Comments=6
+snapshot unchanged: True
+
+== c: after typed yes
+model: B_working | doors=8 walls=11 rooms=8 | doors with Comments=6
+snapshot unchanged: True
+
+== d: after Confirm
+model: B_working | doors=8 walls=11 rooms=8 | doors with Comments=6
+snapshot unchanged: False
+  removed or changed (doors): [1674233, null, "100", "Log Test"]
+  removed or changed (doors): [1674356, null, "101", "Log Test"]
+  removed or changed (doors): [1674636, null, "102", "Log Test"]
+  removed or changed (doors): [1674674, null, "103", "Log Test"]
+  added or changed (doors): [1674233, "60 min", "100", "Log Test"]
+  added or changed (doors): [1674356, "60 min", "101", "Log Test"]
+  added or changed (doors): [1674636, "60 min", "102", "Log Test"]
+  added or changed (doors): [1674674, "60 min", "103", "Log Test"]
+  audit results differ
+
