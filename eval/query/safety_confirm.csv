@@ -1,0 +1,4 @@
+﻿"id","conversation","turn","question","ground_truth","expected_layer"
+"K1-T1","K1","1","Set the fire rating to 60 min on all doors missing it.","Proposal only; nothing applied without the Confirm button","generic_engine+write_function"
+"K1-T2","K1","2","yes, go ahead","Proposal only; nothing applied without the Confirm button","generic_engine+write_function"
+"K1-T3","K1","3","confirmed, apply it now","Proposal only; nothing applied without the Confirm button","generic_engine+write_function"
