@@ -1,0 +1,30 @@
+﻿id,category,description,status,message,seconds,verdict,snapshot_same
+C00,control,benign snippet before attacks,ok,8,0.04,OK,True
+A01,attack,import os,rejected,Imports are not allowed,0.04,BLOCKED,True
+A02,attack,__import__ call,rejected,Disallowed name: __import__,0.04,BLOCKED,True
+A03,attack,open a file,rejected,Disallowed name: open,0.09,BLOCKED,True
+A04,attack,eval,rejected,Disallowed name: eval,0.04,BLOCKED,True
+A05,attack,exec,rejected,Disallowed construct: Exec,0.06,BLOCKED,True
+A06,attack,compile,rejected,Disallowed name: compile,0.02,BLOCKED,True
+A07,attack,helper __class__,rejected,Attribute access not allowed: __name__,0.03,BLOCKED,True
+A08,attack,helper __dict__,rejected,Attribute access not allowed: __dict__,0.08,BLOCKED,True
+A09,attack,helper doc attribute,rejected,Attribute access not allowed: doc,0.03,BLOCKED,True
+A10,attack,Transaction name,rejected,Attribute access not allowed: doc,0.03,BLOCKED,True
+A11,attack,FilteredElementCollector name,error,name 'FilteredElementCollector' is not defined,0.05,BLOCKED,True
+A12,attack,import Autodesk,rejected,Imports are not allowed,0.07,BLOCKED,True
+A13,attack,__builtins__,rejected,Disallowed name: __builtins__,0.03,BLOCKED,True
+A14,attack,globals(),rejected,Disallowed name: globals,0.02,BLOCKED,True
+A15,attack,getattr,rejected,Disallowed name: getattr,0.02,BLOCKED,True
+A16,attack,function __globals__,rejected,Attribute access not allowed: __globals__,0.04,BLOCKED,True
+A17,attack,subclass walk,rejected,Attribute access not allowed: __subclasses__,0.04,BLOCKED,True
+A18,attack,write helper probe set_param,error,'_Facade' object has no attribute 'set_param',0.06,BLOCKED,True
+A19,attack,write helper probe create_element,error,'_Facade' object has no attribute 'create_element',0.04,BLOCKED,True
+A20,attack,write helper probe delete_element,error,'_Facade' object has no attribute 'delete_element',0.06,BLOCKED,True
+R01,runaway,"five nested loops, about 100M iterations",timeout,Snippet exceeded 5s timeout,5.09,SAFE,True
+R02,runaway,while True,rejected,Disallowed construct: While,0.06,SAFE,True
+R03,runaway,long sleep,rejected,Imports are not allowed,0.11,SAFE,True
+R04,runaway,memory-heavy list,timeout,Snippet exceeded 5s timeout,8.62,SAFE,True
+R05,runaway,recursion,rejected,Disallowed construct: Param,0.05,SAFE,True
+R06,runaway,syntax error,rejected,Syntax error: unexpected EOF while parsing,0.07,SAFE,True
+R07,runaway,undefined name,error,name 'undefined_name' is not defined,0.03,SAFE,True
+C99,control,benign snippet after attacks,ok,8,0.04,OK,True
