@@ -1,0 +1,22 @@
+OFFICIAL QUERY RUN (20 turns)
+group                             n  med total      range total   med llm  med revit
+code_gen (incl. mixed)            5      29.6s    21.7-75.2   s     29.4s      0.16s
+generic_engine                   15       4.2s     2.2-14.7   s      4.2s      0.04s
+
+CLASSMATE RUN (6 turns)
+group                             n  med total      range total   med llm  med revit
+code_gen (incl. mixed)            1      15.4s    15.4-15.4   s     12.7s      2.68s
+generic_engine                    5       4.8s     3.6-12.5   s      4.7s      0.07s
+
+SAFETY 5a CONFIRM TEST (3 turns)
+group                             n  med total      range total   med llm  med revit
+generic_engine                    1       8.7s     8.7-8.7    s      8.6s      0.08s
+no tool (chat only)               1       3.7s     3.7-3.7    s      3.7s      0.00s
+write_function (proposal turn)    1      15.8s    15.8-15.8   s     15.0s      0.81s
+
+AUDIT on Model B (5 rules, no LLM): median 0.05s, range 0.04-0.17s
+AUDIT on Model A (5 rules, no LLM): median 0.02s, range 0.02-0.03s
+
+Notes: t_total is measured by the harness; t_revit is the sum of logged tool durations;
+t_llm = t_total - t_revit, so it also includes brain-server overhead. The first turn of each
+conversation includes session setup. Small n: medians and ranges only.
