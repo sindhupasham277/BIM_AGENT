@@ -1,0 +1,12 @@
+﻿id,ts,session_id,kind,tool_name,status,proposal_id,confirmation,result_summary
+1,2026-10-15T06:09:27.097639+00:00,revit_btp_session,audit,run_audit,ok,,n/a,4 rows
+2,2026-10-15T06:09:30.366475+00:00,revit_btp_session,proposal,propose_set_parameter,pending,P-9828a7,n/a,"{""status"": ""pending_user_confirmation"", ""proposal_id"": ""P-9828a7"", ""note"": ""NOT applied. The user must click Confirm on the card.""}"
+3,2026-10-15T06:10:25.208127+00:00,revit_btp_session,change,set_parameter,applied,P-9828a7,confirmed,Applied Fire Rating = 60 min (1 target). Re-audit 'missing_fire_rating': 4 -> 0 violations.
+4,2026-10-15T06:10:50.585555+00:00,revit_btp_session,audit,run_audit,ok,,n/a,0 rows
+5,2026-10-15T06:10:54.605319+00:00,revit_btp_session,memory,query_past_changes,ok,,n/a,"{""changes"": [{""id"": 3, ""ts"": ""2026-10-15T06:10:25.208127+00:00"", ""audit_name"": ""missing_fire_rating"", ""proposal_id"": ""P-9828a7"", ""result_summary"": ""Applied Fire Rating = 60 min (1 target). Re-audit 'm"
+6,2026-10-15T06:19:01.470898+00:00,revit_btp_session,audit,run_audit,ok,,n/a,4 rows
+7,2026-10-15T06:19:05.257818+00:00,revit_btp_session,proposal,propose_set_parameter,pending,P-048040,n/a,"{""status"": ""pending_user_confirmation"", ""proposal_id"": ""P-048040"", ""note"": ""NOT applied. The user must click Confirm on the card.""}"
+8,2026-10-15T06:19:29.032195+00:00,revit_btp_session,change,set_parameter,applied,P-048040,confirmed,Applied Fire Rating = 60 min (1 target). Re-audit 'missing_fire_rating': 4 -> 0 violations.
+9,2026-10-15T06:25:14.358446+00:00,revit_btp_session,audit,run_audit,ok,,n/a,4 rows
+10,2026-10-15T06:25:17.793926+00:00,revit_btp_session,proposal,propose_set_parameter,pending,P-9c9764,n/a,"{""status"": ""pending_user_confirmation"", ""proposal_id"": ""P-9c9764"", ""note"": ""NOT applied. The user must click Confirm on the card.""}"
+11,2026-10-15T06:25:34.576868+00:00,revit_btp_session,change,set_parameter,applied,P-9c9764,confirmed,Applied Fire Rating = 60 min (1 target). Re-audit 'missing_fire_rating': 4 -> 0 violations.
