@@ -1,0 +1,8 @@
+﻿task_id,task_name,manual_1_s,agent_1_s,manual_2_s,agent_2_s,speed up ,,manual_answer_1,agent_answer_1,manual_answer_2,agent_answer_2,ground_truth,agent_correct_1,agent_correct_2,notes
+T1,Count doors with Fire Rating 2H,26.46,4.6,20,5.6,4.554901961,Agent faster,1 door,1 door,1 door,1 door,1 door,TRUE,TRUE,
+T2,Total area of all rooms,44,7.5,40,6.56,5.974395448,Agent faster,661 m2,661 sqm,661 m2,661 sqm,661 m2,TRUE,TRUE,
+T3,Count structural columns,19,10,20.39,8.6,2.117741935,Agent faster,6 columns,6 columns in model,6 columns,6 columns,6 columns,TRUE,TRUE,
+T4,Count walls longer than 5 m,30,6.22,32,4.52,5.772811918,Agent faster,9 walls,9 walls,9 walls,9 walls,9 walls,TRUE,TRUE,Created new Wall schedule; confirm whether schedule creation time was included
+T5,Room with the most doors,3.35,4.5,3.8,3.7,0.87195122,Agent slower,Room 1 (105) - 3 doors,Room 1 (105) with 3 doors,Room 1 (105) - 3 doors,Room 1 (105) with 3 doors,Room 1 (105) - 3 doors,TRUE,TRUE,
+T6,Count doors missing Fire Rating,20.37,6,20,5.1,3.636936937,Agent faster,4 doors,4 doors,4 doors,4 doors,4 doors,TRUE,TRUE,
+T7,Set Fire Rating to 60 min on missing doors,28.25,18.5,28,18,1.54109589,Agent faster,4 blanks to 0,4 blanks to 0,4 blanks to 0,4 blanks to 0,0 blanks after fix,TRUE,TRUE,Agent timing: first keystroke to Re-audit message; Confirm clicked immediately
