@@ -1,0 +1,7 @@
+﻿"id","conversation","turn","question","ground_truth","expected_layer"
+"T3a","T3a","1","How many structural columns are there?","6","generic_engine"
+"T3b","T3b","1","How many structural columns are there?","6","generic_engine"
+"T3c","T3c","1","How many structural columns are there?","6","generic_engine"
+"T5a","T5a","1","Which room has the most doors?","Room 1 (Number 105), 3 doors","code_gen"
+"T5b","T5b","1","Which room has the most doors?","Room 1 (Number 105), 3 doors","code_gen"
+"T5c","T5c","1","Which room has the most doors?","Room 1 (Number 105), 3 doors","code_gen"
