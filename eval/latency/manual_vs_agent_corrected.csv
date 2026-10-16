@@ -1,0 +1,8 @@
+﻿task_id,task_name,manual_avg_s,agent_s,speedup,agent_time_source,agent_score
+T1,Count doors with Fire Rating 2H,23.23,5.1,4.55,"hand-recorded, 2 trials",2/2 (self-reported)
+T2,Total area of all rooms,42.0,7.03,5.97,"hand-recorded, 2 trials",2/2 (self-reported)
+T3,Count structural columns,19.7,9.91,1.99,re-run median of 3 (harness),0.67 mean of 3
+T4,Count walls longer than 5 m,31.0,5.37,5.77,"hand-recorded, 2 trials",2/2 (self-reported)
+T5,Room with the most doors,3.58,19.84,0.18,re-run median of 3 (harness),0.83 mean of 3
+T6,Count doors missing Fire Rating,20.19,5.55,3.64,"hand-recorded, 2 trials",2/2 (self-reported)
+T7,Set Fire Rating to 60 min on missing doors,28.12,18.25,1.54,"hand-recorded, 2 trials",2/2 (self-reported)

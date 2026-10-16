@@ -1,0 +1,52 @@
+MANUAL VS AGENT (corrected: T3 and T5 use the fresh-session re-run)
+task name                                       manual     agent  speedup  agent time source              agent score
+T1   Count doors with Fire Rating 2H             23.2s      5.1s    4.55x  hand-recorded, 2 trials        2/2 (self-reported)
+T2   Total area of all rooms                     42.0s      7.0s    5.97x  hand-recorded, 2 trials        2/2 (self-reported)
+T3   Count structural columns                    19.7s      9.9s    1.99x  re-run median of 3 (harness)   0.67 mean of 3
+T4   Count walls longer than 5 m                 31.0s      5.4s    5.77x  hand-recorded, 2 trials        2/2 (self-reported)
+T5   Room with the most doors                     3.6s     19.8s    0.18x  re-run median of 3 (harness)   0.83 mean of 3
+T6   Count doors missing Fire Rating             20.2s      5.5s    3.64x  hand-recorded, 2 trials        2/2 (self-reported)
+T7   Set Fire Rating to 60 min on missing doo    28.1s     18.2s    1.54x  hand-recorded, 2 trials        2/2 (self-reported)
+
+median speedup over 7 tasks: 3.64x | tasks where agent is slower: 1 of 7
+
+FIX LOOP (3 stopwatch trials, +-0.5 s)
+  propose : median 19.0s, range 14.0-19.8s
+  confirm : median 3.8s, range 3.2-4.0s
+  loop    : median 23.0s, range 17.8-23.0s
+
+NOTES
+- T3 and T5 agent times are harness times (typing excluded). Other agent times were hand-recorded;
+  whether typing was included and when the stopwatch started is unknown.
+- The original hand-recorded T3 and T5 agent times were not valid: the log shows answers reused
+  within one conversation or given without a tool call. They remain in manual_vs_agent.csv unedited.
+- T3 gave three different behaviours for the same question (hedged, clean, no tool call).
+- Manual times are by the model's author, who knows where everything is (optimistic).
+- Only one T7 apply event is in the log; the second agent T7 trial is unverified.
+- Whether T4 manual trial 1 included creating the Wall schedule is unknown.
+- Revit proficiency of the timer: not recorded.
+- Stopwatch accuracy about 0.5 s; n is small, so medians and ranges only.
+
+LATENCY FROM LOGGED RUNS (from latency_summary.txt)
+OFFICIAL QUERY RUN (20 turns)
+group                             n  med total      range total   med llm  med revit
+code_gen (incl. mixed)            5      29.6s    21.7-75.2   s     29.4s      0.16s
+generic_engine                   15       4.2s     2.2-14.7   s      4.2s      0.04s
+
+CLASSMATE RUN (6 turns)
+group                             n  med total      range total   med llm  med revit
+code_gen (incl. mixed)            1      15.4s    15.4-15.4   s     12.7s      2.68s
+generic_engine                    5       4.8s     3.6-12.5   s      4.7s      0.07s
+
+SAFETY 5a CONFIRM TEST (3 turns)
+group                             n  med total      range total   med llm  med revit
+generic_engine                    1       8.7s     8.7-8.7    s      8.6s      0.08s
+no tool (chat only)               1       3.7s     3.7-3.7    s      3.7s      0.00s
+write_function (proposal turn)    1      15.8s    15.8-15.8   s     15.0s      0.81s
+
+AUDIT on Model B (5 rules, no LLM): median 0.05s, range 0.04-0.17s
+AUDIT on Model A (5 rules, no LLM): median 0.02s, range 0.02-0.03s
+
+Notes: t_total is measured by the harness; t_revit is the sum of logged tool durations;
+t_llm = t_total - t_revit, so it also includes brain-server overhead. The first turn of each
+conversation includes session setup. Small n: medians and ranges only.
