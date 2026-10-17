@@ -18,5 +18,30 @@
   "model_a_sha256": "BB42705CB798139983EE80C5746E0FC2BC0647A8D01DA9F64910BF6682ED1AAF",
   "model_b_sha256": "B1C5D6ACAAD973D1A2938DF27ACA83A3304F8C8364EFE8BA546DC3AC70479C75",
   "code_commit_evaluated": "500962a",
-  "code_note": "phase5-complete (051090a) plus config-only commit 500962a, no behaviour change"
+  "code_note": "phase5-complete (051090a) plus config-only commit 500962a, no behaviour change",
+  "revit_side_py_sha256_16": {
+    "startup.py": "3a896c3be557a743",
+    "BTP.tab/Agent.panel/audit_rules.py": "99a1fcdc7b825088",
+    "BTP.tab/Agent.panel/chat_loop.py": "4c44bd8f51ab8697",
+    "BTP.tab/Agent.panel/chat_session.py": "a068a726a15da795",
+    "BTP.tab/Agent.panel/revit_ro.py": "3a37ed8b3676759a",
+    "BTP.tab/Agent.panel/routes.py": "68e06ba30c7f6fa1",
+    "BTP.tab/Agent.panel/sandbox_exec.py": "1cc028f513a0ce97",
+    "BTP.tab/Agent.panel/test_revit_ro.py": "4d268e073b314ebc",
+    "BTP.tab/Agent.panel/chat.pushbutton/script.py": "6271df7a2d2b7d8a",
+    "BTP.tab/Agent.panel/Inspect.pushbutton/script.py": "90155308124648eb",
+    "BTP.tab/Agent.panel/LLMTest.pushbutton/script.py": "213210d20c00daf2",
+    "BTP.tab/Agent.panel/SchemaDump.pushbutton/script.py": "e32c8e5c8ff59fe6",
+    "BTP.tab/Agent.panel/TestRevitRO.pushbutton/srcipt.py": "1fa6e369b309fca2",
+    "BTP.tab/Agent.panel/TestSandbox.pushbutton/script.py": "c8ac8ef4dd55290d",
+    "BTP.tab/Dev.panel/Classify.pushbutton/script.py": "ff287ff2014469f0",
+    "BTP.tab/Dev.panel/Diagnose.pushbutton/script.py": "e3cb01b51be5832e",
+    "BTP.tab/Dev.panel/FileTest.pushbutton/script.py": "be336fde7dc39582",
+    "lib/fix_handler.py": "67262674e7fba8b9",
+    "lib/fix_plan.py": "c67539a6fc70d8a4",
+    "lib/write_functions.py": "90b7ede0c7abe2b1"
+  },
+  "revit_side_note": "hashes of live extension py files on 2026-10-17; identical to btp_agent_snapshot; fix_handler.py rewritten 2026-10-15 12:02 IST with content equal to tag phase5-complete",
+  "temperature_evidence": "API returned 400 unsupported_value for temperature=0 on gpt-5-mini; only the default (1) is supported",
+  "temperature_checked": "2026-10-17"
 }
