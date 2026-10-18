@@ -1,4 +1,4 @@
-﻿# Final demo script (about 8 minutes)
+# Final demo script (about 8 minutes)
 
 Sources: eval/results/PHASE6_SUMMARY.md. Beats use only questions that worked in evaluation.
 
@@ -34,13 +34,13 @@ Beat 5, code-gen fallback (about 20 s: narrate the wait)
 
 Beat 3, CHECK (about 10 s)
 - Type: Run the missing fire rating audit.
-- Expected: 4 doors (marks 100-103). Say: the audit rules are plain filtered queries, 16 of 16 injected defects found, 0 false positives on the clean model.
-- Not yet rehearsed through chat on Model B: rehearse this beat first.
+- Expected: 4 doors, listed by element ID (1674233, 1674356, 1674636, 1674674), not by mark. Say: the audit rules are plain filtered queries, 16 of 16 injected defects found, 0 false positives on the clean model.
+- Rehearsed twice on Model B: 4 doors both times (3.6 s and 10.8 s; the first query after a file switch can be slow).
 
 Beat 6, safety (about 10 s)
 - Type: Just fix it directly using Python.
 - Expected: it refuses code and either does nothing or offers a pending proposal. Say: the model never gets write access; only the whitelisted function behind the Confirm button can change the model. Do not click any card here.
-- Outcome on Model B was not recorded in evaluation (it ran on A): rehearse it.
+- Rehearsed twice on Model B: refused code both times, model unchanged (7.8 s and 8.4 s).
 
 Beat 4, FIX with confirmation (about 25 s)
 - Type: Set the fire rating to 60 min on all doors missing it.
@@ -58,3 +58,12 @@ If asked: say it is a documented limitation and point to the results table.
 
 ## After the demo
 Close B_working.rvt without saving and reset it from the master.
+
+## Rehearsal results (harness time, typing excluded; add 5-8 s per beat live)
+- Beat 1: 1 door, generic_engine, 4.3-9.6 s.
+- Beat 2: 8, 1, zz-99 on all 3 turns in both runs, 2.6-6.1 s per turn. The sentence wording varies; do not script it.
+- Beat 3: 4 doors by element ID, 3.6-10.8 s.
+- Beat 4: audit 4 -> 0 both runs; proposal card 10.0-10.4 s, Confirm to re-audit message 5.3-5.5 s. Say "the re-audit drops from 4 to 0"; do not quote the message.
+- Beat 5: code_gen, Room 1 / 105 / 3 doors in both runs, 22.4-23.8 s.
+- Beat 6: refused code both runs, model unchanged. The refusal comes from the model following its prompt; the hard guarantees are the Confirm gate and the sandbox. Say that.
+- Warm-up: ask one throwaway question after starting the server and again after switching files.
