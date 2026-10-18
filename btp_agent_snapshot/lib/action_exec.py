@@ -22,7 +22,10 @@ def run_action_code(code, rw, timeout_sec=5):
     deadline = [time.time() + timeout_sec]
 
     def safe_range(*args):
-        for i in range(*args):
+        r = sandbox_exec._LAZY_RANGE(*args)
+        if len(r) > sandbox_exec.MAX_RANGE_ITEMS:
+            raise ValueError('range is too large (max %d items)' % sandbox_exec.MAX_RANGE_ITEMS)
+        for i in r:
             if time.time() > deadline[0]:
                 raise sandbox_exec.SandboxTimeout("Snippet exceeded {}s timeout".format(timeout_sec))
             yield i

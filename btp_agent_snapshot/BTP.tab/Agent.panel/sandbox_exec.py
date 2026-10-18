@@ -122,6 +122,17 @@ def validate_snippet(code):
         )
 
     for node in ast.walk(tree):
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
+            for side in (node.left, node.right):
+                if isinstance(side, (ast.List, ast.ListComp, ast.Tuple)) or isinstance(_const(side), _STRS):
+                    raise SandboxRejected('Repeating a list or text with * is not allowed')
+        v = _const(node)
+        if v is not _NOVAL and not isinstance(v, _STRS) and v is not None and not isinstance(v, bool):
+            try:
+                if abs(v) > MAX_INT_LITERAL:
+                    raise SandboxRejected('Number literal too large')
+            except TypeError:
+                pass
 
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             raise SandboxRejected(
@@ -178,6 +189,30 @@ SAFE_BUILTINS = {
 # ============================================================
 
 import time
+
+
+try:
+    _LAZY_RANGE = xrange  # IronPython 2.7: range() would build the whole list in memory first
+except NameError:
+    _LAZY_RANGE = range
+MAX_RANGE_ITEMS = 1000000
+MAX_INT_LITERAL = 10 ** 12
+try:
+    _STRS = (str, unicode)  # type: ignore
+except NameError:
+    _STRS = (str,)
+_NOVAL = object()
+
+
+def _const(node):
+    name = type(node).__name__
+    if name == 'Constant':
+        return node.value
+    if name == 'Num':
+        return node.n
+    if name == 'Str':
+        return node.s
+    return _NOVAL
 
 
 class SandboxTimeout(Exception):
@@ -299,7 +334,10 @@ def run_snippet(code, revit_ro_instance, timeout_sec=5):
     deadline = [time.time() + timeout_sec]
 
     def safe_range(*args):
-        for i in range(*args):
+        r = _LAZY_RANGE(*args)
+        if len(r) > MAX_RANGE_ITEMS:
+            raise ValueError('range is too large (max %d items)' % MAX_RANGE_ITEMS)
+        for i in r:
             if time.time() > deadline[0]:
                 raise SandboxTimeout(
                     "Snippet exceeded {}s timeout".format(timeout_sec)
