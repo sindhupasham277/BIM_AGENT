@@ -6,6 +6,8 @@ import math
 from Autodesk.Revit.DB import (StorageType, FilteredElementCollector, Level, WallType, Wall,
                                Line, XYZ, UnitUtils, UnitTypeId, ElementTypeGroup, ElementTransformUtils, ElementId, ElementType, CategoryType, Grid)
 import fix_plan
+from Autodesk.Revit.DB import FamilySymbol, BuiltInCategory, BuiltInParameter
+from Autodesk.Revit.DB.Structure import StructuralType
 
 MAX_CHANGES = 200
 MAX_CREATED = 20
@@ -343,6 +345,81 @@ class RevitRW(object):
                 "affected": 1,
             })
         return model_deleted
+
+    def get_location(self, element_id):
+        return self._where(self._element(element_id))
+
+    def _symbols(self, category):
+        bic = {"Doors": BuiltInCategory.OST_Doors, "Windows": BuiltInCategory.OST_Windows}.get(category)
+        if bic is None:
+            raise ActionError("category must be 'Doors' or 'Windows'")
+        out = []
+        for s in FilteredElementCollector(self.doc).OfClass(FamilySymbol).OfCategory(bic):
+            name = fix_plan.el_name(s)
+            out.append((s, name, "%s: %s" % (s.FamilyName, name)))
+        return out
+
+    def list_family_types(self, category):
+        return sorted(full for s, n, full in self._symbols(category))
+
+    def _place(self, category, kind, wall_id, type_name, distance_m, sill_m):
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        wall = self._element(wall_id)
+        wid = _int(fix_plan.id_int(wall.Id))
+        if not isinstance(wall, Wall):
+            raise ActionError("id %s is not a wall" % wid)
+        syms = self._symbols(category)
+        hits = [s for s, n, full in syms if full == type_name] or [s for s, n, full in syms if n == type_name]
+        if not hits:
+            raise ActionError("no %s type %r; available: %s" % (kind, type_name, ", ".join(sorted(f for s, n, f in syms))[:400]))
+        if len(hits) > 1:
+            raise ActionError("type name %r is ambiguous; use 'Family: Type'" % type_name)
+        sym = hits[0]
+        curve = wall.Location.Curve
+        length_m = _m(curve.Length)
+        dist = _num(distance_m, "distance_m")
+        if not 0.0 < dist < length_m:
+            raise ActionError("distance_m must be between 0 and the wall length (%.2f m)" % length_m)
+        if not sym.IsActive:
+            sym.Activate()
+            self.doc.Regenerate()
+        pt = curve.Evaluate(dist / length_m, True)
+        level = self.doc.GetElement(wall.LevelId)
+        inst = self.doc.Create.NewFamilyInstance(pt, sym, wall, level, StructuralType.NonStructural)
+        host_txt = "the new wall" if wid in self._created else "wall %s" % wid
+        text = "'%s: %s' in %s at %.2f m from its start" % (sym.FamilyName, fix_plan.el_name(sym), host_txt, dist)
+        if sill_m is not None:
+            sill = _num(sill_m, "sill_height_m")
+            if not 0.0 <= sill <= 10.0:
+                raise ActionError("sill_height_m must be between 0 and 10 m")
+            p = inst.get_Parameter(BuiltInParameter.INSTANCE_SILL_HEIGHT_PARAM)
+            if p is None or p.IsReadOnly:
+                raise ActionError("this %s type has no editable sill height" % kind)
+            p.Set(_ft(sill))
+            text += ", sill %.2f m" % sill
+        self.doc.Regenerate()
+        host = getattr(inst, "Host", None)
+        if host is None or fix_plan.id_int(host.Id) != fix_plan.id_int(wall.Id):
+            raise ActionError("Revit did not host the new %s in wall %s" % (kind, wid))
+        nid = _int(fix_plan.id_int(inst.Id))
+        self._created.add(nid)
+        self._record((nid, "(new %s)" % kind), {
+            "target_id": nid,
+            "scope": "created",
+            "label": category,
+            "param_name": "(new %s)" % kind,
+            "old": u"",
+            "new": text,
+            "affected": 1,
+        })
+        return nid
+
+    def place_door(self, wall_id, type_name, distance_m):
+        return self._place("Doors", "door", wall_id, type_name, distance_m, None)
+
+    def place_window(self, wall_id, type_name, distance_m, sill_height_m=None):
+        return self._place("Windows", "window", wall_id, type_name, distance_m, sill_height_m)
 
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
