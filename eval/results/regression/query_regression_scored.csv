@@ -1,0 +1,21 @@
+﻿id,p6_score,new_score,p6_routing,new_routing,note
+G1,1,1,1,1,
+G2,1,1,1,1,
+G3,0.5,0.5,1,1,unit not stated in either run
+G4,0,1,1,1,LLM filtered on Type (P6: Type Name); query engine unchanged -> run-to-run variance
+G5,1,1,1,1,
+G6,1,1,1,1,
+G7,0.5,0.5,1,1,same call as P6; new wording 'typically square feet' is misleading in a metric model (strict reading: 0)
+G8,0,1,1,1,LLM grouped by Type (P6: Type Name) -> run-to-run variance
+C1,1,1,0,0,answered by generic engine (routing miss both runs)
+C2,0.5,1,1,1,differently written snippet named the room -> run-to-run variance
+C3,0,0,1,1,read helper has no Columns category (known defect)
+C4,1,1,0,1,vacuous in both runs (no columns seen); routing now code_gen
+C5,1,1,0,0,correct wall id; generic_engine+code_gen counts as a routing miss
+C6,0,0,1,1,known Columns defect
+C7,0,0,1,1,known Columns defect
+M1-T1,1,1,1,1,
+M1-T2,1,1,1,1,
+M1-T3,1,1,1,1,
+M2-T1,1,1,1,1,
+M2-T2,1,1,1,1,
