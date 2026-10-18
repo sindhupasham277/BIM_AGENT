@@ -162,5 +162,50 @@ class RevitRW(object):
         })
         return wid
 
+    def _valid_types(self, el):
+        out = []
+        for tid in el.GetValidTypes():
+            t = self.doc.GetElement(tid)
+            if t is None:
+                continue
+            name = fix_plan.el_name(t)
+            fam = getattr(t, "FamilyName", "") or ""
+            out.append((t, name, ("%s: %s" % (fam, name)) if fam else name))
+        return out
+
+    def list_types(self, element_id):
+        el = self._element(element_id)
+        return sorted(full for t, name, full in self._valid_types(el))
+
+    def change_type(self, element_id, type_name):
+        el = self._element(element_id)
+        cur = self.doc.GetElement(el.GetTypeId())
+        if cur is None:
+            raise ActionError("id %s has no type to change" % _int(element_id))
+        types = self._valid_types(el)
+        hits = [t for t, name, full in types if full == type_name]
+        if not hits:
+            hits = [t for t, name, full in types if name == type_name]
+        if not hits:
+            raise ActionError("type %r is not valid for id %s; valid: %s"
+                              % (type_name, _int(element_id), ", ".join(sorted(full for t, n, full in types))[:400]))
+        if len(hits) > 1:
+            raise ActionError("type name %r is ambiguous; use 'Family: Type'" % type_name)
+        eid = _int(fix_plan.id_int(el.Id))
+        cur_fam = getattr(cur, "FamilyName", "") or ""
+        cur_name = fix_plan.el_name(cur)
+        self._record((eid, "(type)"), {
+            "target_id": eid,
+            "scope": "new element" if eid in self._created else "instance",
+            "label": el.Category.Name if el.Category is not None else "element",
+            "param_name": "(type)",
+            "old": ("%s: %s" % (cur_fam, cur_name)) if cur_fam else cur_name,
+            "new": _txt(type_name),
+            "affected": 1,
+        })
+        if fix_plan.id_int(hits[0].Id) != fix_plan.id_int(el.GetTypeId()):
+            el.ChangeTypeId(hits[0].Id)
+        return True
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]

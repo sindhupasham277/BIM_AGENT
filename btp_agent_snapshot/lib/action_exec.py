@@ -10,7 +10,7 @@ if PANEL not in sys.path:
     sys.path.append(PANEL)
 import sandbox_exec
 
-ACTION_METHODS = ("get_param", "set_param", "list_levels", "list_wall_types", "create_wall")
+ACTION_METHODS = ("get_param", "set_param", "list_levels", "list_wall_types", "create_wall", "list_types", "change_type")
 
 
 def run_action_code(code, rw, timeout_sec=5):
@@ -29,6 +29,10 @@ def run_action_code(code, rw, timeout_sec=5):
 
     builtins = dict(sandbox_exec.SAFE_BUILTINS)
     builtins["range"] = safe_range
+    # Action snippets only (the read-only sandbox is unchanged):
+    builtins["str"] = str
+    builtins["int"] = int
+    builtins["float"] = float
 
     facade = sandbox_exec._Facade()
     for name in ACTION_METHODS:
