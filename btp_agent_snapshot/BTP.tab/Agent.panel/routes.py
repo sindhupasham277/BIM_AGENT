@@ -771,6 +771,61 @@ def route_fix_preview(doc, request):
 # /model_info  (READ-ONLY: returns the title of the open model)
 # ============================================================
 
+# ============================================================
+# /select  (UI SELECTION ONLY: never opens a Transaction)
+# ============================================================
+
+@api.route("/select", methods=["POST"])
+def route_select(doc, uidoc, request):
+    try:
+        from System import Int64
+        from System.Collections.Generic import List
+        from Autodesk.Revit.DB import ElementId
+
+        data = request.data
+        category = data["category"]
+        op_map = {
+            "==": "eq", "!=": "neq", ">": "gt", "<": "lt",
+            ">=": "gte", "<=": "lte", "contains": "contains",
+            "is_null": "is_null", "is_not_null": "is_not_null"
+        }
+        converted = []
+        for f in data.get("filters", []):
+            converted.append({
+                "param": f["parameter"],
+                "op": op_map[f["operator"]],
+                "value": f.get("value")
+            })
+
+        rows = query_elements(doc, category, converted, [])
+
+        ids = List[ElementId]()
+        for r in rows:
+            ids.Add(ElementId(Int64(int(str(r["_id"])))))
+        uidoc.Selection.SetElementIds(ids)
+
+        selected = [int(str(e.Value)) for e in uidoc.Selection.GetElementIds()]
+        return {
+            "status": "ok",
+            "matched": len(rows),
+            "selected_count": len(selected),
+            "selected_ids": selected
+        }
+
+    except KeyError as e:
+        return routes.make_response(
+            data={"error": "missing or unknown field: " + str(e)},
+            status=400
+        )
+
+    except Exception as e:
+        import traceback
+        return routes.make_response(
+            data={"error": traceback.format_exc()},
+            status=500
+        )
+
+
 @api.route("/model_info", methods=["GET"])
 def route_model_info(doc, request):
     try:

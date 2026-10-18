@@ -217,5 +217,53 @@
             "required": [],
             "additionalProperties": false
         }
+    },
+    "select_elements": {
+        "name": "select_elements",
+        "description": "Select elements of a category in the Revit user interface, after applying optional filters (same filters as query_elements). This only changes which elements are selected on screen; it does not modify the model and needs no confirmation. Returns how many elements were selected and their IDs.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "filters": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "parameter": {
+                                "type": "string"
+                            },
+                            "operator": {
+                                "type": "string",
+                                "enum": [
+                                    "==",
+                                    "!=",
+                                    ">",
+                                    "<",
+                                    ">=",
+                                    "<=",
+                                    "contains",
+                                    "is_null",
+                                    "is_not_null"
+                                ]
+                            },
+                            "value": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "parameter",
+                            "operator",
+                            "value"
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "category"
+            ]
+        }
     }
 }
