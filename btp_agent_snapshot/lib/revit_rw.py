@@ -4,11 +4,13 @@
 # Lengths are in METRES, like the query results.
 import math
 from Autodesk.Revit.DB import (StorageType, FilteredElementCollector, Level, WallType, Wall,
-                               Line, XYZ, UnitUtils, UnitTypeId, ElementTypeGroup, ElementTransformUtils)
+                               Line, XYZ, UnitUtils, UnitTypeId, ElementTypeGroup, ElementTransformUtils, ElementId, ElementType, CategoryType, Grid)
 import fix_plan
 
 MAX_CHANGES = 200
 MAX_CREATED = 20
+MAX_DELETE = 20
+MAX_DELETE_TOTAL = 100
 MAX_COORD_M = 1000.0
 WALL_LENGTH_M = (0.1, 100.0)
 WALL_HEIGHT_M = (0.5, 30.0)
@@ -282,6 +284,65 @@ class RevitRW(object):
             })
             out.append(n)
         return out
+
+    def _is_model(self, el):
+        if isinstance(el, (ElementType, Level, Grid)):
+            return False
+        c = el.Category
+        return c is not None and c.CategoryType == CategoryType.Model
+
+    def _describe(self, el):
+        cat = el.Category.Name if el.Category is not None else "element"
+        return cat, "%s '%s'" % (cat, fix_plan.el_name(el))
+
+    def delete_elements(self, element_ids):
+        if isinstance(element_ids, (int, float)) or isinstance(element_ids, _STR):
+            element_ids = [element_ids]
+        ids = []
+        for raw in element_ids:
+            n = _int(raw)
+            if n not in ids:
+                ids.append(n)
+        if not ids:
+            raise ActionError("no element ids given")
+        if len(ids) > MAX_DELETE:
+            raise ActionError("at most %d elements can be deleted in one action" % MAX_DELETE)
+        from System.Collections.Generic import List
+        targets = List[ElementId]()
+        known = {}
+        for n in ids:
+            el = self._element(n)
+            if not self._is_model(el):
+                raise ActionError("id %s is not a model element; only model elements (walls, doors, rooms, ...) can be deleted" % n)
+            if getattr(el, "Pinned", False):
+                raise ActionError("id %s is pinned; unpin it in Revit first" % n)
+            known[n] = self._describe(el)
+            try:
+                for dep_id in el.GetDependentElements(None):
+                    d = _int(fix_plan.id_int(dep_id))
+                    if d not in known:
+                        dep = self.doc.GetElement(dep_id)
+                        if dep is not None and self._is_model(dep):
+                            known[d] = self._describe(dep)
+            except Exception:
+                pass
+            targets.Add(el.Id)
+        deleted = [_int(fix_plan.id_int(x)) for x in self.doc.Delete(targets)]
+        model_deleted = [d for d in deleted if d in known]
+        if len(model_deleted) > MAX_DELETE_TOTAL:
+            raise ActionError("this would delete %d model elements (limit %d)" % (len(model_deleted), MAX_DELETE_TOTAL))
+        for d in model_deleted:
+            cat, desc = known[d]
+            self._record((d, "(deleted)"), {
+                "target_id": d,
+                "scope": "deleted" if d in ids else "deleted (dependent)",
+                "label": cat,
+                "param_name": "(deleted)",
+                "old": desc,
+                "new": "deleted",
+                "affected": 1,
+            })
+        return model_deleted
 
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]

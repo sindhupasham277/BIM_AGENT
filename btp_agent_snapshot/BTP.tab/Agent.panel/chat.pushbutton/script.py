@@ -2233,6 +2233,10 @@ def _append_proposal_card(self, p):
             "TYPE-level change: affects %d elements in total" % type_total,
             bold=True, color=Color.FromArgb(185, 28, 28), height=22
         )
+    n_del = len([it for it in items if str(it.get("scope", "")).startswith("deleted")])
+    if n_del:
+        add_label("DELETES %d element%s. Undo with Ctrl+Z after applying." % (n_del, "" if n_del == 1 else "s"),
+                  bold=True, color=Color.FromArgb(185, 28, 28), height=22)
     add_label("Nothing is applied until you click Confirm.", height=20)
 
     confirm = Button()
