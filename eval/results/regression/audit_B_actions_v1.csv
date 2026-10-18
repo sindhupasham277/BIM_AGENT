@@ -1,0 +1,6 @@
+model,rule,count_reported,flagged,tp,fp,fn,decoys_flagged,seconds,flagged_ids
+B,missing_fire_rating,4,4,4,0,0,0,0.04,1674233 1674356 1674636 1674674
+B,missing_room_name,3,3,3,0,0,0,0.07,1680622 1682933 1682936
+B,missing_room_number,3,3,3,0,0,0,0.05,1682942 1682945 1682948
+B,missing_wall_mark,3,3,3,0,0,0,0.05,1682134 1682569 1682824
+B,missing_column_type_mark,3,3,3,0,0,0,0.05,1678294 1681147 1681264
