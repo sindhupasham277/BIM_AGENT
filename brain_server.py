@@ -262,6 +262,7 @@ def validate_parameter_names(user_message, arguments):
 # ============================================================
 
 TOOL_REGISTRY = {
+    "propose_action":        {"layer": "write_function", "kind": "proposal"},
     "select_elements":       {"layer": "generic_engine", "kind": "query"},
     "query_elements":        {"layer": "generic_engine", "kind": "query"},
     "aggregate_elements":    {"layer": "generic_engine", "kind": "query"},
@@ -288,6 +289,14 @@ def _dispatch_core(name, arguments, session):
         except (ValueError, TypeError, RuntimeError) as ex:
             return {"error": str(ex)}
 
+    if name == "propose_action":
+
+        # Creates a PROPOSAL from a rolled-back dry run. Never changes the model.
+        try:
+            return proposals.propose_action(session, **arguments)
+        except (ValueError, TypeError, RuntimeError) as ex:
+            return {"error": str(ex)}
+
     if name == "query_past_changes":
 
         # Read-only memory lookup: fixed SQL, the caller supplies values only.
@@ -300,6 +309,9 @@ def _dispatch_core(name, arguments, session):
 
     if name in ("query_elements", "run_audit"):
         session["seen_ids"] |= proposals.collect_ids(result)
+
+    if name == "select_elements" and isinstance(result, dict):
+        session["seen_ids"] |= set(int(i) for i in result.get("selected_ids", []))
 
     return result
 
@@ -650,7 +662,7 @@ def handle_message(payload: MessagePayload):
 
                 validation_error = None
 
-                if tool_call.function.name not in ("propose_set_parameter", "query_past_changes"):
+                if tool_call.function.name not in ("propose_set_parameter", "query_past_changes", "propose_action"):
 
                     validation_error = validate_parameter_names(
                         payload.user_message,

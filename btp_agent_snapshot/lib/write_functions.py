@@ -1,4 +1,4 @@
-﻿# pyright: reportUndefinedVariable=false
+# pyright: reportUndefinedVariable=false
 # lib/write_functions.py  (the ONLY file in the project allowed to contain a Transaction)
 from Autodesk.Revit.DB import Transaction, TransactionStatus, StorageType, ElementId
 import fix_plan
@@ -53,7 +53,61 @@ def _set_parameter(doc, args, expected_old):
     return {"status": "applied", "changed": plan["items"]}
 
 
-_WRITE_WHITELIST = {"set_parameter": _set_parameter}    # Revit-side whitelist
+def _action_modules():
+    import action_exec
+    import revit_rw
+    return action_exec, revit_rw
+
+
+def preview_action(doc, code):
+    """DRY RUN: runs the snippet in a Transaction that is ALWAYS rolled back."""
+    action_exec, revit_rw = _action_modules()
+    rw = revit_rw.RevitRW(doc)
+    t = Transaction(doc, "AI Agent: preview (rolled back)")
+    t.Start()
+    try:
+        out = action_exec.run_action_code(code, rw)
+    finally:
+        if t.HasStarted() and not t.HasEnded():
+            t.RollBack()
+    return out
+
+
+def _change_key(c):
+    return (c["target_id"], c["param_name"], _norm(c["new"]))
+
+
+def _run_action(doc, args, expected_old):
+    """APPLY: one Transaction; rolled back unless the run matches the preview."""
+    action_exec, revit_rw = _action_modules()
+    expected = args.get("expected_changes") or []
+    rw = revit_rw.RevitRW(doc)
+    t = Transaction(doc, "AI Agent: " + _txt(args.get("description", "action"))[:60])
+    t.Start()
+    try:
+        out = action_exec.run_action_code(args.get("code", ""), rw)
+        if out["status"] != "ok":
+            t.RollBack()
+            return {"status": "failed", "reason": "snippet " + out["status"] + ": " + _txt(out.get("message", ""))}
+        changes = out["changes"]
+        for c in changes:
+            key = "%s|%s" % (c["target_id"], c["param_name"])
+            if key not in expected_old or _norm(expected_old[key]) != _norm(c["old"]):
+                t.RollBack()
+                return {"status": "refused", "reason": "Model changed since the preview. Nothing applied."}
+        if sorted(_change_key(c) for c in changes) != sorted(_change_key(c) for c in expected):
+            t.RollBack()
+            return {"status": "refused", "reason": "The action did something different from the preview. Nothing applied."}
+        if t.Commit() != TransactionStatus.Committed:
+            return {"status": "failed", "reason": "Revit did not commit"}
+    except Exception as ex:
+        if t.HasStarted() and not t.HasEnded():
+            t.RollBack()
+        return {"status": "failed", "reason": str(ex)}
+    return {"status": "applied", "changed": changes}
+
+
+_WRITE_WHITELIST = {"set_parameter": _set_parameter, "run_action": _run_action}    # Revit-side whitelist
 
 
 def apply_fix(doc, function, args, expected_old):

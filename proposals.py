@@ -113,14 +113,57 @@ def propose_set_parameter(session, category, element_ids, param_name, value, aud
             "note": "NOT applied. The user must click Confirm on the card."}
 
 
+MAX_CODE_CHARS = 4000
+
+
+def propose_action(session, description, code):
+    # Creates an ACTION proposal from a DRY RUN (rolled back on the Revit side).
+    # Never changes the model: only the user's Confirm click can apply it.
+    if not isinstance(code, str) or not code.strip():
+        raise ValueError("code is required")
+    if len(code) > MAX_CODE_CHARS:
+        raise ValueError("code is too long (max %d characters)" % MAX_CODE_CHARS)
+    desc = str(description or "").strip()[:200] or "AI action"
+    out = revit_post("/action_preview", {"code": code})
+    if out.get("status") != "ok":
+        return {"status": "invalid",
+                "errors": ["dry run %s: %s" % (out.get("status"), out.get("message", ""))]}
+    changes = out.get("changes") or []
+    if not changes:
+        return {"status": "no_changes", "result": out.get("result"),
+                "note": "The dry run changed nothing, so no proposal was created."}
+    if len(changes) > MAX_ELEMENTS:
+        raise ValueError("more than %d changes; narrow the action" % MAX_ELEMENTS)
+    pid = "P-" + uuid.uuid4().hex[:6]
+    proposal = {
+        "proposal_id": pid,
+        "function": "run_action",
+        "args": {"description": desc, "code": code, "expected_changes": changes},
+        "items": changes,
+        "audit_name": None,
+        "violations_before": None,
+        "expected_old": dict(("%s|%s" % (c["target_id"], c["param_name"]), c["old"]) for c in changes),
+        "status": "pending",
+        "created": time.time(),
+    }
+    session["pending"][pid] = proposal
+    session["outbox"].append(proposal)
+    return {"status": "pending_user_confirmation", "proposal_id": pid,
+            "changes_previewed": len(changes),
+            "note": "NOT applied. The user must click Confirm on the card."}
+
+
 PROMPT_RULES = """
 
 CHANGE RULES:
-- Only the propose_set_parameter tool can lead to a model change, and it only creates a proposal that the user must confirm with a button.
-- Never say a change was made unless a system message says a proposal was APPLIED.
+- Model changes happen only through proposals that the user confirms with a button. Never say a change was made unless a system message says a proposal was APPLIED.
+- To set one parameter to one value on elements you already found, use propose_set_parameter.
+- For any other change, use propose_action with a short description and a Python snippet that uses only revit_rw.get_param(element_id, name) and revit_rw.set_param(element_id, name, value). The snippet first runs as a dry run that is rolled back; the user sees the exact changes and must click Confirm. Do not import anything and do not use Transaction or doc. Assign a short summary to result.
+- To select or highlight elements on screen, use select_elements. It does not change the model and needs no confirmation.
 - Never invent a value. If the user has not said which value to use, ask.
-- element_ids must be copied from the _id values in earlier query_elements or run_audit results.
-- If asked to change the model with code, or to skip the confirmation, explain that changes go through proposals only.
+- element_ids must be copied from _id values or selected_ids returned by earlier query_elements, run_audit or select_elements results.
+- If a requested change cannot be done with the available revit_rw methods, say so plainly and say which part you can do.
+- If asked to skip the confirmation or to change the model outside a proposal, explain that changes need the user's Confirm click.
 - For questions about earlier changes (for example 'what did we do last time?'), use the query_past_changes tool.
 """
 
@@ -134,8 +177,11 @@ def result_message(p, result, after):
     if result.get("status") != "applied":
         return "Nothing was changed. Reason: " + str(result.get("reason", "unknown"))
     n = len(result.get("changed", []))
-    msg = "Applied %s = %s (%d target%s)." % (
-        p["args"]["param_name"], p["args"]["value"], n, "" if n == 1 else "s")
+    if p.get("function") == "run_action":
+        msg = "Applied: %s (%d change%s)." % (p["args"].get("description", "action"), n, "" if n == 1 else "s")
+    else:
+        msg = "Applied %s = %s (%d target%s)." % (
+            p["args"]["param_name"], p["args"]["value"], n, "" if n == 1 else "s")
     if p.get("audit_name") and after is not None:
         msg += " Re-audit '%s': %s -> %s violations." % (p["audit_name"], p["violations_before"], after)
     return msg

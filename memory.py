@@ -99,17 +99,17 @@ def log(session, kind, layer, tool_name, query_or_code, status, result_summary="
 def log_change(session, p, result, after, text, path=None):
     """One row for an applied/refused/failed change, plus one row per changed item."""
     status = result.get("status", "failed")
-    items = [(int(i.get("target_id", 0)), i.get("scope"), p["args"]["param_name"],
+    items = [(int(i.get("target_id", 0)), i.get("scope"), i.get("param_name") or p["args"].get("param_name"),
               i.get("old"), i.get("new")) for i in result.get("changed", [])]
-    return log(session, "change", "write_function", "set_parameter",
-               "set_parameter " + str(p["args"]), status, text,
+    return log(session, "change", "write_function", p.get("function", "set_parameter"),
+               p.get("function", "set_parameter") + " " + str(p["args"]), status, text,
                audit_name=p.get("audit_name"), proposal_id=p["proposal_id"],
                before=p.get("violations_before"), after=after, items=items, path=path)
 
 
 def log_rejected(session, p, path=None):
-    return log(session, "change", "write_function", "set_parameter",
-               "set_parameter " + str(p["args"]), "rejected", "Rejected by the user",
+    return log(session, "change", "write_function", p.get("function", "set_parameter"),
+               p.get("function", "set_parameter") + " " + str(p["args"]), "rejected", "Rejected by the user",
                audit_name=p.get("audit_name"), proposal_id=p["proposal_id"],
                before=p.get("violations_before"), path=path)
 

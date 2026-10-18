@@ -826,6 +826,36 @@ def route_select(doc, uidoc, request):
         )
 
 
+# ============================================================
+# /action_preview  (DRY RUN: the snippet runs in a Transaction that is
+# ALWAYS rolled back; nothing is kept in the model)
+# ============================================================
+
+@api.route("/action_preview", methods=["POST"])
+def route_action_preview(doc, request):
+    try:
+        import sys
+        LIB = r"C:\Users\sindh\AppData\Roaming\pyRevit\Extensions\btp_agent.extension\lib"
+        if LIB not in sys.path:
+            sys.path.append(LIB)
+        import write_functions
+        code = request.data["code"]
+        return write_functions.preview_action(doc, code)
+
+    except KeyError as e:
+        return routes.make_response(
+            data={"error": "missing required field: " + str(e)},
+            status=400
+        )
+
+    except Exception as e:
+        import traceback
+        return routes.make_response(
+            data={"error": traceback.format_exc()},
+            status=500
+        )
+
+
 @api.route("/model_info", methods=["GET"])
 def route_model_info(doc, request):
     try:

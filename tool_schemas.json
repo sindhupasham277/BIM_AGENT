@@ -265,5 +265,26 @@
                 "category"
             ]
         }
+    },
+    "propose_action": {
+        "name": "propose_action",
+        "description": "Create a PROPOSED model change from a short Python snippet that uses only revit_rw.get_param(element_id, name) and revit_rw.set_param(element_id, name, value). The snippet first runs as a dry run that is rolled back, and the exact changes are shown to the user on a card. Nothing is applied unless the user clicks Confirm. Do not import anything; do not use Transaction or doc; assign a short summary to result.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "description": "One short sentence describing the change for the user."
+                },
+                "code": {
+                    "type": "string",
+                    "description": "The snippet, using only revit_rw.get_param and revit_rw.set_param."
+                }
+            },
+            "required": [
+                "description",
+                "code"
+            ]
+        }
     }
 }

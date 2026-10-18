@@ -2213,10 +2213,13 @@ def _append_proposal_card(self, p):
         return lbl
 
     add_label("PROPOSED CHANGE  (%s)" % pid, bold=True)
-    add_label("Set '%s' = '%s' on %s" % (args["param_name"], args["value"], args["category"]))
+    if p.get("function") == "run_action":
+        add_label("Action: %s" % args.get("description", ""), height=36)
+    else:
+        add_label("Set '%s' = '%s' on %s" % (args["param_name"], args["value"], args["category"]))
     for it in items:
         add_label(
-            "- %s [%s]:  '%s'  ->  '%s'" % (it.get("label"), it.get("scope"), it.get("old"), it.get("new")),
+            ("- id %s %s [%s] %s:  '%s'  ->  '%s'" % (it.get("target_id"), it.get("label"), it.get("scope"), it.get("param_name"), it.get("old"), it.get("new")) if it.get("param_name") else "- %s [%s]:  '%s'  ->  '%s'" % (it.get("label"), it.get("scope"), it.get("old"), it.get("new"))),
             height=36
         )
     type_total = 0
