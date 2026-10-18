@@ -1,4 +1,4 @@
-﻿# lib/action_exec.py  (runs a generated ACTION snippet against revit_rw)
+# lib/action_exec.py  (runs a generated ACTION snippet against revit_rw)
 # Same static validator, safe builtins, timeout and plain-result rule as the
 # read-only sandbox (reused from sandbox_exec). It NEVER touches a Transaction:
 # the caller owns it and decides whether to roll back or commit.
@@ -10,7 +10,7 @@ if PANEL not in sys.path:
     sys.path.append(PANEL)
 import sandbox_exec
 
-ACTION_METHODS = ("get_param", "set_param")
+ACTION_METHODS = ("get_param", "set_param", "list_levels", "list_wall_types", "create_wall")
 
 
 def run_action_code(code, rw, timeout_sec=5):

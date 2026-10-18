@@ -74,7 +74,7 @@ def preview_action(doc, code):
 
 
 def _change_key(c):
-    return (c["target_id"], c["param_name"], _norm(c["new"]))
+    return ("new" if c.get("scope") in ("created", "new element") else c["target_id"], c["param_name"], _norm(c["new"]))
 
 
 def _run_action(doc, args, expected_old):
@@ -91,6 +91,8 @@ def _run_action(doc, args, expected_old):
             return {"status": "failed", "reason": "snippet " + out["status"] + ": " + _txt(out.get("message", ""))}
         changes = out["changes"]
         for c in changes:
+            if c.get("scope") in ("created", "new element"):
+                continue
             key = "%s|%s" % (c["target_id"], c["param_name"])
             if key not in expected_old or _norm(expected_old[key]) != _norm(c["old"]):
                 t.RollBack()

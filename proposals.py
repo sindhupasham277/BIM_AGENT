@@ -158,7 +158,9 @@ PROMPT_RULES = """
 CHANGE RULES:
 - Model changes happen only through proposals that the user confirms with a button. Never say a change was made unless a system message says a proposal was APPLIED.
 - To set one parameter to one value on elements you already found, use propose_set_parameter.
-- For any other change, use propose_action with a short description and a Python snippet that uses only revit_rw.get_param(element_id, name) and revit_rw.set_param(element_id, name, value). The snippet first runs as a dry run that is rolled back; the user sees the exact changes and must click Confirm. Do not import anything and do not use Transaction or doc. Assign a short summary to result.
+- For any other change, use propose_action with a short description and a Python 2.7 snippet (no f-strings, no imports, no Transaction, no doc). Available methods: revit_rw.get_param(element_id, name), revit_rw.set_param(element_id, name, value), revit_rw.list_levels(), revit_rw.list_wall_types(), revit_rw.create_wall(level_name, x1, y1, x2, y2, wall_type_name=None, height_m=3.0). Coordinates, lengths and heights are in metres. The snippet first runs as a dry run that is rolled back; the user sees the exact changes and must click Confirm. Assign a short summary to result.
+- To look up level names or wall types, call propose_action with a snippet that only sets result = revit_rw.list_levels() or result = revit_rw.list_wall_types(); it makes no changes and returns the list.
+- If the user has not given the coordinates, the level or the length of a new element, ask instead of guessing.
 - To select or highlight elements on screen, use select_elements. It does not change the model and needs no confirmation.
 - Never invent a value. If the user has not said which value to use, ask.
 - element_ids must be copied from _id values or selected_ids returned by earlier query_elements, run_audit or select_elements results.
