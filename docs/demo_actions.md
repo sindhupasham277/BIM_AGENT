@@ -1,4 +1,4 @@
-﻿# Demo script: action agent (branch agent-actions)
+# Demo script: action agent (branch agent-actions)
 
 Every prompt below passed in testing (M1-M5, action evaluation run 1). Model: A_working.rvt reset from
 Model_A_clean.rvt. Expected durations are from the evaluation run (prompt to card).
@@ -17,7 +17,7 @@ Model_A_clean.rvt. Expected durations are from the evaluation run (prompt to car
 ## Beats
 | # | Type in the chat panel | Expected | Time |
 |---|---|---|---|
-| 1 | `Select all doors with a fire rating of 2H.` | Door zz-99 (id 1678957) is selected in Revit; no card. | ~6 s |
+| 1 | `Select all doors whose Fire Rating parameter is 2H.` | Door zz-99 (id 1678957) is selected in Revit; no card. | ~6 s |
 | 2 | `Copy each wall's Mark into its Comments.` | Card with 11 lines (Comments: '' -> w-01 ... ). Click **Confirm**: "Applied ... (11 changes)". Select any wall: Comments equals its Mark. | ~25 s |
 | 3 | `Create a wall on level L1 from (25, 0) to (33, 0) metres and place a door of type "M_Door-Exterior-Single-Two_Lite: 900 x 2000mm" in it at 4 metres from its start.` | Card with 2 created lines (the wall; the door "in the new wall at 4.00 m"). **Confirm**: wall and door appear east of the building. | ~11 s |
 | 4 | `Move wall 1674186 by 1 metre in the Y direction.` | Card shows the real new line (y 12.807 -> 13.807). **Confirm**: the top wall moves; joined walls stretch. Then press **Ctrl+Z** once: it moves back. | ~6 s |
@@ -39,3 +39,19 @@ Model_A_clean.rvt. Expected durations are from the evaluation run (prompt to car
 ## Known limitations to state if asked
 Walls adjusted by Revit joins are not listed on the card; rotation, rooms and many other operations are not yet
 methods; list repetition through a variable could still freeze Revit (save before use); evaluation is one run on one model.
+
+## Rehearsal 1 (2026-10-18, cold start, log eval/results/demo_actions_rehearsal.db)
+| Beat | Outcome | Reply time | Confirm |
+|---|---|---|---|
+| Warm-up | 11 walls | 18.6 s | - |
+| 1 Select 2H | Correct (door 1678957), but the first filter used Type Name; the agent self-corrected | 5.5 s | - |
+| 2 Mark -> Comments | Applied, 11 changes | 17.5 s | 3.4 s |
+| 3 Wall + door | Applied; doors 8 -> 9, walls 11 -> 12 | 8.3 s | 3.4 s |
+| 4 Move + Ctrl+Z | Applied, wall moved; undo moved it back | 5.5 s | 3.4 s |
+| 5 Delete all walls | Card with red DELETES line; rejected; nothing changed | 8.9 s | - |
+| 6 Rotate | Explained no rotate method; asked for pivot and hosted-element choices; no card | 9.3 s | - |
+
+Change after rehearsal: beat 1 now names the parameter ("whose Fire Rating parameter is 2H"). Checked 3 times in
+fresh sessions on the post-rehearsal model: each run used one select call with Fire Rating == 2H and selected exactly
+the doors an independent query returns (2 doors there, because beat 3's new door shares the 900 x 2000mm type, whose
+Fire Rating is a type parameter). On a fresh model, before beat 3, the answer is 1 door. Total stopwatch time not recorded.

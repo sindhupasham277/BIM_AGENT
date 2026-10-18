@@ -1,0 +1,4 @@
+id,group,pass,seconds,why,tools,proposals,items,reply,session_id,prompt
+B1a,beat1,0,7.2,selected counts: [2],select_elements:ok,0,[],success,act-eval-B1a-3d1245,Select all doors whose Fire Rating parameter is 2H.
+B1b,beat1,0,6.8,selected counts: [2],select_elements:ok,0,[],success,act-eval-B1b-ecd23d,Select all doors whose Fire Rating parameter is 2H.
+B1c,beat1,0,8.5,selected counts: [2],select_elements:ok query_elements:ok,0,[],success,act-eval-B1c-85e29b,Select all doors whose Fire Rating parameter is 2H.
