@@ -30,7 +30,10 @@ Beat 5, code-gen fallback (about 20 s: narrate the wait)
 ## Part 2: switch to Model B
 
 6. Close A_working.rvt (No to saving). Open B_working.rvt. Check model_info says B_working.
-   Restart nothing else.
+   Then restart the brain server (Ctrl+C, then the same command with BTP_MEMORY_DB set to the demo database)
+   so Part 1's conversation history does not carry into Part 2 (in the recorded Clip 1 the agent answered
+   "I already ran the audit" from history). Ask one throwaway question that is not a demo beat
+   (for example: how many walls are there?) to warm up before Beat 3.
 
 Beat 3, CHECK (about 10 s)
 - Type: Run the missing fire rating audit.
