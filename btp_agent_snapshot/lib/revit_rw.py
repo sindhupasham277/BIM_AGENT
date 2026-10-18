@@ -4,7 +4,7 @@
 # Lengths are in METRES, like the query results.
 import math
 from Autodesk.Revit.DB import (StorageType, FilteredElementCollector, Level, WallType, Wall,
-                               Line, XYZ, UnitUtils, UnitTypeId, ElementTypeGroup)
+                               Line, XYZ, UnitUtils, UnitTypeId, ElementTypeGroup, ElementTransformUtils)
 import fix_plan
 
 MAX_CHANGES = 200
@@ -66,6 +66,7 @@ class RevitRW(object):
         self._changes = {}
         self._order = []
         self._created = set()
+        self._moves = {}
 
     def _element(self, element_id):
         n = _int(element_id)
@@ -206,6 +207,81 @@ class RevitRW(object):
         if fix_plan.id_int(hits[0].Id) != fix_plan.id_int(el.GetTypeId()):
             el.ChangeTypeId(hits[0].Id)
         return True
+
+    def _where(self, el):
+        loc = el.Location
+        try:
+            pt = loc.Point
+            return "point (%.3f, %.3f, %.3f) m" % (_m(pt.X), _m(pt.Y), _m(pt.Z))
+        except Exception:
+            pass
+        try:
+            c = loc.Curve
+            a, b = c.GetEndPoint(0), c.GetEndPoint(1)
+            return "line (%.3f, %.3f) to (%.3f, %.3f) m" % (_m(a.X), _m(a.Y), _m(b.X), _m(b.Y))
+        except Exception:
+            return None
+
+    def _offset(self, el, dx, dy, dz):
+        d = [_num(v, "offset") for v in (dx, dy, dz)]
+        if max(abs(v) for v in d) > MAX_COORD_M:
+            raise ActionError("offsets must be within +/-%d m" % MAX_COORD_M)
+        if not any(d):
+            raise ActionError("offset is zero")
+        if getattr(el, "Pinned", False):
+            raise ActionError("id %s is pinned; unpin it in Revit first" % _int(fix_plan.id_int(el.Id)))
+        if self._where(el) is None:
+            raise ActionError("id %s has no location that can be moved" % _int(fix_plan.id_int(el.Id)))
+        return d
+
+    def move_element(self, element_id, dx, dy, dz=0):
+        el = self._element(element_id)
+        d = self._offset(el, dx, dy, dz)
+        eid = _int(fix_plan.id_int(el.Id))
+        before = self._where(el)
+        ElementTransformUtils.MoveElement(self.doc, el.Id, XYZ(_ft(d[0]), _ft(d[1]), _ft(d[2])))
+        self.doc.Regenerate()
+        after = self._where(el)
+        if after == before:
+            raise ActionError("the move had no effect: Revit keeps id %s in place (for a wall, usually because "
+                              "both ends are joined to other walls; moving it along its own length is undone "
+                              "by the joins). Try moving it across its length instead." % eid)
+        self._record((eid, "(location)"), {
+            "target_id": eid,
+            "scope": "new element" if eid in self._created else "instance",
+            "label": el.Category.Name if el.Category is not None else "element",
+            "param_name": "(location)",
+            "old": before,
+            "new": after,
+            "affected": 1,
+        })
+        return True
+
+    def copy_element(self, element_id, dx, dy, dz=0):
+        el = self._element(element_id)
+        d = self._offset(el, dx, dy, dz)
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        src = _int(fix_plan.id_int(el.Id))
+        new_ids = ElementTransformUtils.CopyElement(self.doc, el.Id, XYZ(_ft(d[0]), _ft(d[1]), _ft(d[2])))
+        out = []
+        for nid in new_ids:
+            n = _int(fix_plan.id_int(nid))
+            if len(self._created) >= MAX_CREATED:
+                raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+            self._created.add(n)
+            ne = self.doc.GetElement(nid)
+            self._record((n, "(copy)"), {
+                "target_id": n,
+                "scope": "created",
+                "label": ne.Category.Name if ne is not None and ne.Category is not None else "element",
+                "param_name": "(copy)",
+                "old": u"",
+                "new": "copy of id %s moved by (%.3f, %.3f, %.3f) m" % (src, d[0], d[1], d[2]),
+                "affected": 1,
+            })
+            out.append(n)
+        return out
 
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
