@@ -1,0 +1,20 @@
+﻿[
+ {"id": "S1", "group": "select", "prompt": "Select all doors.", "expect": {"kind": "select", "count": 8}},
+ {"id": "S2", "group": "select", "prompt": "Select the walls whose Mark is w-04.", "expect": {"kind": "select", "count": 1}},
+ {"id": "P1", "group": "parameter", "prompt": "Set the Comments of door 1678957 to checked.", "expect": {"kind": "items", "count": 1, "match": [{"target_id": 1678957, "param": "Comments", "new": "checked"}]}},
+ {"id": "P2", "group": "parameter", "prompt": "Copy each wall's Mark into its Comments.", "expect": {"kind": "copy_marks"}},
+ {"id": "C1", "group": "create", "prompt": "Create a wall on level L1 from (50, 50) to (55, 50) metres.", "expect": {"kind": "items", "count": 1, "match": [{"scope": "created", "param": "(new wall)", "new_contains": ["on L1", "(50.00, 50.00) to (55.00, 50.00)"]}]}},
+ {"id": "C2", "group": "create", "prompt": "Create a Concrete 300mm wall on level L2 from (0, 60) to (8, 60) metres, 4 metres high.", "expect": {"kind": "items", "count": 1, "match": [{"scope": "created", "label": "Concrete 300mm", "new_contains": ["on L2", "(0.00, 60.00) to (8.00, 60.00)", "height 4.00"]}]}},
+ {"id": "T1", "group": "type", "prompt": "Change the type of wall 1674186 to Concrete 300mm.", "expect": {"kind": "items", "count": 1, "match": [{"target_id": 1674186, "param": "(type)", "new_endswith": "Concrete 300mm"}]}},
+ {"id": "M1", "group": "move_copy", "prompt": "Move wall 1674186 by 1 metre in the Y direction.", "expect": {"kind": "items", "count": 1, "match": [{"target_id": 1674186, "param": "(location)", "new": "line (-12.173, 13.807) to (17.827, 13.807) m"}]}},
+ {"id": "M2", "group": "move_copy", "prompt": "Move wall 1674186 by 1 metre in the X direction.", "expect": {"kind": "no_proposal"}},
+ {"id": "M3", "group": "move_copy", "prompt": "Copy wall 1674186 20 metres in the Y direction.", "expect": {"kind": "items", "count": 1, "match": [{"scope": "created", "param": "(copy)", "new_contains": ["copy of id 1674186 moved by (0.000, 20.000, 0.000)"]}]}},
+ {"id": "D1", "group": "delete", "prompt": "Delete door 1678957.", "expect": {"kind": "items", "count": 1, "match": [{"target_id": 1678957, "scope": "deleted"}]}},
+ {"id": "D2", "group": "delete", "prompt": "Delete wall 1674186.", "expect": {"kind": "items", "count": 3, "match": [{"target_id": 1674186, "scope": "deleted"}, {"target_id": 1674233, "scope": "deleted (dependent)"}, {"target_id": 1676128, "scope": "deleted (dependent)"}]}},
+ {"id": "H1", "group": "doors_windows", "prompt": "Place a door of type \"M_Door-Exterior-Single-Two_Lite: 900 x 2000mm\" in wall 1674186 at 15 metres from its start.", "expect": {"kind": "items", "count": 1, "match": [{"scope": "created", "param": "(new door)", "new_contains": ["in wall 1674186 at 15.00 m"]}]}},
+ {"id": "H2", "group": "doors_windows", "prompt": "Place a window of type \"M_Window-Casement-Double: 1050 x 1350mm\" in wall 1674186 at 5 metres from its start with a sill height of 0.9 metres.", "expect": {"kind": "items", "count": 1, "match": [{"scope": "created", "param": "(new window)", "new_contains": ["in wall 1674186 at 5.00 m", "sill 0.90 m"]}]}},
+ {"id": "X1", "group": "compound", "prompt": "Create a wall on level L1 from (70, 0) to (80, 0) metres and place a door of type \"M_Door-Exterior-Single-Two_Lite: 900 x 2000mm\" in it at 5 metres from its start.", "expect": {"kind": "items", "count": 2, "match": [{"param": "(new wall)", "new_contains": ["(70.00, 0.00) to (80.00, 0.00)"]}, {"param": "(new door)", "new_contains": ["in the new wall at 5.00 m"]}]}},
+ {"id": "N1", "group": "should_not_act", "prompt": "Create a wall.", "expect": {"kind": "no_proposal"}},
+ {"id": "N2", "group": "should_not_act", "prompt": "Tidy up the model.", "expect": {"kind": "no_proposal"}},
+ {"id": "N3", "group": "should_not_act", "prompt": "Rotate wall 1674186 by 90 degrees.", "expect": {"kind": "no_proposal"}}
+]
