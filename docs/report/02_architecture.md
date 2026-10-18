@@ -1,4 +1,4 @@
-﻿# 2. Architecture
+# 2. Architecture
 
 ## 2.1 Overview
 
@@ -18,12 +18,12 @@ The brain talks to the bridge over local HTTP. The panel talks to the brain over
 
 The read path serves two kinds of tool, and the LLM decides which to call. Everything on it is read-only.
 
-**Layer 1: the generic query engine.** Two generic tools replace a fixed list of questions. `query_elements` returns the requested fields of the elements in a category that pass a list of filters, and `aggregate_elements` counts, sums, averages or groups them. A schema of the open model (categories and the parameter names that exist, with their data types) is built on the Revit side and supplied to the LLM, so it knows what it may query. Before a query runs, the brain checks that every parameter name matches the schema exactly and refuses the call otherwise. Five audit rules are exposed as a `run_audit` tool (chapter 4). The engine covers the categories Doors, Windows, Walls, Rooms and Columns.
+**Layer 1: the generic query engine.** Two generic tools replace a fixed list of questions. `query_elements` returns the requested fields of the elements in a category that pass a list of filters, and `aggregate_elements` computes a count, sum, average, minimum or maximum over them, optionally grouped by a field. The Revit side builds a schema of the open model (the categories and, for each, the parameter names that exist with their data types) and serves it at `/schema`. Before a query runs, the brain checks that every parameter name matches the schema exactly and refuses the call otherwise (for example: "The requested parameter 'x' is not available with that exact name in the model schema"). Five audit rules are exposed as a `run_audit` tool (chapter 4). The engine covers the categories Doors, Windows, Walls, Rooms and Columns.
 
 **Layer 2: the sandboxed code-gen fallback.** For questions that one filtered query cannot express (for example, a relationship between two categories), the LLM writes a short Python snippet and sends it with `run_generated_snippet`. The bridge runs it as follows:
 1. A static validator parses the snippet and rejects imports, dangerous names and attribute tricks.
 2. The snippet runs with a 5 s time limit.
-3. It may call only `revit_ro`, a hand-written read-only helper (`get_elements`, `get_param`, `get_geometry_bbox`, `get_host_id`, `get_relationship`, `get_level_of_element`). The helper has no write methods and the generated code never sees the Revit `Document`.
+3. It may call only `revit_ro`, a hand-written read-only helper (`get_elements`, `get_param`, `get_geometry_bbox`, `get_host_id`, `get_relationship`, `get_level_of_element`; these six are all of its public methods). The helper has no write methods and the generated code never sees the Revit `Document`.
 
 The safety of this layer is the size of the `revit_ro` surface: every method added to it is something generated code can do. Its category map covers Doors, Windows, Walls, Rooms and Levels, which differs from the engine's list (it has no Columns); section 5.2 shows the consequence.
 
