@@ -9,6 +9,37 @@ except NameError:
     _STR = str              # IronPython 3 / CPython
 
 
+from Autodesk.Revit.DB import IFailuresPreprocessor, FailureProcessingResult, FailureSeverity
+
+
+class _WarningHandler(IFailuresPreprocessor):
+    # Accepts Revit WARNINGS only (records their text); errors are left alone and still roll back.
+    __namespace__ = 'BtpAgentWarnings'
+
+    def __init__(self):
+        self.warnings = []
+
+    def PreprocessFailures(self, failures):
+        for f in failures.GetFailureMessages():
+            if f.GetSeverity() == FailureSeverity.Warning:
+                try:
+                    text = f.GetDescriptionText()
+                    if text not in self.warnings:
+                        self.warnings.append(text)
+                except Exception:
+                    pass
+                failures.DeleteWarning(f)
+        return FailureProcessingResult.Continue
+
+
+def _attach_warning_handler(t):
+    h = _WarningHandler()
+    opts = t.GetFailureHandlingOptions()
+    opts.SetFailuresPreprocessor(h)
+    t.SetFailureHandlingOptions(opts)
+    return h
+
+
 def _txt(v):
     return v if isinstance(v, _STR) else str(v)
 
@@ -44,13 +75,14 @@ def _set_parameter(doc, args, expected_old):
             owner = doc.GetElement(fix_plan.make_id(it["target_id"]))
             if not _set(owner.LookupParameter(args["param_name"]), args["value"]):
                 raise ValueError("could not set id %s" % it["target_id"])
+        _wh = _attach_warning_handler(t)
         if t.Commit() != TransactionStatus.Committed:
             return {"status": "failed", "reason": "Revit did not commit"}
     except Exception as ex:
         if t.HasStarted():
             t.RollBack()
         return {"status": "failed", "reason": str(ex)}
-    return {"status": "applied", "changed": plan["items"]}
+    return {"status": "applied", "changed": plan["items"], "warnings": list(_wh.warnings)}
 
 
 def _action_modules():
@@ -100,13 +132,14 @@ def _run_action(doc, args, expected_old):
         if sorted(_change_key(c) for c in changes) != sorted(_change_key(c) for c in expected):
             t.RollBack()
             return {"status": "refused", "reason": "The action did something different from the preview. Nothing applied."}
+        _wh = _attach_warning_handler(t)
         if t.Commit() != TransactionStatus.Committed:
             return {"status": "failed", "reason": "Revit did not commit"}
     except Exception as ex:
         if t.HasStarted() and not t.HasEnded():
             t.RollBack()
         return {"status": "failed", "reason": str(ex)}
-    return {"status": "applied", "changed": changes}
+    return {"status": "applied", "changed": changes, "warnings": list(_wh.warnings)}
 
 
 _WRITE_WHITELIST = {"set_parameter": _set_parameter, "run_action": _run_action}    # Revit-side whitelist

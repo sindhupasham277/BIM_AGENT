@@ -187,6 +187,8 @@ def result_message(p, result, after):
     else:
         msg = "Applied %s = %s (%d target%s)." % (
             p["args"]["param_name"], p["args"]["value"], n, "" if n == 1 else "s")
+    if result.get("warnings"):
+        msg += " Revit warnings: " + "; ".join(str(w).rstrip(".") for w in result["warnings"])[:300] + "."
     if p.get("audit_name") and after is not None:
         msg += " Re-audit '%s': %s -> %s violations." % (p["audit_name"], p["violations_before"], after)
     return msg
