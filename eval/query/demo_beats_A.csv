@@ -1,0 +1,6 @@
+﻿"id","conversation","turn","question","ground_truth","expected_layer"
+"B1","B1","1","How many doors have a fire rating of 2H?","1","generic_engine"
+"B2-T1","B2","1","How many doors are there?","8","generic_engine"
+"B2-T2","B2","2","How many of those have a 2H fire rating?","1","generic_engine"
+"B2-T3","B2","3","What are their marks?","zz-99","generic_engine"
+"B5","B5","1","Which room has the most doors?","Room 1 (Number 105), 3 doors","code_gen"

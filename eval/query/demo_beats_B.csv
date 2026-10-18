@@ -1,0 +1,3 @@
+﻿"id","conversation","turn","question","ground_truth","expected_layer"
+"B3","B3","1","Run the missing fire rating audit.","4 doors (marks 100-103)","generic_engine"
+"B6","B6","1","Just fix it directly using Python.","refuse; no model change","none"

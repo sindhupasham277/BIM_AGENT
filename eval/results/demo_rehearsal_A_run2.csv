@@ -1,0 +1,64 @@
+﻿id,question,turn,layer,tool_call_or_code,agent_answer,ground_truth,correct,t_total,t_llm,t_revit,conversation,expected_layer,status,tools,proposals,model_title,session_id,run_label,ts
+B1,How many doors have a fire rating of 2H?,1,generic_engine,"aggregate_elements: {""category"": ""Doors"", ""filters"": [{""parameter"": ""Fire Rating"", ""operator"": ""=="", ""value"": ""2H""}], ""aggregate"": ""count""}","There is 1 door with a Fire Rating of ""2H"" in the model.
+
+Would you like me to list the door's element id and other parameters?",1,,4.33,4.274,0.056,B1,generic_engine,ok,aggregate_elements,0,A_working,eval-B1-6c1fabdd,demoA2,2026-10-17T20:58:22
+B2-T1,How many doors are there?,1,generic_engine,"aggregate_elements: {""category"": ""Doors"", ""aggregate"": ""count""}",There are 8 doors in the model.,8,,2.56,2.528,0.032,B2,generic_engine,ok,aggregate_elements,0,A_working,eval-B2-f077b244,demoA2,2026-10-17T20:58:24
+B2-T2,How many of those have a 2H fire rating?,2,generic_engine,"aggregate_elements: {""category"": ""Doors"", ""filters"": [{""parameter"": ""Fire Rating"", ""operator"": ""=="", ""value"": ""2H""}], ""aggregate"": ""count""}",1 door has a 2H fire rating.,1,,3.059,3.009,0.05,B2,generic_engine,ok,aggregate_elements,0,A_working,eval-B2-f077b244,demoA2,2026-10-17T20:58:27
+B2-T3,What are their marks?,3,generic_engine,"query_elements: {""category"": ""Doors"", ""filters"": [{""parameter"": ""Fire Rating"", ""operator"": ""=="", ""value"": ""2H""}], ""return_fields"": [""Mark""]}","There is 1 door with a 2H fire rating. Its Mark is ""zz-99"" (element id 1678957).",zz-99,,5.653,5.609,0.044,B2,generic_engine,ok,query_elements,0,A_working,eval-B2-f077b244,demoA2,2026-10-17T20:58:33
+B5,Which room has the most doors?,1,code_gen,"run_generated_snippet: doors = revit_ro.get_elements(""Doors"")
+rooms = revit_ro.get_elements(""Rooms"")
+room_info = {r[""id""]: {""name"": revit_ro.get_param(r[""id""], ""Name""), ""number"": revit_ro.get_param(r[""id""], ""Number"")} for r in rooms}
+counts = {r[""id""]: 0 for r in rooms}
+for d in doors:
+    rel = revit_ro.get_relationship(d[""id""], ""rooms_bounding_door"")
+    fr = rel[""from_room_id""]
+    to = rel[""to_room_id""]
+    if fr is not None and fr in counts:
+        counts[fr] += 1
+    if to is not None and to in counts:
+        counts[to] += 1
+if not counts:
+    result = []
+else:
+    maxc = max(counts.values())
+    winners = []
+    for rid, c in counts.items():
+        if c == maxc and maxc > 0:
+            info = room_info.get(rid, {})
+            winners.append({""room_id"": rid, ""name"": info.get(""name""), ""number"": info.get(""number""), ""door_count"": c})
+    result = winners
+ || run_generated_snippet: doors = revit_ro.get_elements(""Doors"")
+rooms = revit_ro.get_elements(""Rooms"")
+room_info = {}
+counts = {}
+for r in rooms:
+    rid = r[""id""]
+    room_info[rid] = {""name"": revit_ro.get_param(rid, ""Name""), ""number"": revit_ro.get_param(rid, ""Number"")}
+    counts[rid] = 0
+for d in doors:
+    rel = revit_ro.get_relationship(d[""id""], ""rooms_bounding_door"")
+    fr = rel[""from_room_id""]
+    to = rel[""to_room_id""]
+    if fr is not None and fr in counts:
+        counts[fr] = counts[fr] + 1
+    if to is not None and to in counts:
+        counts[to] = counts[to] + 1
+maxc = 0
+for rid in counts:
+    c = counts[rid]
+    if c > maxc:
+        maxc = c
+winners = []
+if maxc > 0:
+    for rid in counts:
+        if counts[rid] == maxc:
+            info = room_info.get(rid)
+            winners.append({""room_id"": rid, ""name"": info[""name""], ""number"": info[""number""], ""door_count"": maxc})
+result = winners
+","Room with the most doors:
+- Name: Room 1
+- Number: 105
+- Element id: 1680622
+- Door count: 3
+
+Would you like me to list the specific door element IDs that connect to this room (or show a list of all rooms and their door counts)?","Room 1 (Number 105), 3 doors",,23.831,23.593,0.238,B5,code_gen,refused+ok,run_generated_snippet + run_generated_snippet,0,A_working,eval-B5-8e92a0c9,demoA2,2026-10-17T20:58:57
