@@ -42,6 +42,8 @@ def check(test, props, sel_counts, marks):
         return (not props), "proposals: %d" % len(props)
     if kind == "select":
         return (exp["count"] in sel_counts), "selected counts: %s" % sel_counts
+    if kind == "items_or_none" and not props:
+        return True, "no proposal (acceptable)"
     if not props:
         return False, "no proposal"
     if kind == "copy_marks":

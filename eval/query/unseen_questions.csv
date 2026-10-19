@@ -1,0 +1,14 @@
+id,conversation,turn,question,ground_truth,expected_layer
+U1,U1,1,"Which wall is the longest, and how long is it?",30 m; any of: w-04 (1674186),any
+U2,U2,1,What share of the total room area does the largest room take up?,"32.5 percent (Room 1, number 105)",any
+U3,U3,1,Which doors are hosted in wall w-04?,"1674233, 1676128",any
+U4,U4,1,How many doors are on each level?,L1: 8 (L2: 0),any
+U5,U5,1,"Which structural column is closest to door zz-99, and how far away is it?","column 1681138, 1.85 m",any
+U6,U6,1,Are there any walls shorter than 3 metres?,No (shortest 5.0 m),any
+U7,U7,1,What is the combined length of all the walls?,198.2 m,any
+U8-T1,U8,1,How many doors does the model have?,8,any
+U8-T2,U8,2,Only count the ones whose type is d1.,7,any
+U8-T3,U8,3,"Of those, how many sit in wall w-01?",4,any
+U9-T1,U9,1,Which room has the largest floor area?,Room 1 (Number 105),any
+U9-T2,U9,2,What is that area in square metres?,214.88 m2,any
+U9-T3,U9,3,How many doors does it have?,3,any

@@ -1,0 +1,48 @@
+{
+ "longest_wall": {
+  "id": 1674186,
+  "mark": "w-04",
+  "length_m": 30.0
+ },
+ "shortest_wall_m": 5.0,
+ "total_wall_length_m": 198.2,
+ "walls_over_10m": [
+  1674186,
+  1674187,
+  1674188,
+  1674189,
+  1682004,
+  1682134,
+  1682569,
+  1682824
+ ],
+ "wall_by_mark": {
+  "w-04": 1674186,
+  "w-02": 1674187,
+  "w-01": 1674188,
+  "w-03": 1674189,
+  "w-05": 1675635,
+  "W-TEST-01": 1675759,
+  "w-07": 1681589,
+  "w-06": 1682004,
+  "w-10": 1682134,
+  "w-09": 1682569,
+  "w-08": 1682824
+ },
+ "rooms": 8,
+ "biggest_room_share_pct": 32.5,
+ "room_105_id": [
+  1680622
+ ],
+ "doors_by_level": {
+  "L1": 8
+ },
+ "zz99_nearest_column": 1681138,
+ "doors_in_w04": [
+  1674233,
+  1676128
+ ],
+ "d1_doors_in_w01": 4,
+ "zz99_nearest_column_m": 1.85,
+ "first_window_type": "M_Window-Casement-Double: 1050 x 1350mm"
+}

@@ -1,0 +1,225 @@
+[
+ {
+  "id": "A1",
+  "group": "u_param",
+  "prompt": "Give every wall that is longer than 10 metres the Comments value long-wall.",
+  "expect": {
+   "kind": "items",
+   "count": 8,
+   "match": [
+    {
+     "target_id": 1674186,
+     "param": "Comments",
+     "new": "long-wall"
+    },
+    {
+     "target_id": 1674187,
+     "param": "Comments",
+     "new": "long-wall"
+    },
+    {
+     "target_id": 1674188,
+     "param": "Comments",
+     "new": "long-wall"
+    },
+    {
+     "target_id": 1674189,
+     "param": "Comments",
+     "new": "long-wall"
+    },
+    {
+     "target_id": 1682004,
+     "param": "Comments",
+     "new": "long-wall"
+    },
+    {
+     "target_id": 1682134,
+     "param": "Comments",
+     "new": "long-wall"
+    },
+    {
+     "target_id": 1682569,
+     "param": "Comments",
+     "new": "long-wall"
+    },
+    {
+     "target_id": 1682824,
+     "param": "Comments",
+     "new": "long-wall"
+    }
+   ]
+  }
+ },
+ {
+  "id": "A2",
+  "group": "u_param",
+  "prompt": "Set the Mark of door zz-99 to FD-01.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "target_id": 1678957,
+     "param": "Mark",
+     "new": "FD-01"
+    }
+   ]
+  }
+ },
+ {
+  "id": "A3",
+  "group": "u_copy",
+  "prompt": "Make a copy of wall w-04 three metres to the north.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "param": "(copy)",
+     "new_contains": [
+      "copy of id 1674186 moved by (0.000, 3.000, 0.000)"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "A4",
+  "group": "u_compound",
+  "prompt": "Add a 4 metre long wall on level L1 starting at (60, 60) and running north, and put a window of type \"M_Window-Casement-Double: 1050 x 1350mm\" in the middle of it.",
+  "expect": {
+   "kind": "items",
+   "count": 2,
+   "match": [
+    {
+     "param": "(new wall)",
+     "new_contains": [
+      "(60.00, 60.00) to (60.00, 64.00)"
+     ]
+    },
+    {
+     "param": "(new window)",
+     "new_contains": [
+      "in the new wall at 2.00 m"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "A5",
+  "group": "u_type",
+  "prompt": "Change wall w-02 to the Generic - 300mm type.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "target_id": 1674187,
+     "param": "(type)",
+     "new_endswith": "Generic - 300mm"
+    }
+   ]
+  }
+ },
+ {
+  "id": "A6",
+  "group": "u_move",
+  "prompt": "Slide door zz-99 half a metre along its wall.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "target_id": 1678957,
+     "param": "(location)"
+    }
+   ]
+  }
+ },
+ {
+  "id": "A7",
+  "group": "u_param",
+  "prompt": "Rename every room to Office.",
+  "expect": {
+   "kind": "items",
+   "count": 8,
+   "match": [
+    {
+     "target_id": 1680622,
+     "param": "Name",
+     "new": "Office"
+    }
+   ]
+  }
+ },
+ {
+  "id": "A8",
+  "group": "u_delete",
+  "prompt": "Delete the two doors that are closest to a structural column.",
+  "expect": {
+   "kind": "items",
+   "count_scope": {
+    "deleted": 2
+   },
+   "match": [
+    {
+     "target_id": 1678957,
+     "scope": "deleted"
+    },
+    {
+     "target_id": 1676128,
+     "scope": "deleted"
+    }
+   ]
+  }
+ },
+ {
+  "id": "N1",
+  "group": "u_no_act",
+  "prompt": "Put a door somewhere sensible.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ },
+ {
+  "id": "N2",
+  "group": "u_no_act",
+  "prompt": "Move wall w-04 to level L5.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ },
+ {
+  "id": "N3",
+  "group": "u_no_act",
+  "prompt": "Mirror the whole building about the x axis.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ },
+ {
+  "id": "N4",
+  "group": "u_no_act",
+  "prompt": "Copy wall w-01 25 times, 1 metre apart.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ },
+ {
+  "id": "N5",
+  "group": "u_partial",
+  "prompt": "Rename room 105 to Lobby and rotate it by 90 degrees.",
+  "expect": {
+   "kind": "items_or_none",
+   "count": 1,
+   "match": [
+    {
+     "target_id": 1680622,
+     "param": "Name",
+     "new": "Lobby"
+    }
+   ]
+  }
+ }
+]
