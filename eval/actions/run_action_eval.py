@@ -50,6 +50,10 @@ def check(test, props, sel_counts, marks):
         return ok, "%d items (expected %d), %d wrong" % (len(items), len(marks), len(bad))
     if "count" in exp and len(items) != exp["count"]:
         return False, "%d items (expected %d)" % (len(items), exp["count"])
+    for sc, n in (exp.get("count_scope") or {}).items():
+        have = len([i for i in items if i["scope"] == sc])
+        if have != n:
+            return False, "%d items with scope %s (expected %d)" % (have, sc, n)
     for m in exp.get("match", []):
         if not [i for i in items if all(field_ok(i, k, v) for k, v in m.items())]:
             return False, "no item matching %s" % json.dumps(m)
@@ -92,6 +96,8 @@ def main():
                 sel += selected_counts(summ)
         con.close()
         ok, why = check(t, props, sel, marks)
+        if len(props) > 1:
+            ok, why = False, why + " | MORE THAN ONE PROPOSAL (%d)" % len(props)
         for p in props:
             requests.post(BRAIN + "/proposals/%s/reject" % p["proposal_id"], json={"session_id": sid}, timeout=60)
         rows.append({"id": t["id"], "group": t["group"], "pass": int(ok), "seconds": round(secs, 1),
