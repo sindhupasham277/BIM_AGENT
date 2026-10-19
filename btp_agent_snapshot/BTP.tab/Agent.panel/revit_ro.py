@@ -70,6 +70,15 @@ class RevitRO(object):
                 if type_el is not None:
                     param = type_el.LookupParameter(name)
 
+        # G3 C7: 'Type Name' -> the name of the element's type (LookupParameter finds nothing for it)
+        if (param is None or not param.HasValue) and name == 'Type Name':
+            _t = self.doc.GetElement(el.GetTypeId())
+            if _t is not None:
+                try:
+                    from Autodesk.Revit.DB import Element as _E
+                    return _E.Name.GetValue(_t)
+                except Exception:
+                    return _t.Name
         if param is None or not param.HasValue:
             return None
 

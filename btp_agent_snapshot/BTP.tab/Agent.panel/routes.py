@@ -44,6 +44,15 @@ def get_param_value(doc, el, param_name):
             if type_el: 
                 p = type_el.LookupParameter(param_name) 
  
+    # G3 C7: 'Type Name' -> the name of the element's type (LookupParameter finds nothing for it)
+    if (p is None or not p.HasValue) and param_name == 'Type Name':
+        _t = doc.GetElement(el.GetTypeId())
+        if _t is not None:
+            try:
+                from Autodesk.Revit.DB import Element as _E
+                return _E.Name.GetValue(_t)
+            except Exception:
+                return _t.Name
     if p is None or not p.HasValue: 
         return None 
  

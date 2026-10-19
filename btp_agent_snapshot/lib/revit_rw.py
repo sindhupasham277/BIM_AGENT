@@ -101,6 +101,12 @@ class RevitRW(object):
     def get_param(self, element_id, name):
         el = self._element(element_id)
         p, scope, owner = fix_plan.find_param(self.doc, el, name)
+        if p is None or not (p.AsValueString() or p.AsString()):
+            # G3 C7: 'Type Name' -> the name of the element's type
+            if name == 'Type Name':
+                _t = self.doc.GetElement(el.GetTypeId())
+                if _t is not None:
+                    return fix_plan.el_name(_t)
         if p is None:
             return None
         return p.AsValueString() or p.AsString() or u""

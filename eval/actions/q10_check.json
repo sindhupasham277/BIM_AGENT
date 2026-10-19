@@ -1,0 +1,1 @@
+﻿[{"id":"Q10","group":"earlier_hidden","prompt":"Change every wall of type Generic - 200mm to Concrete 300mm.","expect":{"kind":"items","match":[{"param":"(type)","new_endswith":"Concrete 300mm"}]}}]
