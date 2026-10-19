@@ -281,11 +281,20 @@ def _dispatch_core(name, arguments, session):
     if entry is None:
         return {"error": "'%s' is not an available tool" % name}
 
+    # G3 C2c: at most ONE pending change proposal per user message (no batch splitting).
+    if name in ("propose_action", "propose_set_parameter") and session.get("turn_proposals", 0) >= 1:
+        return {"error": "Only one change proposal is allowed per user request, and one is already pending. "
+                         "Do not split a request into batches. Tell the user which limit applies and ask them "
+                         "to narrow the request."}
+
     if name == "propose_set_parameter":
 
         # Creates a PROPOSAL only. Never changes the model.
         try:
-            return proposals.propose_set_parameter(session, **arguments)
+            out = proposals.propose_set_parameter(session, **arguments)
+            if isinstance(out, dict) and out.get("status") == "pending_user_confirmation":
+                session["turn_proposals"] = session.get("turn_proposals", 0) + 1
+            return out
         except (ValueError, TypeError, RuntimeError) as ex:
             return {"error": str(ex)}
 
@@ -293,7 +302,10 @@ def _dispatch_core(name, arguments, session):
 
         # Creates a PROPOSAL from a rolled-back dry run. Never changes the model.
         try:
-            return proposals.propose_action(session, **arguments)
+            out = proposals.propose_action(session, **arguments)
+            if isinstance(out, dict) and out.get("status") == "pending_user_confirmation":
+                session["turn_proposals"] = session.get("turn_proposals", 0) + 1
+            return out
         except (ValueError, TypeError, RuntimeError) as ex:
             return {"error": str(ex)}
 
@@ -444,6 +456,7 @@ def handle_message(payload: MessagePayload):
     session["session_id"] = payload.session_id
     session["last_user_text"] = payload.user_message
     session["turn_logged"] = False
+    session["turn_proposals"] = 0
     session["model_name"] = fetch_model_name()
 
 
