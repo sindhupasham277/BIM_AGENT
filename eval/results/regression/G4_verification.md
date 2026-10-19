@@ -22,3 +22,11 @@ Result: 12/12. Never more than one proposal per message.
 ## Remaining known limits (candidates for G5)
 Read helper: no Columns category; bounding boxes and lengths in feet (C3, C4, C6, C7). Units not stated in some
 answers (G3, G7). Joined-wall side effects not listed on cards. Rotate, floors and other operations not available.
+
+## G5 full query run (2026-10-19, build 9f514c7, one session, log g5_full_query.db)
+Scored by hand with the unchanged rubric (query_g5_full_scored.csv).
+- Original ground truth: 17.0/20 (generic 8/8, code-gen 4/7, multi-turn 5/5). Phase 6: 13.5/20.
+- With approved errata for C3, C6, C7 (eval/query/ground_truth_errata.md): 20.0/20.
+- Strict routing 18/20 (C1, C5 answered correctly by the generic engine).
+- G3 and G7 now state m2 (previously 0.5 each); likely due to the rules stating metric units (C6, C10), not isolated.
+- Caveat: a single run of a nondeterministic model.

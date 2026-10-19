@@ -1,0 +1,21 @@
+﻿id,original_truth,score_original,corrected_truth,score_corrected,routing_correct
+G1,8,1,8,1,1
+G2,1,1,1,1,1
+G3,661 m2,1,661 m2,1,1
+G4,7,1,7,1,1
+G5,6,1,6,1,1
+G6,0,1,0,1,1
+G7,82.625 m2,1,82.625 m2,1,1
+G8,d1: 7; 900 x 2000mm: 1,1,d1: 7; 900 x 2000mm: 1,1,1
+C1,9 walls,1,9 walls,1,0
+C2,Room 1 (Number 105),1,Room 1 (Number 105),1,1
+C3,1 door,0,2 doors,1,1
+C4,None (0 rooms),1,None (0 rooms),1,1
+C5,Wall w-01 (ID 1674188),1,Wall w-01 (ID 1674188),1,0
+C6,2 columns,0,6 columns,1,1
+C7,30 m,0,37.79 m,1,1
+M1-T1,8,1,8,1,1
+M1-T2,1,1,1,1,1
+M1-T3,ZZ-99,1,ZZ-99,1,1
+M2-T1,8,1,8,1,1
+M2-T2,Room 1 (Number 105),1,Room 1 (Number 105),1,1
