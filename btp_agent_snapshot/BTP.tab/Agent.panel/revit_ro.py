@@ -4,6 +4,9 @@ from Autodesk.Revit.DB import (
     BuiltInCategory,
     ElementId,
     StorageType,
+    UnitUtils,
+    UnitTypeId,
+    SpecTypeId,
 )
 
 from System import Int64
@@ -15,7 +18,28 @@ CATEGORY_MAP = {
     "Walls": BuiltInCategory.OST_Walls,
     "Rooms": BuiltInCategory.OST_Rooms,
     "Levels": BuiltInCategory.OST_Levels,
+    "Columns": BuiltInCategory.OST_StructuralColumns,   # G5 C11: Revit Structural Columns
 }
+
+
+# G5 C11: read results in metres, like the query engine and revit_rw
+def _m(v):
+    return UnitUtils.ConvertFromInternalUnits(v, UnitTypeId.Meters)
+
+
+def _metric(p):
+    raw = p.AsDouble()
+    try:
+        spec = p.Definition.GetDataType()
+    except Exception:
+        return raw
+    if spec == SpecTypeId.Length:
+        return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.Meters)
+    if spec == SpecTypeId.Area:
+        return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.SquareMeters)
+    if spec == SpecTypeId.Volume:
+        return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.CubicMeters)
+    return raw
 
 
 class RevitRO(object):
@@ -91,7 +115,7 @@ class RevitRO(object):
             return param.AsInteger()
 
         if storage == StorageType.Double:
-            return param.AsDouble()
+            return _metric(param)   # G5 C11: m, m2, m3
 
         if storage == StorageType.ElementId:
             eid = param.AsElementId()
@@ -113,10 +137,28 @@ class RevitRO(object):
         if bbox is None:
             return None
 
-        return {
-            "min": (bbox.Min.X, bbox.Min.Y, bbox.Min.Z),
-            "max": (bbox.Max.X, bbox.Max.Y, bbox.Max.Z),
-        }
+        mn = [round(_m(v), 4) for v in (bbox.Min.X, bbox.Min.Y, bbox.Min.Z)]   # G5 C11: metres
+        mx = [round(_m(v), 4) for v in (bbox.Max.X, bbox.Max.Y, bbox.Max.Z)]
+        return {"min": mn, "max": mx, "center": [round((mn[i] + mx[i]) / 2.0, 4) for i in range(3)]}
+
+    def get_line(self, element_id):   # G5 C11
+        el = self.doc.GetElement(ElementId(Int64(element_id)))
+        if el is None:
+            return None
+        loc = el.Location
+        try:
+            pt = loc.Point
+            return {"point": [round(_m(v), 4) for v in (pt.X, pt.Y, pt.Z)]}
+        except Exception:
+            pass
+        try:
+            c = loc.Curve
+            a, b = c.GetEndPoint(0), c.GetEndPoint(1)
+            s = [round(_m(v), 4) for v in (a.X, a.Y, a.Z)]
+            e = [round(_m(v), 4) for v in (b.X, b.Y, b.Z)]
+            return {"start": s, "end": e, "length_m": round(_m(c.Length), 4)}
+        except Exception:
+            return None
 
     def get_relationship(self, element_id, kind):
 

@@ -145,7 +145,7 @@
     },
     "run_generated_snippet": {
         "name": "run_generated_snippet",
-        "description": "Run a short read-only Python snippet against the current Revit model when the request requires relationships, combining categories, comparisons, or multi-step logic that cannot be handled by query_elements, aggregate_elements, or run_audit.",
+        "description": "Run a short READ-ONLY Python 2.7 snippet against the open Revit model, for relationships, distances, combining categories, comparisons or multi-step logic that query_elements, aggregate_elements or run_audit cannot do. Use only revit_ro (lengths in metres, areas in m2): get_elements(category) returns a list of {id, name, category} for Doors, Windows, Walls, Rooms, Levels or Columns ('Columns' is Revit's Structural Columns category); get_param(element_id, name) returns the value (numbers in m, m2, m3; 'Type Name' gives the type name; None if missing); get_geometry_bbox(element_id) returns {min: [x, y, z], max: [x, y, z], center: [x, y, z]} or None; get_line(element_id) returns {start: [x, y, z], end: [x, y, z], length_m} for walls and other line-based elements, {point: [x, y, z]} for point-based elements such as doors and columns, or None; get_relationship(door_id, 'rooms_bounding_door') returns {from_room_id, to_room_id}; get_level_of_element(element_id) returns the level name; get_host_id(element_id) returns the host id or None. Same Python subset as action snippets (no import, while, try, lambda, def, **, isinstance, % formatting; 5 s timeout). Assign the answer to result.",
         "input_schema": {
             "type": "object",
             "properties": {

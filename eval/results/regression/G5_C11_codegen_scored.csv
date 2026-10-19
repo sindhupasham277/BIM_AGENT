@@ -1,0 +1,8 @@
+﻿id,source_run,answer,original_truth,score_original,corrected_truth,score_corrected,routing_correct,note
+C1,query_log_g4.csv,9 walls longer than 5 m,9 walls,1,9 walls,1,0,answered by generic engine
+C2,g5_codegen_log.csv,Room 1 (105) - 3 doors,Room 1 (Number 105),1,Room 1 (Number 105),1,1,
+C3,g5_codegen_log.csv,2 doors (1676128 1678957),1 door,0,2 doors,1,1,matches independent geometry
+C4,g5_codegen_log.csv,no rooms contain a structural column,None (0 rooms),1,None (0 rooms),1,1,now from real column data (was vacuous)
+C5,g5_codegen_log.csv,wall 1674188 - 4 doors,Wall w-01 (ID 1674188),1,Wall w-01 (ID 1674188),1,0,answered by generic engine
+C6,g5_codegen_log.csv,6 columns,2 columns,0,6 columns,1,1,matches independent geometry
+C7,g5_codegen_log.csv,37.786 m (1681129-1681264),30 m,0,37.79 m,1,1,matches independent geometry

@@ -240,6 +240,7 @@ PUBLIC_METHODS = (
     "get_relationship",
     "get_level_of_element",
     "get_host_id",
+    "get_line",   # G5 C11
 )
 
 BLOCKED_ATTR_PREFIXES = ("_", "func_", "im_", "gi_", "f_", "co_", "tb_", "cell_")

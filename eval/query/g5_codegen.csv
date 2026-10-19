@@ -1,0 +1,7 @@
+id,conversation,turn,question,ground_truth,expected_layer
+C2,C2,1,Which room has the most doors?,Room 1 (Number 105),code_gen
+C3,C3,1,How many doors are within 3 m of a structural column?,1 door,code_gen
+C4,C4,1,Which rooms contain a structural column?,None (0 rooms),code_gen
+C5,C5,1,Which wall hosts the most doors?,Wall w-01 (ID 1674188),code_gen
+C6,C6,1,How many structural columns are within 2 m of a wall intersection?,2 columns,code_gen
+C7,C7,1,What is the distance between the two farthest structural columns?,30 m,code_gen
