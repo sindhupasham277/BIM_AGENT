@@ -68,6 +68,8 @@ ALLOWED_NODES = {
     ast.Break,
     ast.Continue,
     ast.Pass,
+    ast.UnaryOp,   # G3 C4: -x and not x (Invert ~ stays blocked)
+    ast.keyword,   # G3 C4: keyword arguments, e.g. f(a, name=b)
 }
 
 
