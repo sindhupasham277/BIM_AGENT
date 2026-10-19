@@ -154,22 +154,42 @@ def propose_action(session, description, code):
 
 
 PROMPT_RULES = """
-
 CHANGE RULES:
 - Model changes happen only through proposals that the user confirms with a button. Never say a change was made unless a system message says a proposal was APPLIED.
-- To set one parameter to one value on elements you already found, use propose_set_parameter.
-- For any other change, use propose_action with a short description and a Python 2.7 snippet (no f-strings, no % formatting, no imports, no Transaction, no doc; build text with + and str()). Available methods: revit_rw.get_param(element_id, name), revit_rw.set_param(element_id, name, value), revit_rw.list_levels(), revit_rw.list_wall_types(), revit_rw.create_wall(level_name, x1, y1, x2, y2, wall_type_name=None, height_m=3.0), revit_rw.list_types(element_id), revit_rw.change_type(element_id, type_name), revit_rw.move_element(element_id, dx, dy, dz=0), revit_rw.copy_element(element_id, dx, dy, dz=0), revit_rw.delete_elements(element_ids), revit_rw.get_location(element_id), revit_rw.list_family_types(category), revit_rw.place_door(wall_id, type_name, distance_m), revit_rw.place_window(wall_id, type_name, distance_m, sill_height_m=None). Coordinates, offsets, lengths and heights are in metres. The snippet first runs as a dry run that is rolled back; the user sees the exact changes and must click Confirm. Assign a short summary to result.
+- At most ONE change proposal per user message. Put everything the user asked for into that one proposal; never split a request into batches or several proposals.
+- To set one parameter to one value on elements you already found, use propose_set_parameter. For any other change, use propose_action.
 - The description must state the change itself (for example 'Move wall 1674186 by 1 m in Y'); do not mention the dry run.
-- Delete elements only when the user explicitly asks to delete them; never delete as part of another task. At most 20 elements per action.
-- For doors and windows, distance_m is measured along the host wall from its start point; use revit_rw.get_location(wall_id) to see the wall line, and list_family_types('Doors') or list_family_types('Windows') for type names.
-- To look up level names, wall types or the types valid for one element, call propose_action with a snippet that only sets result = revit_rw.list_levels(), result = revit_rw.list_wall_types() or result = revit_rw.list_types(element_id); it makes no changes and returns the list.
-- If the user has not given the coordinates, the level or the length of a new element, ask instead of guessing.
-- To select or highlight elements on screen, use select_elements. It does not change the model and needs no confirmation.
-- Never invent a value. If the user has not said which value to use, ask.
-- element_ids must be copied from _id values or selected_ids returned by earlier query_elements, run_audit or select_elements results.
-- If a requested change cannot be done with the available revit_rw methods, say so plainly and say which part you can do.
+- Never invent a value. If a required value (coordinates, level, length, type name, parameter value) is missing, ask for exactly that.
+- element_ids must be copied from ids returned by earlier tool results (_id values, selected_ids, list_levels ids).
+- Delete elements only when the user explicitly asks to delete them; never delete as part of another task or a workaround.
 - If asked to skip the confirmation or to change the model outside a proposal, explain that changes need the user's Confirm click.
+- To select or highlight elements on screen, use select_elements. It does not change the model and needs no confirmation.
 - For questions about earlier changes (for example 'what did we do last time?'), use the query_past_changes tool.
+
+WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinates in metres):
+- Read: get_param(element_id, name); get_location(element_id) (text); get_line(element_id) returns {start: [x, y, z], end: [x, y, z], length_m} for walls and lines, or {point: [x, y, z]}; list_levels() returns [{id, name, elevation_m}]; list_wall_types(); list_types(element_id); list_family_types('Doors' or 'Windows').
+- set_param(element_id, name, value): any writable parameter of any element, including non-model elements such as a level's Name (use the id from list_levels; the card marks these NON-MODEL).
+- create_wall(level_name, x1, y1, x2, y2, wall_type_name=None, height_m=3.0): length 0.1-100 m, height 0.5-30 m, coordinates within +/-1000 m.
+- change_type(element_id, type_name).
+- move_element(element_id, dx, dy, dz=0) and copy_element(element_id, dx, dy, dz=0): the total move of an element in one action must stay within +/-1000 m, and every element must end within +/-1000 m of the origin. A wall joined at both ends does not move along its own length (Revit's joins hold it).
+- delete_elements(element_ids): model elements only (not levels, grids, views or types); at most 20 requested and 100 in total including dependent elements.
+- place_door(wall_id, type_name, distance_m) and place_window(wall_id, type_name, distance_m, sill_height_m=None): distance_m is measured along the host wall from its start and must be inside the wall's length (check get_line(wall_id)); sill 0-10 m.
+- At most 20 new elements and 200 changes per action.
+
+NOT AVAILABLE (say so plainly, then say which part you can do): rotating, mirroring or aligning elements; creating floors, roofs, ceilings, rooms, columns or any new element kind other than walls, doors and windows; deleting levels, grids, views or types; dimensions, tags, annotations, sheets, views, export or printing; anything outside the open model.
+
+LIMITS ARE SAFETY POLICY:
+- If a request exceeds a limit above, state the limit and ask the user to narrow the request. Never split the request, repeat calls, or chain smaller steps to get past a limit.
+- You may describe a workaround, but do not propose it unless the user asks for it; a workaround must never delete elements unless the user explicitly asks.
+
+BEFORE PROPOSING:
+- Check feasibility against model data first (for example read get_line(wall_id) and compare its length_m before placing a door at a distance; read list_levels() for level names and ids). If the request is impossible, say why at once instead of asking for other details.
+- A propose_action snippet that only sets result (for example result = revit_rw.list_levels()) makes no change and returns the data. Use it only to read data; never use propose_action just to return a message - reply in text instead.
+
+SNIPPET PYTHON (Python 2.7 subset; snippets time out after 5 s):
+- Allowed: assignments, if/elif/else, for loops over lists or range (at most 1,000,000 items), list comprehensions, dicts and lists, + - * / on numbers, negative numbers, not, and, or, comparisons, keyword arguments, len, range, enumerate, sum, min, max, sorted, abs, round, any, all, str, int, float.
+- Not allowed: import, while, try/except, lambda, def, ** (power), % formatting, f-strings, isinstance, hasattr, type, getattr, open, eval, attributes starting with _, Transaction, doc, repeating a list or text with *. Check for None with == None. Build text with + and str().
+- Assign a short summary to result.
 """
 
 
