@@ -106,7 +106,7 @@ class RevitRW(object):
         return p.AsValueString() or p.AsString() or u""
 
     def list_levels(self):
-        return [{"name": fix_plan.el_name(lv), "elevation_m": round(_m(lv.Elevation), 3)}
+        return [{"id": _int(fix_plan.id_int(lv.Id)), "name": fix_plan.el_name(lv), "elevation_m": round(_m(lv.Elevation), 3)}
                 for lv in FilteredElementCollector(self.doc).OfClass(Level)]
 
     def list_wall_types(self):
@@ -125,7 +125,7 @@ class RevitRW(object):
         self._record((tid, name), {
             "target_id": tid,
             "scope": "new element" if tid in self._created else scope,
-            "label": fix_plan.el_name(owner),
+            "label": fix_plan.el_name(owner) if self._is_model(el) else "NON-MODEL %s: %s" % (el.Category.Name if el.Category is not None else el.GetType().Name, fix_plan.el_name(owner)),
             "param_name": name,
             "old": p.AsValueString() or p.AsString() or u"",
             "new": _txt(value),
@@ -238,13 +238,49 @@ class RevitRW(object):
             raise ActionError("id %s has no location that can be moved" % _int(fix_plan.id_int(el.Id)))
         return d
 
+    def _points(self, el):
+        loc = el.Location
+        try:
+            pt = loc.Point
+            return [(pt.X, pt.Y, pt.Z)]
+        except Exception:
+            pass
+        try:
+            c = loc.Curve
+            a, b = c.GetEndPoint(0), c.GetEndPoint(1)
+            return [(a.X, a.Y, a.Z), (b.X, b.Y, b.Z)]
+        except Exception:
+            return []
+
+    def _check_bounds(self, el):
+        for p in self._points(el):
+            if max(abs(_m(v)) for v in p) > MAX_COORD_M:
+                raise ActionError("id %s would end up outside +/-%d m of the project origin" % (_int(fix_plan.id_int(el.Id)), MAX_COORD_M))
+
+    def get_line(self, element_id):
+        el = self._element(element_id)
+        pts = self._points(el)
+        if len(pts) == 2:
+            a = [round(_m(v), 3) for v in pts[0]]
+            b = [round(_m(v), 3) for v in pts[1]]
+            return {"start": a, "end": b, "length_m": round(math.sqrt(sum((b[i] - a[i]) ** 2 for i in range(3))), 3)}
+        if len(pts) == 1:
+            return {"point": [round(_m(v), 3) for v in pts[0]]}
+        return None
+
     def move_element(self, element_id, dx, dy, dz=0):
         el = self._element(element_id)
         d = self._offset(el, dx, dy, dz)
         eid = _int(fix_plan.id_int(el.Id))
+        tot = self._moves.get(eid, (0.0, 0.0, 0.0))
+        tot = (tot[0] + d[0], tot[1] + d[1], tot[2] + d[2])
+        if max(abs(v) for v in tot) > MAX_COORD_M:
+            raise ActionError("total move of id %s in one action exceeds +/-%d m (the limit applies to the sum of all moves)" % (eid, MAX_COORD_M))
+        self._moves[eid] = tot
         before = self._where(el)
         ElementTransformUtils.MoveElement(self.doc, el.Id, XYZ(_ft(d[0]), _ft(d[1]), _ft(d[2])))
         self.doc.Regenerate()
+        self._check_bounds(el)
         after = self._where(el)
         if after == before:
             raise ActionError("the move had no effect: Revit keeps id %s in place (for a wall, usually because "
@@ -275,6 +311,8 @@ class RevitRW(object):
                 raise ActionError("more than %d new elements in one action" % MAX_CREATED)
             self._created.add(n)
             ne = self.doc.GetElement(nid)
+            if ne is not None:
+                self._check_bounds(ne)
             self._record((n, "(copy)"), {
                 "target_id": n,
                 "scope": "created",
