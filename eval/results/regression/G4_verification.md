@@ -30,3 +30,11 @@ Scored by hand with the unchanged rubric (query_g5_full_scored.csv).
 - Strict routing 18/20 (C1, C5 answered correctly by the generic engine).
 - G3 and G7 now state m2 (previously 0.5 each); likely due to the rules stating metric units (C6, C10), not isolated.
 - Caveat: a single run of a nondeterministic model.
+
+## Unseen set, run 2 (build 6aef630; expectations unchanged from commit 0ef180c)
+Reads 12.5/13 (U4 0.5: omitted L2: 0), actions 11/13, total 23.5/26 (run 1: 23.5/26, failures moved).
+- A4 failed with HTTP 500: query_elements on category "Levels" -> bridge 400 -> dispatch_tool logged and RE-RAISED -> /chat 500,
+  no reply. Fixed by C13 (dispatch_tool returns the error, with the bridge's text, to the agent). Re-run A4: PASS (c13_a4.csv).
+- A6 asked which direction to slide the door (the prompt gives none): a legitimate clarification under the C12 rule, but a FAIL
+  against the pre-registered expectation; cause is ambiguity in the test prompt. Not re-scored.
+- U4: group_by Level returns only non-empty groups; the C12 zero-groups rule was not applied (prompt-compliance limit).

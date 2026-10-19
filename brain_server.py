@@ -389,10 +389,18 @@ def dispatch_tool(name, arguments, session):
     try:
         result = _dispatch_core(name, arguments, session)
     except Exception as ex:
+        # G5 C13: a failing tool must not break the turn; return the error to the agent instead
+        detail = str(ex)
+        resp = getattr(ex, "response", None)
+        if resp is not None:
+            try:
+                detail = detail + " | bridge said: " + resp.text[:300]
+            except Exception:
+                pass
         memory.log(session, entry["kind"], entry["layer"], name, code_or_args,
-                   "error", str(ex)[:500], audit_name=audit_name,
+                   "error", detail[:500], audit_name=audit_name,
                    duration_ms=int((time.time() - t0) * 1000))
-        raise
+        return {"error": "Tool '%s' failed: %s" % (name, detail[:500])}
 
     memory.log(session, entry["kind"], entry["layer"], name, code_or_args,
                _status_of(result), _summary_of(result), audit_name=audit_name,
