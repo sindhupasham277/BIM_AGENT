@@ -8,6 +8,7 @@ from Autodesk.Revit.DB import (StorageType, FilteredElementCollector, Level, Wal
 import fix_plan
 from Autodesk.Revit.DB import FamilySymbol, BuiltInCategory, BuiltInParameter
 from Autodesk.Revit.DB.Structure import StructuralType
+from Autodesk.Revit.DB import Plane
 
 MAX_CHANGES = 200
 MAX_CREATED = 20
@@ -464,6 +465,115 @@ class RevitRW(object):
 
     def place_window(self, wall_id, type_name, distance_m, sill_height_m=None):
         return self._place("Windows", "window", wall_id, type_name, distance_m, sill_height_m)
+
+    def _center(self, el):
+        pts = self._points(el)
+        if not pts:
+            return None
+        if len(pts) == 1:
+            return pts[0]
+        return ((pts[0][0] + pts[1][0]) / 2.0, (pts[0][1] + pts[1][1]) / 2.0, (pts[0][2] + pts[1][2]) / 2.0)
+
+    def _pose(self, el):
+        w = self._where(el)
+        try:
+            return "%s, rotation %.1f deg" % (w, math.degrees(el.Location.Rotation))
+        except Exception:
+            return w
+
+    def rotate_element(self, element_id, angle_deg, cx=None, cy=None):   # family 1
+        el = self._element(element_id)
+        eid = _int(fix_plan.id_int(el.Id))
+        a = _num(angle_deg, "angle_deg")
+        if a == 0 or abs(a) > 360:
+            raise ActionError("angle_deg must be non-zero and between -360 and 360")
+        if getattr(el, "Pinned", False):
+            raise ActionError("id %s is pinned; unpin it in Revit first" % eid)
+        before = self._pose(el)
+        if before is None:
+            raise ActionError("id %s has no location that can be rotated" % eid)
+        if cx is None or cy is None:
+            c = self._center(el)
+            px, py = c[0], c[1]
+        else:
+            px, py = _ft(_num(cx, "cx")), _ft(_num(cy, "cy"))
+        axis = Line.CreateBound(XYZ(px, py, 0), XYZ(px, py, 1))
+        ElementTransformUtils.RotateElement(self.doc, el.Id, axis, math.radians(a))
+        self.doc.Regenerate()
+        self._check_bounds(el)
+        after = self._pose(el)
+        if after == before:
+            raise ActionError("the rotation had no effect on id %s (Revit kept it in place)" % eid)
+        self._record((eid, "(location)"), {
+            "target_id": eid,
+            "scope": "new element" if eid in self._created else "instance",
+            "label": el.Category.Name if el.Category is not None else "element",
+            "param_name": "(location)",
+            "old": before,
+            "new": after,
+            "affected": 1,
+        })
+        return True
+
+    def mirror_element(self, element_id, x1, y1, x2, y2, copy=True):   # family 1
+        el = self._element(element_id)
+        eid = _int(fix_plan.id_int(el.Id))
+        p = [_num(v, "coordinate") for v in (x1, y1, x2, y2)]
+        if max(abs(v) for v in p) > MAX_COORD_M:
+            raise ActionError("mirror line coordinates must be within +/-%d m" % MAX_COORD_M)
+        dx, dy = p[2] - p[0], p[3] - p[1]
+        if math.hypot(dx, dy) < 0.001:
+            raise ActionError("the mirror line needs two different points")
+        if self._where(el) is None:
+            raise ActionError("id %s has no location that can be mirrored" % eid)
+        plane = Plane.CreateByNormalAndOrigin(XYZ(-dy, dx, 0).Normalize(), XYZ(_ft(p[0]), _ft(p[1]), 0))
+        from System.Collections.Generic import List
+        ids = List[ElementId]()
+        ids.Add(el.Id)
+        if copy:
+            if len(self._created) >= MAX_CREATED:
+                raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+            new_ids = ElementTransformUtils.MirrorElements(self.doc, ids, plane, True)
+            self.doc.Regenerate()
+            out = []
+            for nid in new_ids:
+                n = _int(fix_plan.id_int(nid))
+                if len(self._created) >= MAX_CREATED:
+                    raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+                self._created.add(n)
+                ne = self.doc.GetElement(nid)
+                if ne is not None:
+                    self._check_bounds(ne)
+                self._record((n, "(mirror)"), {
+                    "target_id": n,
+                    "scope": "created",
+                    "label": ne.Category.Name if ne is not None and ne.Category is not None else "element",
+                    "param_name": "(mirror)",
+                    "old": u"",
+                    "new": "mirror of id %s: %s" % (eid, (self._where(ne) if ne is not None else None) or "no location"),
+                    "affected": 1,
+                })
+                out.append(n)
+            return out
+        if getattr(el, "Pinned", False):
+            raise ActionError("id %s is pinned; unpin it in Revit first" % eid)
+        before = self._pose(el)
+        ElementTransformUtils.MirrorElements(self.doc, ids, plane, False)
+        self.doc.Regenerate()
+        self._check_bounds(el)
+        after = self._pose(el)
+        if after == before:
+            raise ActionError("the mirror had no effect on id %s" % eid)
+        self._record((eid, "(location)"), {
+            "target_id": eid,
+            "scope": "new element" if eid in self._created else "instance",
+            "label": el.Category.Name if el.Category is not None else "element",
+            "param_name": "(location)",
+            "old": before,
+            "new": after,
+            "affected": 1,
+        })
+        return True
 
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
