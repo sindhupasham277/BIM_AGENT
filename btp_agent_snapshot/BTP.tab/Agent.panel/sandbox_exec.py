@@ -70,6 +70,7 @@ ALLOWED_NODES = {
     ast.Pass,
     ast.UnaryOp,   # G3 C4: -x and not x (Invert ~ stays blocked)
     ast.keyword,   # G3 C4: keyword arguments, e.g. f(a, name=b)
+    ast.AugAssign, # G5 C12: += and -= only (checked in validate_snippet)
 }
 
 
@@ -115,6 +116,19 @@ FORBIDDEN_NAMES = {
 # VALIDATOR
 # ============================================================
 
+# G5 C12: say what to do instead, so the agent can correct its snippet in one try
+_HINTS = {
+    'Param': ' (functions with parameters are not allowed: write the code inline, without def)',
+    'Pow': ' (** is not allowed: use x * x)',
+    'While': ' (while is not allowed: use a for loop over a list or range)',
+    'TryExcept': ' (try/except is not allowed: check values with == None or if instead)',
+    'Try': ' (try/except is not allowed: check values with == None or if instead)',
+    'Lambda': ' (lambda is not allowed: write the code inline)',
+    'Starred': ' (*args is not allowed)',
+    'Invert': ' (~ is not allowed)',
+}
+
+
 def validate_snippet(code):
     try:
         tree = ast.parse(code, mode="exec")
@@ -124,6 +138,8 @@ def validate_snippet(code):
         )
 
     for node in ast.walk(tree):
+        if isinstance(node, ast.AugAssign) and not isinstance(node.op, (ast.Add, ast.Sub)):   # G5 C12
+            raise SandboxRejected('Only += and -= are allowed; write x = x * y instead of x *= y')
         if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Mult):
             for side in (node.left, node.right):
                 if isinstance(side, (ast.List, ast.ListComp, ast.Tuple)) or isinstance(_const(side), _STRS):
@@ -144,7 +160,7 @@ def validate_snippet(code):
         if type(node) not in ALLOWED_NODES:
             raise SandboxRejected(
                 "Disallowed construct: {}".format(
-                    type(node).__name__
+                    type(node).__name__ + _HINTS.get(type(node).__name__, '')   # G5 C12
                 )
             )
 

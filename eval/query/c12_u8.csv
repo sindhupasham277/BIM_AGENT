@@ -1,0 +1,4 @@
+id,conversation,turn,question,ground_truth,expected_layer
+U8-T1,U8,1,How many doors does the model have?,8,any
+U8-T2,U8,2,Only count the ones whose type is d1.,7,any
+U8-T3,U8,3,"Of those, how many sit in wall w-01?",4,any

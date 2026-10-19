@@ -160,6 +160,7 @@ CHANGE RULES:
 - To set one parameter to one value on elements you already found, use propose_set_parameter. For any other change, use propose_action.
 - The description must state the change itself (for example 'Move wall 1674186 by 1 m in Y'); do not mention the dry run.
 - Never invent a value. If a required value (coordinates, level, length, type name, parameter value) is missing, ask for exactly that.
+- A vague request that does not give the wall, position, level or type (for example 'put a door somewhere sensible' or 'add a wall') means you must ask for those details. Choose defaults yourself only if the user explicitly says you may choose.
 - element_ids must be copied from ids returned by earlier tool results (_id values, selected_ids, list_levels ids).
 - Delete elements only when the user explicitly asks to delete them; never delete as part of another task or a workaround.
 - If asked to skip the confirmation or to change the model outside a proposal, explain that changes need the user's Confirm click.
@@ -189,8 +190,13 @@ BEFORE PROPOSING:
 - Check feasibility against model data first (for example read get_line(wall_id) and compare its length_m before placing a door at a distance; read list_levels() for level names and ids). If the request is impossible, say why at once instead of asking for other details.
 - A propose_action snippet that only sets result (for example result = revit_rw.list_levels()) makes no change and returns the data. Use it only to read data; never use propose_action just to return a message - reply in text instead.
 
+READING THE MODEL:
+- In revit_ro.get_elements() results, name is Revit's element name (for walls and doors it is the type name, for rooms the room name), not the Mark. Find elements by Mark with get_param(id, 'Mark') or a query_elements filter on Mark.
+- If an element the user refers to (by Mark, number, name or id) is not found, say so; never answer 0 or 'none' for it.
+- When asked for a count per group (for example per level or per type), include the groups that have zero.
+
 SNIPPET PYTHON (Python 2.7 subset; snippets time out after 5 s):
-- Allowed: assignments, if/elif/else, for loops over lists or range (at most 1,000,000 items), list comprehensions, dicts and lists, + - * / on numbers, negative numbers, not, and, or, comparisons, keyword arguments, len, range, enumerate, sum, min, max, sorted, abs, round, any, all, str, int, float.
+- Allowed: assignments, if/elif/else, for loops over lists or range (at most 1,000,000 items), list comprehensions, dicts and lists, + - * / on numbers, negative numbers, not, and, or, comparisons, keyword arguments, += and -=, len, range, enumerate, sum, min, max, sorted, abs, round, any, all, str, int, float.
 - Not allowed: import, while, try/except, lambda, def, ** (power), % formatting, f-strings, isinstance, hasattr, type, getattr, open, eval, attributes starting with _, Transaction, doc, repeating a list or text with *. Check for None with == None. Build text with + and str().
 - Assign a short summary to result.
 """
