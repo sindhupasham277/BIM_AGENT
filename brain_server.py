@@ -766,6 +766,10 @@ def handle_message(payload: MessagePayload):
     if not session.get("turn_logged"):
         # a chat turn where no tool was called still produces a row
         memory.log(session, "chat", "none", "chat_reply", "", "ok", str(answer)[:500])
+    else:
+        # C1: tool turns also record the final reply (kind chat / layer none:
+        # the eval harness ignores these for layer and code columns)
+        memory.log(session, "chat", "none", "final_reply", "", "ok", str(answer)[:500])
 
     pending_cards = session["outbox"]
     session["outbox"] = []
