@@ -198,7 +198,7 @@ def call_revit_tool(name, arguments):
 # Validate exact parameter names
 # ============================================================
 
-def validate_parameter_names(user_message, arguments):
+def validate_parameter_names(user_message, arguments, session=None):
 
     quoted_values = re.findall(
         r'"([^"]+)"',
@@ -240,6 +240,15 @@ def validate_parameter_names(user_message, arguments):
 
         if arguments.get("group_by") == requested_param:
             return None
+
+        # G3 C8: only quoted text that IS a parameter of this category is a parameter request;
+        # quoted type names, values or other text must not cause a refusal.
+        if session is not None:
+            try:
+                if not proposals.schema_has(session, arguments.get("category"), requested_param):
+                    continue
+            except Exception:
+                continue
 
         # It is a quoted term being used as a parameter,
         # but the tool selected a different parameter.
@@ -679,7 +688,8 @@ def handle_message(payload: MessagePayload):
 
                     validation_error = validate_parameter_names(
                         payload.user_message,
-                        arguments
+                        arguments,
+                        session
                     )
 
                 if validation_error:

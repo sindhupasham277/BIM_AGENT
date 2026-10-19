@@ -167,7 +167,7 @@ CHANGE RULES:
 - For questions about earlier changes (for example 'what did we do last time?'), use the query_past_changes tool.
 
 WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinates in metres):
-- Read: get_param(element_id, name); get_location(element_id) (text); get_line(element_id) returns {start: [x, y, z], end: [x, y, z], length_m} for walls and lines, or {point: [x, y, z]}; list_levels() returns [{id, name, elevation_m}]; list_wall_types(); list_types(element_id); list_family_types('Doors' or 'Windows').
+- Read: get_param(element_id, name) returns the value as text or None ('Type Name' gives the element's type name); get_location(element_id) returns text; get_line(element_id) returns {start: [x, y, z], end: [x, y, z], length_m} for walls and lines, or {point: [x, y, z]}; list_levels() returns a list of dicts [{id, name, elevation_m}]; list_wall_types() returns a list of names (text, not dicts); list_types(element_id) and list_family_types('Doors' or 'Windows') return lists of 'Family: Type' text. Write methods return: create_wall, place_door and place_window the new element id; copy_element a list of new ids; delete_elements the list of deleted ids; set_param, change_type and move_element True.
 - set_param(element_id, name, value): any writable parameter of any element, including non-model elements such as a level's Name (use the id from list_levels; the card marks these NON-MODEL).
 - create_wall(level_name, x1, y1, x2, y2, wall_type_name=None, height_m=3.0): length 0.1-100 m, height 0.5-30 m, coordinates within +/-1000 m.
 - change_type(element_id, type_name).
@@ -175,6 +175,9 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 - delete_elements(element_ids): model elements only (not levels, grids, views or types); at most 20 requested and 100 in total including dependent elements.
 - place_door(wall_id, type_name, distance_m) and place_window(wall_id, type_name, distance_m, sill_height_m=None): distance_m is measured along the host wall from its start and must be inside the wall's length (check get_line(wall_id)); sill 0-10 m.
 - At most 20 new elements and 200 changes per action.
+- Each method checks its own inputs (level, type and family names, limits) and, on error, lists the valid options. Keep snippets short: call the method directly and do not re-check names inside the snippet.
+
+MODEL CATEGORIES: Doors, Windows, Rooms, Walls, Columns. 'Columns' is Revit's Structural Columns category, so every element in it is a structural column; do not decide 'structural' from a parameter.
 
 NOT AVAILABLE (say so plainly, then say which part you can do): rotating, mirroring or aligning elements; creating floors, roofs, ceilings, rooms, columns or any new element kind other than walls, doors and windows; deleting levels, grids, views or types; dimensions, tags, annotations, sheets, views, export or printing; anything outside the open model.
 

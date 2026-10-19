@@ -1,0 +1,3 @@
+id,conversation,turn,question,ground_truth,expected_layer
+G5,G5,1,How many structural columns are there?,6,generic_engine
+C4,C4,1,Which rooms contain a structural column?,None (0 rooms),code_gen
