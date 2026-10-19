@@ -129,12 +129,26 @@ _HINTS = {
 }
 
 
+def _syntax_message(code, e):   # G5 C14: say WHERE the syntax error is
+    ln = getattr(e, 'lineno', None)
+    txt = ''
+    try:
+        if ln:
+            txt = code.splitlines()[ln - 1].strip()
+    except Exception:
+        pass
+    msg = 'Syntax error at line %s: %s' % (ln, getattr(e, 'msg', e))
+    if txt:
+        msg += ' | the line is: ' + txt[:160]
+    return msg
+
+
 def validate_snippet(code):
     try:
         tree = ast.parse(code, mode="exec")
     except SyntaxError as e:
         raise SandboxRejected(
-            "Syntax error: {}".format(e)
+            _syntax_message(code, e)
         )
 
     for node in ast.walk(tree):
