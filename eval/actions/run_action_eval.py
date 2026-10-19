@@ -34,9 +34,12 @@ def field_ok(item, key, want):
     return have == want or str(have) == str(want)
 
 
-def check(test, props, sel_counts, marks):
+def check(test, props, sel_counts, marks, tools=None):
     exp = test["expect"]
     kind = exp["kind"]
+    if kind == "tool":
+        want = "%s:ok" % exp["tool"]
+        return (want in (tools or [])), "tools: %s" % " ".join(tools or [])
     items = [i for p in props for i in norm_items(p)]
     if kind == "no_proposal":
         return (not props), "proposals: %d" % len(props)
@@ -97,7 +100,7 @@ def main():
             if tool == "select_elements":
                 sel += selected_counts(summ)
         con.close()
-        ok, why = check(t, props, sel, marks)
+        ok, why = check(t, props, sel, marks, tools)
         if len(props) > 1:
             ok, why = False, why + " | MORE THAN ONE PROPOSAL (%d)" % len(props)
         for p in props:

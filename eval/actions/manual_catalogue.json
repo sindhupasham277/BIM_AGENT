@@ -1,0 +1,456 @@
+[
+ {
+  "id": "E1",
+  "group": "existing",
+  "prompt": "Highlight all the walls that are longer than 10 metres.",
+  "expect": {
+   "kind": "select",
+   "count": 8
+  }
+ },
+ {
+  "id": "E2",
+  "group": "existing",
+  "prompt": "Set the Comments of every door hosted in wall w-01 to inspect.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "target_id": 1674636,
+     "param": "Comments",
+     "new": "inspect"
+    },
+    {
+     "target_id": 1674674,
+     "param": "Comments",
+     "new": "inspect"
+    },
+    {
+     "target_id": 1681335,
+     "param": "Comments",
+     "new": "inspect"
+    },
+    {
+     "target_id": 1681355,
+     "param": "Comments",
+     "new": "inspect"
+    }
+   ],
+   "count": 4
+  }
+ },
+ {
+  "id": "E3",
+  "group": "existing",
+  "prompt": "Change wall w-05 to the Generic - 300mm type.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "target_id": 1675635,
+     "param": "(type)",
+     "new_endswith": "Generic - 300mm"
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "E4",
+  "group": "existing",
+  "prompt": "Copy column 1678294 three metres to the east.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "param": "(copy)",
+     "new_contains": [
+      "copy of id 1678294 moved by (3.000, 0.000, 0.000)"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "E5",
+  "group": "existing",
+  "prompt": "Move column 1681264 two metres to the north.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "target_id": 1681264,
+     "param": "(location)",
+     "new_contains": [
+      "-12.153, -8.193"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "E6",
+  "group": "existing",
+  "prompt": "Delete door 1674233.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "target_id": 1674233,
+     "scope": "deleted"
+    }
+   ],
+   "count_scope": {
+    "deleted": 1
+   }
+  }
+ },
+ {
+  "id": "E7",
+  "group": "existing",
+  "prompt": "Create a 6 metre wall on level L2 starting at (0, 50) and running east.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "param": "(new wall)",
+     "new_contains": [
+      "on L2",
+      "(0.00, 50.00) to (6.00, 50.00)"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "E8",
+  "group": "existing",
+  "prompt": "Place a window of type \"M_Window-Casement-Double: 1050 x 1350mm\" in wall w-02, 3 metres from its start.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "param": "(new window)",
+     "new_contains": [
+      "in wall 1674187 at 3.00 m"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "E9",
+  "group": "existing",
+  "prompt": "Rename level L2 to Level 2.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "target_id": 9946,
+     "param": "Name",
+     "new": "Level 2",
+     "label_contains": [
+      "NON-MODEL"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "E10",
+  "group": "existing",
+  "prompt": "Set the Comments of room 105 to Reception.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "target_id": 1680622,
+     "param": "Comments",
+     "new": "Reception"
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "R3",
+  "group": "existing",
+  "prompt": "Make 3 copies of column 1678294 in a row, 2 metres apart in the X direction.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "param": "(copy)",
+     "new_contains": [
+      "moved by (2.000, 0.000, 0.000)"
+     ]
+    },
+    {
+     "param": "(copy)",
+     "new_contains": [
+      "moved by (4.000, 0.000, 0.000)"
+     ]
+    },
+    {
+     "param": "(copy)",
+     "new_contains": [
+      "moved by (6.000, 0.000, 0.000)"
+     ]
+    }
+   ],
+   "count": 3
+  }
+ },
+ {
+  "id": "R1",
+  "group": "transform",
+  "prompt": "Create a wall on level L1 from (60, 0) to (70, 0) metres and rotate it 90 degrees anticlockwise about its start point.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "param": "(location)",
+     "new_contains": [
+      "60.000, 0.000",
+      "60.000, 10.000"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "R2",
+  "group": "transform",
+  "prompt": "Mirror wall w-04 about the x axis to create a mirrored copy.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "scope": "created",
+     "new_contains": [
+      "-12.173, -12.807",
+      "17.827, -12.807"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "P1",
+  "group": "place_family",
+  "prompt": "Place a new structural column at (5, 5) on level L1, using the same type as column 1678294.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "scope": "created",
+     "label": "Structural Columns",
+     "new_contains": [
+      "5.00, 5.00"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "LV1",
+  "group": "levels_grids",
+  "prompt": "Create a new level named L3 at an elevation of 7.2 metres.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "scope": "created",
+     "label": "Levels",
+     "new_contains": [
+      "L3",
+      "7.20"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "GR1",
+  "group": "levels_grids",
+  "prompt": "Create a grid line named G1 from (0, -20) to (0, 30) metres.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "scope": "created",
+     "label": "Grids",
+     "new_contains": [
+      "G1"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "F1",
+  "group": "floors",
+  "prompt": "Create a floor in room 105.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "scope": "created",
+     "label": "Floors"
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "F2",
+  "group": "floors",
+  "prompt": "Create a floor on level L2 covering the rectangle from (0, 0) to (10, 8) metres.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "scope": "created",
+     "label": "Floors",
+     "new_contains": [
+      "L2"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "F3",
+  "group": "floors",
+  "prompt": "Add a ceiling at 2.7 metres in room 105.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "scope": "created",
+     "label": "Ceilings"
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "V1",
+  "group": "view",
+  "prompt": "Isolate all the doors in the active view.",
+  "expect": {
+   "kind": "tool",
+   "tool": "view_action"
+  }
+ },
+ {
+  "id": "V2",
+  "group": "view",
+  "prompt": "Zoom the view to door zz-99.",
+  "expect": {
+   "kind": "tool",
+   "tool": "view_action"
+  }
+ },
+ {
+  "id": "V3",
+  "group": "view",
+  "prompt": "Reset the temporary hide or isolate in the active view.",
+  "expect": {
+   "kind": "tool",
+   "tool": "view_action"
+  }
+ },
+ {
+  "id": "J1",
+  "group": "joins",
+  "prompt": "Attach the top of every wall to level L2.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "param": "Top Constraint",
+     "new_contains": [
+      "L2"
+     ]
+    }
+   ],
+   "count": 11
+  }
+ },
+ {
+  "id": "J2",
+  "group": "joins",
+  "prompt": "Unjoin wall w-04 from the walls joined to it.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "target_id": 1674186,
+     "param": "(join)"
+    }
+   ]
+  }
+ },
+ {
+  "id": "D1",
+  "group": "documentation",
+  "prompt": "Tag all the doors in the active view.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "scope": "created",
+     "label": "Door Tags"
+    }
+   ],
+   "count": 8
+  }
+ },
+ {
+  "id": "D2",
+  "group": "documentation",
+  "prompt": "Add a text note saying Check fire rating next to door zz-99.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "scope": "created",
+     "label": "Text Notes",
+     "new_contains": [
+      "Check fire rating"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ },
+ {
+  "id": "D3",
+  "group": "documentation",
+  "prompt": "Create a new sheet numbered A101 named Ground Floor.",
+  "expect": {
+   "kind": "items",
+   "match": [
+    {
+     "scope": "created",
+     "label": "Sheets",
+     "new_contains": [
+      "A101"
+     ]
+    }
+   ],
+   "count": 1
+  }
+ }
+]
