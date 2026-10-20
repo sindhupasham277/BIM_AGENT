@@ -401,6 +401,13 @@ def dispatch_tool(name, arguments, session):
     if isinstance(arguments, dict):
         audit_name = arguments.get("rule_name") or arguments.get("audit_name")
 
+    # C19: propose_set_parameter only for model categories, so non-model edits always go through set_param (NON-MODEL label)
+    if name == "propose_set_parameter" and isinstance(arguments, dict) and arguments.get("category") not in ("Doors", "Windows", "Rooms", "Walls", "Columns"):
+        msg = ("propose_set_parameter is only for model elements (Doors, Windows, Rooms, Walls, Columns). For levels, views and other "
+               "non-model elements use propose_action with revit_rw.set_param, which marks the change NON-MODEL on the card.")
+        memory.log(session, entry["kind"], entry["layer"], name, code_or_args, "error", msg, audit_name=audit_name,
+                   duration_ms=int((time.time() - t0) * 1000))
+        return {"error": msg}
     try:
         result = _dispatch_core(name, arguments, session)
     except Exception as ex:
