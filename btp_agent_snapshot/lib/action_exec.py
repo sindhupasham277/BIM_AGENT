@@ -10,7 +10,7 @@ if PANEL not in sys.path:
     sys.path.append(PANEL)
 import sandbox_exec
 
-ACTION_METHODS = ("get_param", "set_param", "list_levels", "list_wall_types", "create_wall", "list_types", "change_type", "move_element", "copy_element", "delete_elements", "get_location", "list_family_types", "place_door", "place_window", "get_line", "rotate_element", "mirror_element", "place_instance", "create_level", "create_grid", "create_floor_in_room", "create_floor", "create_ceiling_in_room", "list_floor_types", "list_ceiling_types")
+ACTION_METHODS = ("get_param", "set_param", "list_levels", "list_wall_types", "create_wall", "list_types", "change_type", "move_element", "copy_element", "delete_elements", "get_location", "list_family_types", "place_door", "place_window", "get_line", "rotate_element", "mirror_element", "place_instance", "create_level", "create_grid", "create_floor_in_room", "create_floor", "create_ceiling_in_room", "list_floor_types", "list_ceiling_types", "unjoin_wall", "allow_wall_joins", "join_geometry", "unjoin_geometry")
 
 
 def run_action_code(code, rw, timeout_sec=5):

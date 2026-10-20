@@ -72,6 +72,9 @@ def _set(p, value):
         return p.Set(_txt(value))
     if st == StorageType.Integer:
         return p.Set(int(value))
+    if st == StorageType.ElementId:   # family 6: value is an ElementId resolved by set_param
+        p.Set(value)
+        return True
     if st == StorageType.Double:
         return p.SetValueString(_txt(value))   # parsed in the project's units
     return False
@@ -135,12 +138,21 @@ class RevitRW(object):
     def set_param(self, element_id, name, value):
         el = self._element(element_id)
         p, scope, owner = fix_plan.find_param(self.doc, el, name)
-        if p is None or p.IsReadOnly or p.StorageType not in fix_plan.SUPPORTED:
+        if p is None or p.IsReadOnly or p.StorageType not in tuple(fix_plan.SUPPORTED) + (StorageType.ElementId,):
             raise ActionError("id %s: '%s' missing, read-only or unsupported" % (_int(element_id), name))
         tid = _int(fix_plan.id_int(owner.Id))
         affected = 1
         if scope == "type":
             affected = fix_plan.count_instances_of_type(self.doc, el.Category, owner.Id)
+        target_value = value
+        if p.StorageType == StorageType.ElementId:   # family 6: level-reference parameters
+            target_value, value = self._id_value(value)
+        # no-op changes are skipped: nothing recorded, nothing set (cards list only real changes)
+        if p.StorageType == StorageType.ElementId:
+            if fix_plan.id_int(p.AsElementId()) == fix_plan.id_int(target_value):
+                return False
+        elif p.StorageType == StorageType.String and (p.AsString() or u"") == _txt(target_value):
+            return False
         self._record((tid, name), {
             "target_id": tid,
             "scope": "new element" if tid in self._created else scope,
@@ -150,7 +162,7 @@ class RevitRW(object):
             "new": _txt(value),
             "affected": int(affected),
         })
-        if not _set(p, value):
+        if not _set(p, target_value):
             raise ActionError("Revit refused to set '%s' on id %s" % (name, tid))
         return True
 
@@ -815,6 +827,85 @@ class RevitRW(object):
         self.doc.Regenerate()
         lvname = fix_plan.el_name(self.doc.GetElement(r.LevelId))
         return self._record_new(c, "Ceilings", "ceiling '%s' at %.2f m in %s on %s" % (fix_plan.el_name(ct), h, self._room_label(r), lvname), "(new ceiling)")
+
+    def _id_value(self, value):   # family 6
+        s = _txt(value).strip()
+        if s.lower() in ("none", "", "unconnected"):
+            return ElementId.InvalidElementId, "none"
+        try:
+            el = self.doc.GetElement(fix_plan.make_id(int(s)))
+            if el is not None:
+                return el.Id, fix_plan.el_name(el)
+        except ValueError:
+            pass
+        for lv in FilteredElementCollector(self.doc).OfClass(Level):
+            if fix_plan.el_name(lv) == s:
+                return lv.Id, s
+        raise ActionError("%r is not a level name or element id; for parameters that hold a level (Top Constraint, Base Constraint) "
+                          "give a level name: %s" % (s, ", ".join(self._names_of(Level))))
+
+    def _wall(self, wall_id):
+        w = self._element(wall_id)
+        if not isinstance(w, Wall):
+            raise ActionError("id %s is not a wall" % _int(wall_id))
+        return w
+
+    def _ends(self, state):
+        names = [n for n, b in zip(("start", "end"), state) if b]
+        return ", ".join(names) if names else "neither end"
+
+    def _wall_joins(self, wall_id, allow):
+        from Autodesk.Revit.DB import WallUtils
+        w = self._wall(wall_id)
+        wid = _int(fix_plan.id_int(w.Id))
+        before = [WallUtils.IsWallJoinAllowedAtEnd(w, i) for i in (0, 1)]
+        todo = [i for i in (0, 1) if before[i] != allow]
+        if not todo:
+            raise ActionError("wall %s already has joins %s at both ends" % (wid, "allowed" if allow else "disallowed"))
+        for i in todo:
+            if allow:
+                WallUtils.AllowWallJoinAtEnd(w, i)
+            else:
+                WallUtils.DisallowWallJoinAtEnd(w, i)
+        self.doc.Regenerate()
+        after = [WallUtils.IsWallJoinAllowedAtEnd(w, i) for i in (0, 1)]
+        self._record((wid, "(join)"), {
+            "target_id": wid, "scope": "new element" if wid in self._created else "instance", "label": "Walls",
+            "param_name": "(join)", "old": "joins allowed at " + self._ends(before),
+            "new": "joins allowed at " + self._ends(after), "affected": 1})
+        return True
+
+    def unjoin_wall(self, wall_id):   # family 6: Disallow Join at both ends
+        return self._wall_joins(wall_id, False)
+
+    def allow_wall_joins(self, wall_id):   # family 6: Allow Join at both ends
+        return self._wall_joins(wall_id, True)
+
+    def _geometry_join(self, a_id, b_id, join):
+        from Autodesk.Revit.DB import JoinGeometryUtils
+        a = self._element(a_id)
+        b = self._element(b_id)
+        aid, bid = _int(fix_plan.id_int(a.Id)), _int(fix_plan.id_int(b.Id))
+        joined = JoinGeometryUtils.AreElementsJoined(self.doc, a, b)
+        if joined == join:
+            raise ActionError("ids %s and %s are already %s" % (aid, bid, "joined" if join else "not joined"))
+        if join:
+            JoinGeometryUtils.JoinGeometry(self.doc, a, b)
+        else:
+            JoinGeometryUtils.UnjoinGeometry(self.doc, a, b)
+        self.doc.Regenerate()
+        self._record((aid, "(join)"), {
+            "target_id": aid, "scope": "new element" if aid in self._created else "instance",
+            "label": a.Category.Name if a.Category is not None else "element", "param_name": "(join)",
+            "old": ("not joined with id %s" if join else "joined with id %s") % bid,
+            "new": ("geometry joined with id %s" if join else "geometry unjoined from id %s") % bid, "affected": 1})
+        return True
+
+    def join_geometry(self, a_id, b_id):   # family 6
+        return self._geometry_join(a_id, b_id, True)
+
+    def unjoin_geometry(self, a_id, b_id):   # family 6
+        return self._geometry_join(a_id, b_id, False)
 
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
