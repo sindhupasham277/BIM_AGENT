@@ -1,0 +1,80 @@
+[
+ {
+  "id": "A4",
+  "group": "compound",
+  "prompt": "Move every door hosted in wall w-01 half a metre towards the wall's end.",
+  "expect": {
+   "kind": "any_of",
+   "options": [
+    {
+     "kind": "items",
+     "match": [
+      {
+       "target_id": 1674636,
+       "param": "(location)"
+      },
+      {
+       "target_id": 1674674,
+       "param": "(location)"
+      },
+      {
+       "target_id": 1681335,
+       "param": "(location)"
+      },
+      {
+       "target_id": 1681355,
+       "param": "(location)"
+      }
+     ],
+     "count": 4
+    },
+    {
+     "kind": "no_proposal_reply",
+     "contains": [
+      "start",
+      "end"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "A4",
+  "group": "compound",
+  "prompt": "Move every door hosted in wall w-01 half a metre towards the wall's end.",
+  "expect": {
+   "kind": "any_of",
+   "options": [
+    {
+     "kind": "items",
+     "match": [
+      {
+       "target_id": 1674636,
+       "param": "(location)"
+      },
+      {
+       "target_id": 1674674,
+       "param": "(location)"
+      },
+      {
+       "target_id": 1681335,
+       "param": "(location)"
+      },
+      {
+       "target_id": 1681355,
+       "param": "(location)"
+      }
+     ],
+     "count": 4
+    },
+    {
+     "kind": "no_proposal_reply",
+     "contains": [
+      "start",
+      "end"
+     ]
+    }
+   ]
+  }
+ }
+]

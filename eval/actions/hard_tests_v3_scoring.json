@@ -114,7 +114,8 @@
     {
      "kind": "no_proposal_reply",
      "contains": [
-      "direction"
+      "start",
+      "end"
      ]
     }
    ]
