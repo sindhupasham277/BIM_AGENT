@@ -710,5 +710,111 @@ class RevitRW(object):
         })
         return nid
 
+    def _room(self, room_id):
+        r = self._element(room_id)
+        if r.Category is None or r.Category.Name != "Rooms":
+            raise ActionError("id %s is not a room" % _int(room_id))
+        try:
+            area = r.Area
+        except Exception:
+            area = 0
+        if not area or area <= 0:
+            raise ActionError("room %s is not placed or not enclosed, so it has no boundary" % _int(room_id))
+        return r
+
+    def _room_loops(self, r):
+        from Autodesk.Revit.DB import SpatialElementBoundaryOptions, CurveLoop
+        from System.Collections.Generic import List
+        loops = List[CurveLoop]()
+        for segs in r.GetBoundarySegments(SpatialElementBoundaryOptions()):
+            cl = CurveLoop()
+            for s in segs:
+                cl.Append(s.GetCurve())
+            loops.Add(cl)
+        if loops.Count == 0:
+            raise ActionError("room %s has no boundary" % _int(fix_plan.id_int(r.Id)))
+        return loops
+
+    def _room_label(self, r):
+        try:
+            num = r.Number
+        except Exception:
+            num = None
+        return ("room " + _txt(num)) if num else ("room id %s" % _int(fix_plan.id_int(r.Id)))
+
+    def _type_id(self, cls, name, what, group):
+        if name:
+            return self._by_name(cls, name, what)
+        return self.doc.GetElement(self.doc.GetDefaultElementTypeId(group))
+
+    def list_floor_types(self):
+        from Autodesk.Revit.DB import FloorType
+        return sorted(fix_plan.el_name(t) for t in FilteredElementCollector(self.doc).OfClass(FloorType))
+
+    def list_ceiling_types(self):
+        from Autodesk.Revit.DB import CeilingType
+        return sorted(fix_plan.el_name(t) for t in FilteredElementCollector(self.doc).OfClass(CeilingType))
+
+    def _record_new(self, el, label, text, kind):
+        nid = _int(fix_plan.id_int(el.Id))
+        self._created.add(nid)
+        self._record((nid, kind), {"target_id": nid, "scope": "created", "label": label, "param_name": kind,
+                                   "old": u"", "new": text, "affected": 1})
+        return nid
+
+    def create_floor_in_room(self, room_id, floor_type_name=None):   # family 4
+        from Autodesk.Revit.DB import Floor, FloorType
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        r = self._room(room_id)
+        ft = self._type_id(FloorType, floor_type_name, "floor type", ElementTypeGroup.FloorType)
+        f = Floor.Create(self.doc, self._room_loops(r), ft.Id, r.LevelId)
+        self.doc.Regenerate()
+        lvname = fix_plan.el_name(self.doc.GetElement(r.LevelId))
+        return self._record_new(f, "Floors", "floor '%s' on %s from %s" % (fix_plan.el_name(ft), lvname, self._room_label(r)), "(new floor)")
+
+    def create_floor(self, level_name, x1, y1, x2, y2, floor_type_name=None):   # family 4
+        from Autodesk.Revit.DB import Floor, FloorType, CurveLoop
+        from System.Collections.Generic import List
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        lv = self._by_name(Level, level_name, "level")
+        xs = [_num(v, "coordinate") for v in (x1, y1, x2, y2)]
+        if max(abs(v) for v in xs) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        a, b = (min(xs[0], xs[2]), min(xs[1], xs[3])), (max(xs[0], xs[2]), max(xs[1], xs[3]))
+        if (b[0] - a[0]) * (b[1] - a[1]) < 0.1:
+            raise ActionError("the floor rectangle must be at least 0.1 m2")
+        z = lv.Elevation
+        p = [XYZ(_ft(a[0]), _ft(a[1]), z), XYZ(_ft(b[0]), _ft(a[1]), z), XYZ(_ft(b[0]), _ft(b[1]), z), XYZ(_ft(a[0]), _ft(b[1]), z)]
+        cl = CurveLoop()
+        for i in range(4):
+            cl.Append(Line.CreateBound(p[i], p[(i + 1) % 4]))
+        loops = List[CurveLoop]()
+        loops.Add(cl)
+        ft = self._type_id(FloorType, floor_type_name, "floor type", ElementTypeGroup.FloorType)
+        f = Floor.Create(self.doc, loops, ft.Id, lv.Id)
+        self.doc.Regenerate()
+        return self._record_new(f, "Floors", "floor '%s' on %s, rectangle (%.2f, %.2f) to (%.2f, %.2f) m"
+                                % (fix_plan.el_name(ft), fix_plan.el_name(lv), a[0], a[1], b[0], b[1]), "(new floor)")
+
+    def create_ceiling_in_room(self, room_id, height_m, ceiling_type_name=None):   # family 4
+        from Autodesk.Revit.DB import Ceiling, CeilingType
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        h = _num(height_m, "height_m")
+        if not 0.5 <= h <= 30:
+            raise ActionError("ceiling height must be between 0.5 and 30 m")
+        r = self._room(room_id)
+        ct = self._type_id(CeilingType, ceiling_type_name, "ceiling type", ElementTypeGroup.CeilingType)
+        c = Ceiling.Create(self.doc, self._room_loops(r), ct.Id, r.LevelId)
+        p = c.get_Parameter(BuiltInParameter.CEILING_HEIGHTABOVELEVEL_PARAM)
+        if p is None or p.IsReadOnly:
+            raise ActionError("this ceiling type has no editable height offset")
+        p.Set(_ft(h))
+        self.doc.Regenerate()
+        lvname = fix_plan.el_name(self.doc.GetElement(r.LevelId))
+        return self._record_new(c, "Ceilings", "ceiling '%s' at %.2f m in %s on %s" % (fix_plan.el_name(ct), h, self._room_label(r), lvname), "(new ceiling)")
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
