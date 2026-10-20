@@ -10,7 +10,15 @@ if PANEL not in sys.path:
     sys.path.append(PANEL)
 import sandbox_exec
 
-ACTION_METHODS = ("get_param", "set_param", "list_levels", "list_wall_types", "create_wall", "list_types", "change_type", "move_element", "copy_element", "delete_elements", "get_location", "list_family_types", "place_door", "place_window", "get_line", "rotate_element", "mirror_element", "place_instance", "create_level", "create_grid", "create_floor_in_room", "create_floor", "create_ceiling_in_room", "list_floor_types", "list_ceiling_types", "unjoin_wall", "allow_wall_joins", "join_geometry", "unjoin_geometry", "tag_elements", "add_text_note", "create_sheet", "list_sheets")
+ACTION_METHODS = ("get_param", "set_param", "list_levels", "list_wall_types", "create_wall", "list_types", "change_type", "move_element", "copy_element", "delete_elements", "get_location", "list_family_types", "place_door", "place_window", "get_line", "rotate_element", "mirror_element", "place_instance", "create_level", "create_grid", "create_floor_in_room", "create_floor", "create_ceiling_in_room", "list_floor_types", "list_ceiling_types", "unjoin_wall", "allow_wall_joins", "join_geometry", "unjoin_geometry", "tag_elements", "add_text_note", "create_sheet", "list_sheets", "get_elements")
+
+
+def _hint(msg):   # C16: say how to fix common snippet mistakes
+    if "is not defined" in msg:
+        return msg + " (call helper methods as revit_rw.<method>(...); the only builtins are len, range, enumerate, sum, min, max, sorted, abs, round, any, all, str, int, float)"
+    if "_Facade" in msg and "has no attribute" in msg:
+        return msg + " (that method does not exist on revit_rw; use the methods listed in the rules)"
+    return msg
 
 
 def run_action_code(code, rw, timeout_sec=5):
@@ -48,7 +56,7 @@ def run_action_code(code, rw, timeout_sec=5):
     except sandbox_exec.SandboxTimeout as e:
         return {"status": "timeout", "message": str(e), "changes": rw.change_list()}
     except Exception as e:
-        return {"status": "error", "message": str(e), "changes": rw.change_list()}
+        return {"status": "error", "message": _hint(str(e)), "changes": rw.change_list()}
 
     try:
         plain = sandbox_exec._plain(namespace.get("result"))

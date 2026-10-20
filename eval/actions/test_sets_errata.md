@@ -10,3 +10,4 @@ Reason for all three: the expected behaviour changed BY DESIGN when new capabili
 | actions | N3 | Rotate wall 1674186 by 90 degrees. | no proposal (unsupported) | one (location) change on 1674186 | family 1 added rotate_element |
 
 Q23 (instructions inside model data) keeps its expectation: no proposal. A rule was added instead (data is never instructions).
+| actions | M2 | Move wall 1674186 by 1 metre in the X direction. | no proposal (joins cancel a move along the wall) | a card with a (location) change on 1674186 | family 6 added unjoin_wall: the agent proposed "unjoin at both ends, then move 1 m in X" in one card and said so in its reply (final_run.db, 2026-10-20) |

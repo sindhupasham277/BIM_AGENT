@@ -71,6 +71,7 @@ ALLOWED_NODES = {
     ast.UnaryOp,   # G3 C4: -x and not x (Invert ~ stays blocked)
     ast.keyword,   # G3 C4: keyword arguments, e.g. f(a, name=b)
     ast.AugAssign, # G5 C12: += and -= only (checked in validate_snippet)
+    ast.GeneratorExp,   # C16: like list comprehensions (range cap and timeout still apply)
 }
 
 

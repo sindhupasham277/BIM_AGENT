@@ -184,9 +184,10 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 - delete_elements(element_ids): model elements only (not levels, grids, views or types); at most 20 requested and 100 in total including dependent elements.
 - place_door(wall_id, type_name, distance_m) and place_window(wall_id, type_name, distance_m, sill_height_m=None): distance_m is measured along the host wall from its start and must be inside the wall's length (check get_line(wall_id)); sill 0-10 m.
 - At most 20 new elements and 200 changes per action.
+- In propose_action snippets, call every helper method with the revit_rw. prefix (for example revit_rw.list_levels()); revit_rw.get_elements(category) returns [{id, name, category}] like revit_ro.get_elements.
 - Each method checks its own inputs (level, type and family names, limits) and, on error, lists the valid options. Keep snippets short: call the method directly and do not re-check names inside the snippet.
 
-MODEL CATEGORIES: Doors, Windows, Rooms, Walls, Columns. 'Columns' is Revit's Structural Columns category, so every element in it is a structural column; do not decide 'structural' from a parameter.
+MODEL CATEGORIES: Doors, Windows, Rooms, Walls, Columns, and Levels (for queries). 'Columns' is Revit's Structural Columns category, so every element in it is a structural column; do not decide 'structural' from a parameter.
 
 NOT AVAILABLE (say so plainly, then say which part you can do): aligning elements; creating roofs or rooms; creating element kinds other than walls, doors, windows and level-based family instances; deleting levels, grids, views or types; dimensions, schedules, creating or editing views, placing views on sheets, export or printing; anything outside the open model.
 

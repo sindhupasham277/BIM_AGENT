@@ -1016,5 +1016,16 @@ class RevitRW(object):
         return sorted(out, key=lambda x: x["number"])
 
 
+    def get_elements(self, category):   # C16: same output as revit_ro.get_elements
+        extra = {"Walls": "OST_Walls", "Rooms": "OST_Rooms", "Levels": "OST_Levels", "Floors": "OST_Floors", "Ceilings": "OST_Ceilings"}
+        bic = _FAMILY_CATEGORIES.get(category)
+        if bic is None and category in extra:
+            bic = getattr(BuiltInCategory, extra[category], None)
+        if bic is None:
+            raise ActionError("unknown category %r; available: %s" % (category, ", ".join(sorted(list(_FAMILY_CATEGORIES) + list(extra)))))
+        return [{"id": _int(fix_plan.id_int(e.Id)), "name": fix_plan.el_name(e), "category": category}
+                for e in FilteredElementCollector(self.doc).OfCategory(bic).WhereElementIsNotElementType()]
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]

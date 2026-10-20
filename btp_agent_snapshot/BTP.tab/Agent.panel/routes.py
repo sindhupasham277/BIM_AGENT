@@ -21,6 +21,7 @@ CATEGORY_MAP = {
     "Rooms": BuiltInCategory.OST_Rooms, 
     "Walls": BuiltInCategory.OST_Walls, 
     "Columns": BuiltInCategory.OST_StructuralColumns, 
+    "Levels": BuiltInCategory.OST_Levels,   # C16
 } 
  
  
@@ -523,6 +524,8 @@ def route_query(doc, request):
         data = request.data
 
         category = data["category"]
+        if category not in CATEGORY_MAP:   # C16
+            return routes.make_response(data={"error": "unknown category %r; available: %s" % (category, ", ".join(sorted(CATEGORY_MAP)))}, status=400)
 
         # Step 2 schema names
         filters = data.get("filters", [])
@@ -590,6 +593,8 @@ def route_aggregate(doc, request):
         data = request.data
 
         category = data["category"]
+        if category not in CATEGORY_MAP:   # C16
+            return routes.make_response(data={"error": "unknown category %r; available: %s" % (category, ", ".join(sorted(CATEGORY_MAP)))}, status=400)
         filters = data.get("filters", [])
         group_by = data.get("group_by")
         metric = data["aggregate"]
@@ -793,6 +798,8 @@ def route_select(doc, uidoc, request):
 
         data = request.data
         category = data["category"]
+        if category not in CATEGORY_MAP:   # C16
+            return routes.make_response(data={"error": "unknown category %r; available: %s" % (category, ", ".join(sorted(CATEGORY_MAP)))}, status=400)
         op_map = {
             "==": "eq", "!=": "neq", ">": "gt", "<": "lt",
             ">=": "gte", "<=": "lte", "contains": "contains",
