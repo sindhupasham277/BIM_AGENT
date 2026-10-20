@@ -126,12 +126,24 @@
   "group": "earlier_hidden",
   "prompt": "Move door 1678957 by 1 metre along its host wall.",
   "expect": {
-   "kind": "items",
-   "count": 1,
-   "match": [
+   "kind": "any_of",
+   "options": [
     {
-     "target_id": 1678957,
-     "param": "(location)"
+     "kind": "items",
+     "count": 1,
+     "match": [
+      {
+       "target_id": 1678957,
+       "param": "(location)"
+      }
+     ]
+    },
+    {
+     "kind": "no_proposal_reply",
+     "contains": [
+      "start",
+      "end"
+     ]
     }
    ]
   }

@@ -1,0 +1,148 @@
+[
+ {
+  "id": "D2",
+  "group": "delete",
+  "prompt": "Delete wall 1674186.",
+  "expect": {
+   "kind": "any_of",
+   "options": [
+    {
+     "kind": "items",
+     "count": 3,
+     "match": [
+      {
+       "target_id": 1674186,
+       "scope": "deleted"
+      },
+      {
+       "target_id": 1674233,
+       "scope": "deleted (dependent)"
+      },
+      {
+       "target_id": 1676128,
+       "scope": "deleted (dependent)"
+      }
+     ]
+    },
+    {
+     "kind": "items",
+     "count": 3,
+     "match": [
+      {
+       "target_id": 1674186,
+       "scope": "deleted"
+      },
+      {
+       "target_id": 1674233,
+       "scope": "deleted"
+      },
+      {
+       "target_id": 1676128,
+       "scope": "deleted"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "D2",
+  "group": "delete",
+  "prompt": "Delete wall 1674186.",
+  "expect": {
+   "kind": "any_of",
+   "options": [
+    {
+     "kind": "items",
+     "count": 3,
+     "match": [
+      {
+       "target_id": 1674186,
+       "scope": "deleted"
+      },
+      {
+       "target_id": 1674233,
+       "scope": "deleted (dependent)"
+      },
+      {
+       "target_id": 1676128,
+       "scope": "deleted (dependent)"
+      }
+     ]
+    },
+    {
+     "kind": "items",
+     "count": 3,
+     "match": [
+      {
+       "target_id": 1674186,
+       "scope": "deleted"
+      },
+      {
+       "target_id": 1674233,
+       "scope": "deleted"
+      },
+      {
+       "target_id": 1676128,
+       "scope": "deleted"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "Q7",
+  "group": "earlier_hidden",
+  "prompt": "Move door 1678957 by 1 metre along its host wall.",
+  "expect": {
+   "kind": "any_of",
+   "options": [
+    {
+     "kind": "items",
+     "count": 1,
+     "match": [
+      {
+       "target_id": 1678957,
+       "param": "(location)"
+      }
+     ]
+    },
+    {
+     "kind": "no_proposal_reply",
+     "contains": [
+      "start",
+      "end"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "Q7",
+  "group": "earlier_hidden",
+  "prompt": "Move door 1678957 by 1 metre along its host wall.",
+  "expect": {
+   "kind": "any_of",
+   "options": [
+    {
+     "kind": "items",
+     "count": 1,
+     "match": [
+      {
+       "target_id": 1678957,
+       "param": "(location)"
+      }
+     ]
+    },
+    {
+     "kind": "no_proposal_reply",
+     "contains": [
+      "start",
+      "end"
+     ]
+    }
+   ]
+  }
+ }
+]

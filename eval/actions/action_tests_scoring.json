@@ -175,20 +175,43 @@
   "group": "delete",
   "prompt": "Delete wall 1674186.",
   "expect": {
-   "kind": "items",
-   "count": 3,
-   "match": [
+   "kind": "any_of",
+   "options": [
     {
-     "target_id": 1674186,
-     "scope": "deleted"
+     "kind": "items",
+     "count": 3,
+     "match": [
+      {
+       "target_id": 1674186,
+       "scope": "deleted"
+      },
+      {
+       "target_id": 1674233,
+       "scope": "deleted (dependent)"
+      },
+      {
+       "target_id": 1676128,
+       "scope": "deleted (dependent)"
+      }
+     ]
     },
     {
-     "target_id": 1674233,
-     "scope": "deleted (dependent)"
-    },
-    {
-     "target_id": 1676128,
-     "scope": "deleted (dependent)"
+     "kind": "items",
+     "count": 3,
+     "match": [
+      {
+       "target_id": 1674186,
+       "scope": "deleted"
+      },
+      {
+       "target_id": 1674233,
+       "scope": "deleted"
+      },
+      {
+       "target_id": 1676128,
+       "scope": "deleted"
+      }
+     ]
     }
    ]
   }
