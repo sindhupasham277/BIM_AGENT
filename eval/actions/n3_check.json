@@ -1,0 +1,1 @@
+[{"id": "N3", "group": "should_not_act", "prompt": "Rotate wall 1674186 by 90 degrees.", "expect": {"kind": "items", "count": 1, "match": [{"target_id": 1674186, "param": "(location)"}]}}]

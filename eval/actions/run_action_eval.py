@@ -91,7 +91,7 @@ def main():
             r = {"error": str(ex)}
         secs = time.time() - t0
         props = r.get("proposals") or []
-        reply = next((v for k, v in r.items() if k != "proposals" and isinstance(v, str)), "")
+        reply = r.get("response") if isinstance(r.get("response"), str) else next((v for k, v in r.items() if k != "proposals" and isinstance(v, str)), "")
         con = sqlite3.connect(db)
         tools, sel = [], []
         for tool, status, summ in con.execute(

@@ -18,17 +18,29 @@ class _WarningHandler(IFailuresPreprocessor):
 
     def __init__(self):
         self.warnings = []
+        self.errors = []
 
     def PreprocessFailures(self, failures):
+        # warnings: accepted and reported; errors: reported, then a silent rollback (never a modal dialog)
+        has_error = False
         for f in failures.GetFailureMessages():
+            try:
+                text = f.GetDescriptionText()
+            except Exception:
+                text = '(no description)'
             if f.GetSeverity() == FailureSeverity.Warning:
-                try:
-                    text = f.GetDescriptionText()
-                    if text not in self.warnings:
-                        self.warnings.append(text)
-                except Exception:
-                    pass
+                if text not in self.warnings:
+                    self.warnings.append(text)
                 failures.DeleteWarning(f)
+            else:
+                has_error = True
+                if text not in self.errors:
+                    self.errors.append(text)
+        if has_error:
+            o = failures.GetFailureHandlingOptions()
+            o.SetClearAfterRollback(True)
+            failures.SetFailureHandlingOptions(o)
+            return FailureProcessingResult.ProceedWithRollBack
         return FailureProcessingResult.Continue
 
 
@@ -36,6 +48,7 @@ def _attach_warning_handler(t):
     h = _WarningHandler()
     opts = t.GetFailureHandlingOptions()
     opts.SetFailuresPreprocessor(h)
+    opts.SetClearAfterRollback(True)
     t.SetFailureHandlingOptions(opts)
     return h
 
@@ -77,7 +90,7 @@ def _set_parameter(doc, args, expected_old):
                 raise ValueError("could not set id %s" % it["target_id"])
         _wh = _attach_warning_handler(t)
         if t.Commit() != TransactionStatus.Committed:
-            return {"status": "failed", "reason": "Revit did not commit"}
+            return {"status": "failed", "reason": "Revit did not commit" + ((": " + "; ".join(_wh.errors)) if _wh.errors else "")}
     except Exception as ex:
         if t.HasStarted():
             t.RollBack()
@@ -97,6 +110,7 @@ def preview_action(doc, code):
     rw = revit_rw.RevitRW(doc)
     t = Transaction(doc, "AI Agent: preview (rolled back)")
     t.Start()
+    _attach_warning_handler(t)   # no Revit dialog can block a dry run
     try:
         out = action_exec.run_action_code(code, rw)
     finally:
@@ -134,7 +148,7 @@ def _run_action(doc, args, expected_old):
             return {"status": "refused", "reason": "The action did something different from the preview. Nothing applied."}
         _wh = _attach_warning_handler(t)
         if t.Commit() != TransactionStatus.Committed:
-            return {"status": "failed", "reason": "Revit did not commit"}
+            return {"status": "failed", "reason": "Revit did not commit" + ((": " + "; ".join(_wh.errors)) if _wh.errors else "")}
     except Exception as ex:
         if t.HasStarted() and not t.HasEnded():
             t.RollBack()
