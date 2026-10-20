@@ -2309,6 +2309,18 @@ def _on_confirm(self, pid):
     if _PANEL["event"] is None or _PANEL["handler"] is None:
         card["status"].Text = "Apply unavailable (see log)"
         return
+    # C21: ask the brain first; only the newest pending card may be applied (refuse if the check fails)
+    try:
+        _st = _post_json("/proposals/%s/status" % pid, {"session_id": BRAIN_SESSION_ID}).get("status")
+    except Exception as _ex:
+        _st = "status check failed: " + str(_ex)
+    if _st != "pending":
+        p["_state"] = "superseded"
+        card["confirm"].Enabled = False
+        card["reject"].Enabled = False
+        card["status"].Text = "Not applied"
+        self.append_assistant_message("BTP Assistant: This card can no longer be applied (%s). Only the newest proposal can be confirmed; ask again if you still want this change." % _st)
+        return
     p["_state"] = "applying"
     card["confirm"].Enabled = False
     card["reject"].Enabled = False

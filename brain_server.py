@@ -469,6 +469,16 @@ def proposal_reject(proposal_id: str, payload: RejectPayload):
     return proposals.on_reject(session, proposal_id)
 
 
+@app.post("/proposals/{proposal_id}/status")
+def proposal_status(proposal_id: str, payload: RejectPayload):
+    # C21: read-only; the panel checks that a card is still the current pending proposal before applying it
+    session = _sessions.get(payload.session_id)
+    if session is None:
+        return {"status": "unknown"}
+    p = session["pending"].get(proposal_id)
+    return {"status": p["status"] if p else "unknown"}
+
+
 @app.post("/chat")
 def handle_message(payload: MessagePayload):
 

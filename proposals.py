@@ -29,6 +29,14 @@ def revit_post(path, body, timeout=120):
         raise RuntimeError("Revit bridge call %s failed: %s" % (path, ex))
 
 
+def _supersede(session):
+    # C21: only the newest card in a chat can be confirmed; older pending cards are replaced
+    for old in session["pending"].values():
+        if old.get("status") == "pending":
+            old["status"] = "superseded"
+            note(session, "[SYSTEM] Proposal %s was replaced by a newer proposal and can no longer be confirmed." % old["proposal_id"])
+
+
 def new_session_state():
     """Extra keys every brain session needs for Phase 5."""
     return {"seen_ids": set(), "pending": {}, "outbox": [], "schema": None}
@@ -107,6 +115,7 @@ def propose_set_parameter(session, category, element_ids, param_name, value, aud
         "status": "pending",
         "created": time.time(),
     }
+    _supersede(session)
     session["pending"][pid] = proposal
     session["outbox"].append(proposal)
     return {"status": "pending_user_confirmation", "proposal_id": pid,
@@ -146,6 +155,7 @@ def propose_action(session, description, code):
         "status": "pending",
         "created": time.time(),
     }
+    _supersede(session)
     session["pending"][pid] = proposal
     session["outbox"].append(proposal)
     return {"status": "pending_user_confirmation", "proposal_id": pid,
@@ -155,6 +165,8 @@ def propose_action(session, description, code):
 
 PROMPT_RULES = """
 CHANGE RULES:
+- Creating a new proposal replaces any older unconfirmed card in this chat (only the newest card can be confirmed); mention this if the user had an earlier card waiting.
+- You cannot undo changes yourself. Every applied action is ONE Revit transaction, so when the user asks to undo, tell them to press Ctrl+Z (or Undo) once in Revit: that restores everything the action changed, including the old values.
 - Before asking any other question, check the per-request limits stated in these rules; if the request exceeds one, say so first and do not split it.
 - Copy creates new elements and leaves the original in place (copy_element); move changes the original (move_element). Use exactly the operation the user asked for.
 - Never put a substitute for an unavailable action on a card (for example a text note instead of a dimension) unless the user asks for that substitute: say the action is not available and offer the alternative in your reply.
