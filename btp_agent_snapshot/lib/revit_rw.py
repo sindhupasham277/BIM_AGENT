@@ -907,5 +907,114 @@ class RevitRW(object):
     def unjoin_geometry(self, a_id, b_id):   # family 6
         return self._geometry_join(a_id, b_id, False)
 
+    def _view(self):
+        v = self.doc.ActiveView
+        if v is None:
+            raise ActionError("there is no active view")
+        return v
+
+    def tag_elements(self, element_ids=None, category=None, with_leader=False):   # family 7
+        from Autodesk.Revit.DB import Reference, IndependentTag, TagMode, TagOrientation
+        view = self._view()
+        ids = []
+        if element_ids:
+            ids = [_int(i) for i in element_ids]
+        elif category:
+            bic = _FAMILY_CATEGORIES.get(category)
+            if bic is None and category == "Walls":
+                bic = BuiltInCategory.OST_Walls
+            if bic is None and category == "Rooms":
+                bic = BuiltInCategory.OST_Rooms
+            if bic is None:
+                raise ActionError("unknown category %r for tagging" % category)
+            ids = [_int(fix_plan.id_int(e.Id)) for e in FilteredElementCollector(self.doc, view.Id).OfCategory(bic).WhereElementIsNotElementType()]
+        else:
+            raise ActionError("give element_ids or a category to tag")
+        tagged = set()
+        for t in FilteredElementCollector(self.doc, view.Id).OfClass(IndependentTag):
+            try:
+                for x in t.GetTaggedLocalElementIds():
+                    tagged.add(_int(fix_plan.id_int(x)))
+            except Exception:
+                try:
+                    tagged.add(_int(fix_plan.id_int(t.TaggedLocalElementId)))
+                except Exception:
+                    pass
+        made = []
+        for n in ids:
+            if n in tagged:
+                continue
+            if len(self._created) >= MAX_CREATED:
+                raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+            el = self._element(n)
+            c = self._center(el)
+            if c is None:
+                raise ActionError("id %s has no location to tag" % n)
+            try:
+                tag = IndependentTag.Create(self.doc, view.Id, Reference(el), bool(with_leader), TagMode.TM_ADDBY_CATEGORY,
+                                            TagOrientation.Horizontal, XYZ(c[0], c[1], c[2]))
+            except Exception as ex:
+                raise ActionError("could not tag id %s in view '%s' (is a tag family loaded for this category?): %s" % (n, fix_plan.el_name(view), ex))
+            label = tag.Category.Name if tag.Category is not None else "Tags"
+            made.append(self._record_new(tag, label, "tag for id %s in view '%s'" % (n, fix_plan.el_name(view)), "(new tag)"))
+        return made
+
+    def add_text_note(self, text, x=None, y=None, near_element_id=None):   # family 7
+        from Autodesk.Revit.DB import TextNote
+        view = self._view()
+        s = _txt(text).strip()
+        if not 1 <= len(s) <= 500:
+            raise ActionError("text must be 1-500 characters")
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        if near_element_id is not None:
+            c = self._center(self._element(near_element_id))
+            if c is None:
+                raise ActionError("id %s has no location" % _int(near_element_id))
+            px, py = c[0] + _ft(1.0), c[1]
+            where = "next to id %s" % _int(near_element_id)
+        else:
+            xs = [_num(v, "coordinate") for v in (x, y)]
+            if max(abs(v) for v in xs) > MAX_COORD_M:
+                raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+            px, py = _ft(xs[0]), _ft(xs[1])
+            where = "at (%.2f, %.2f) m" % (xs[0], xs[1])
+        tid = self.doc.GetDefaultElementTypeId(ElementTypeGroup.TextNoteType)
+        note = TextNote.Create(self.doc, view.Id, XYZ(px, py, 0), s, tid)
+        return self._record_new(note, "Text Notes", "text note '%s' %s in view '%s'" % (s[:120], where, fix_plan.el_name(view)), "(new text note)")
+
+    def create_sheet(self, number, name, title_block=None):   # family 7
+        from Autodesk.Revit.DB import ViewSheet
+        num = _txt(number).strip()
+        nm = _txt(name).strip()
+        if not num or not nm:
+            raise ActionError("a sheet needs a number and a name")
+        for sh in FilteredElementCollector(self.doc).OfClass(ViewSheet):
+            if sh.SheetNumber == num:
+                raise ActionError("a sheet numbered %r already exists" % num)
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        tbs = [s for s in FilteredElementCollector(self.doc).OfClass(FamilySymbol).OfCategory(BuiltInCategory.OST_TitleBlocks)]
+        tb = ElementId.InvalidElementId
+        tbname = "no title block"
+        if title_block:
+            hits = [s for s in tbs if fix_plan.el_name(s) == title_block or ("%s: %s" % (s.FamilyName, fix_plan.el_name(s))) == title_block]
+            if not hits:
+                raise ActionError("no title block %r; available: %s" % (title_block, ", ".join(sorted("%s: %s" % (s.FamilyName, fix_plan.el_name(s)) for s in tbs))[:300]))
+            tb, tbname = hits[0].Id, title_block
+        elif tbs:
+            tb, tbname = tbs[0].Id, "%s: %s" % (tbs[0].FamilyName, fix_plan.el_name(tbs[0]))
+        sh = ViewSheet.Create(self.doc, tb)
+        sh.SheetNumber = num
+        sh.Name = nm
+        return self._record_new(sh, "Sheets", "sheet '%s - %s' (%s)" % (num, nm, tbname), "(new sheet)")
+
+    def list_sheets(self):   # family 7
+        from Autodesk.Revit.DB import ViewSheet
+        out = [{"id": _int(fix_plan.id_int(s.Id)), "number": s.SheetNumber, "name": fix_plan.el_name(s)}
+               for s in FilteredElementCollector(self.doc).OfClass(ViewSheet)]
+        return sorted(out, key=lambda x: x["number"])
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]

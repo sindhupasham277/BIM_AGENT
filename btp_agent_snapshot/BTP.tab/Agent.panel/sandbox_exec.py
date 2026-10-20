@@ -274,6 +274,7 @@ PUBLIC_METHODS = (
     "list_levels",   # C15
     "list_wall_types",   # C15
     "list_family_types",   # C15
+    "list_sheets",   # family 7
 )
 
 BLOCKED_ATTR_PREFIXES = ("_", "func_", "im_", "gi_", "f_", "co_", "tb_", "cell_")

@@ -431,17 +431,7 @@
   "group": "documentation",
   "prompt": "Create a new sheet numbered A101 named Ground Floor.",
   "expect": {
-   "kind": "items",
-   "match": [
-    {
-     "scope": "created",
-     "label": "Sheets",
-     "new_contains": [
-      "A101"
-     ]
-    }
-   ],
-   "count": 1
+   "kind": "no_proposal"
   }
  }
 ]

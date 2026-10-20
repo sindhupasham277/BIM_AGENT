@@ -190,6 +190,12 @@ class RevitRO(object):
             return {"error": "unknown family category; available: " + ", ".join(sorted(names))}
         return sorted("%s: %s" % (s.FamilyName, self._nm(s)) for s in FilteredElementCollector(self.doc).OfClass(FamilySymbol).OfCategory(bic))
 
+    def list_sheets(self):   # family 7
+        from Autodesk.Revit.DB import ViewSheet
+        out = [{"id": int(str(s.Id.Value)), "number": s.SheetNumber, "name": self._nm(s)}
+               for s in FilteredElementCollector(self.doc).OfClass(ViewSheet)]
+        return sorted(out, key=lambda x: x["number"])
+
     def get_relationship(self, element_id, kind):
 
         if kind != "rooms_bounding_door":
