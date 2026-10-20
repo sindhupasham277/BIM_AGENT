@@ -1027,5 +1027,22 @@ class RevitRW(object):
                 for e in FilteredElementCollector(self.doc).OfCategory(bic).WhereElementIsNotElementType()]
 
 
+    def get_wall_joins(self, wall_id):   # C18: same as revit_ro.get_wall_joins
+        w = self._wall(wall_id)
+        me = _int(fix_plan.id_int(w.Id))
+        out = {}
+        for i, key in ((0, "start"), (1, "end")):
+            ids = []
+            try:
+                for e in w.Location.get_ElementsAtJoin(i):
+                    n = _int(fix_plan.id_int(e.Id))
+                    if n != me:
+                        ids.append(n)
+            except Exception:
+                pass
+            out[key] = sorted(ids)
+        return out
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]

@@ -215,6 +215,23 @@ class RevitRO(object):
                for s in FilteredElementCollector(self.doc).OfClass(ViewSheet)]
         return sorted(out, key=lambda x: x["number"])
 
+    def get_wall_joins(self, wall_id):   # C18: Revit's own join records at each end of a wall
+        el = self.doc.GetElement(ElementId(Int64(int(wall_id))))
+        if el is None or el.Category is None or el.Category.Name != "Walls":
+            return None
+        out = {}
+        for i, key in ((0, "start"), (1, "end")):
+            ids = []
+            try:
+                for e in el.Location.get_ElementsAtJoin(i):
+                    n = int(str(e.Id.Value))
+                    if n != int(wall_id):
+                        ids.append(n)
+            except Exception:
+                pass
+            out[key] = sorted(ids)
+        return out
+
     def get_relationship(self, element_id, kind):
 
         if kind != "rooms_bounding_door":
