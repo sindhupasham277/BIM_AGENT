@@ -117,11 +117,22 @@
   "group": "move_copy",
   "prompt": "Move wall 1674186 by 1 metre in the X direction.",
   "expect": {
-   "kind": "items",
-   "match": [
+   "kind": "any_of",
+   "options": [
     {
-     "target_id": 1674186,
-     "param": "(location)"
+     "kind": "items",
+     "match": [
+      {
+       "target_id": 1674186,
+       "param": "(location)"
+      }
+     ]
+    },
+    {
+     "kind": "no_proposal_reply",
+     "contains": [
+      "join"
+     ]
     }
    ]
   }

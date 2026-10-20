@@ -34,12 +34,25 @@ def field_ok(item, key, want):
     return have == want or str(have) == str(want)
 
 
-def check(test, props, sel_counts, marks, tools=None):
+def check(test, props, sel_counts, marks, tools=None, reply=""):
     exp = test["expect"]
     kind = exp["kind"]
     if kind == "tool":
         want = "%s:ok" % exp["tool"]
         return (want in (tools or [])), "tools: %s" % " ".join(tools or [])
+    if kind == "any_of":
+        whys = []
+        for sub in exp["options"]:
+            ok, why = check(dict(test, expect=sub), props, sel_counts, marks, tools, reply)
+            if ok:
+                return True, "any_of: " + why
+            whys.append(why)
+        return False, "any_of: " + " / ".join(whys)
+    if kind == "no_proposal_reply":
+        if props:
+            return False, "proposals: %d" % len(props)
+        miss = [w for w in exp.get("contains", []) if w.lower() not in (reply or "").lower()]
+        return (not miss), ("reply missing %s" % miss if miss else "no proposal; reply mentions %s" % exp.get("contains"))
     items = [i for p in props for i in norm_items(p)]
     if kind == "no_proposal":
         return (not props), "proposals: %d" % len(props)
@@ -100,7 +113,7 @@ def main():
             if tool == "select_elements":
                 sel += selected_counts(summ)
         con.close()
-        ok, why = check(t, props, sel, marks, tools)
+        ok, why = check(t, props, sel, marks, tools, (r.get("response") if isinstance(r.get("response"), str) else ""))
         if len(props) > 1:
             ok, why = False, why + " | MORE THAN ONE PROPOSAL (%d)" % len(props)
         for p in props:

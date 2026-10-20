@@ -1,0 +1,52 @@
+[
+ {
+  "id": "M2",
+  "group": "move_copy",
+  "prompt": "Move wall 1674186 by 1 metre in the X direction.",
+  "expect": {
+   "kind": "any_of",
+   "options": [
+    {
+     "kind": "items",
+     "match": [
+      {
+       "target_id": 1674186,
+       "param": "(location)"
+      }
+     ]
+    },
+    {
+     "kind": "no_proposal_reply",
+     "contains": [
+      "join"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "M2",
+  "group": "move_copy",
+  "prompt": "Move wall 1674186 by 1 metre in the X direction.",
+  "expect": {
+   "kind": "any_of",
+   "options": [
+    {
+     "kind": "items",
+     "match": [
+      {
+       "target_id": 1674186,
+       "param": "(location)"
+      }
+     ]
+    },
+    {
+     "kind": "no_proposal_reply",
+     "contains": [
+      "join"
+     ]
+    }
+   ]
+  }
+ }
+]
