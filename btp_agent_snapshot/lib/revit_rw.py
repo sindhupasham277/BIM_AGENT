@@ -646,5 +646,69 @@ class RevitRW(object):
         })
         return nid
 
+    def _names_of(self, cls):
+        return [fix_plan.el_name(e) for e in FilteredElementCollector(self.doc).OfClass(cls)]
+
+    def create_level(self, name, elevation_m, create_plan=False):   # family 3
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        name = _txt(name).strip()
+        if not name:
+            raise ActionError("a level needs a name")
+        if name in self._names_of(Level):
+            raise ActionError("a level named %r already exists" % name)
+        z = _num(elevation_m, "elevation_m")
+        if abs(z) > MAX_COORD_M:
+            raise ActionError("elevation must be within +/-%d m" % MAX_COORD_M)
+        for lv in FilteredElementCollector(self.doc).OfClass(Level):
+            if abs(_m(lv.Elevation) - z) < 0.001:
+                raise ActionError("level %r already uses elevation %.3f m" % (fix_plan.el_name(lv), z))
+        lv = Level.Create(self.doc, _ft(z))
+        lv.Name = name
+        nid = _int(fix_plan.id_int(lv.Id))
+        self._created.add(nid)
+        self._record((nid, "(new level)"), {
+            "target_id": nid, "scope": "created", "label": "Levels", "param_name": "(new level)",
+            "old": u"", "new": "level '%s' at %.2f m" % (name, z), "affected": 1,
+        })
+        if create_plan:
+            from Autodesk.Revit.DB import ViewFamilyType, ViewFamily, ViewPlan
+            vft = [t for t in FilteredElementCollector(self.doc).OfClass(ViewFamilyType) if t.ViewFamily == ViewFamily.FloorPlan]
+            if not vft:
+                raise ActionError("no floor plan view type in this project")
+            if len(self._created) >= MAX_CREATED:
+                raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+            v = ViewPlan.Create(self.doc, vft[0].Id, lv.Id)
+            vid = _int(fix_plan.id_int(v.Id))
+            self._created.add(vid)
+            self._record((vid, "(new view)"), {
+                "target_id": vid, "scope": "created", "label": "Views", "param_name": "(new view)",
+                "old": u"", "new": "floor plan '%s' for level '%s'" % (fix_plan.el_name(v), name), "affected": 1,
+            })
+        return nid
+
+    def create_grid(self, name, x1, y1, x2, y2):   # family 3
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        name = _txt(name).strip()
+        if not name:
+            raise ActionError("a grid needs a name")
+        if name in self._names_of(Grid):
+            raise ActionError("a grid named %r already exists" % name)
+        xs = [_num(v, "coordinate") for v in (x1, y1, x2, y2)]
+        if max(abs(v) for v in xs) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        if math.hypot(xs[2] - xs[0], xs[3] - xs[1]) < 0.1:
+            raise ActionError("a grid line must be at least 0.1 m long")
+        g = Grid.Create(self.doc, Line.CreateBound(XYZ(_ft(xs[0]), _ft(xs[1]), 0), XYZ(_ft(xs[2]), _ft(xs[3]), 0)))
+        g.Name = name
+        nid = _int(fix_plan.id_int(g.Id))
+        self._created.add(nid)
+        self._record((nid, "(new grid)"), {
+            "target_id": nid, "scope": "created", "label": "Grids", "param_name": "(new grid)",
+            "old": u"", "new": "grid '%s' from (%.2f, %.2f) to (%.2f, %.2f) m" % (name, xs[0], xs[1], xs[2], xs[3]), "affected": 1,
+        })
+        return nid
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
