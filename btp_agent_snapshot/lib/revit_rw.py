@@ -10,6 +10,18 @@ from Autodesk.Revit.DB import FamilySymbol, BuiltInCategory, BuiltInParameter
 from Autodesk.Revit.DB.Structure import StructuralType
 from Autodesk.Revit.DB import Plane
 
+# Family 2: family categories that place_instance / list_family_types understand (names as the agent uses them)
+_FAMILY_CATEGORIES = {}
+for _k, _v in (("Doors", "OST_Doors"), ("Windows", "OST_Windows"), ("Columns", "OST_StructuralColumns"),
+               ("Architectural Columns", "OST_Columns"), ("Furniture", "OST_Furniture"), ("Furniture Systems", "OST_FurnitureSystems"),
+               ("Generic Models", "OST_GenericModel"), ("Casework", "OST_Casework"), ("Plumbing Fixtures", "OST_PlumbingFixtures"),
+               ("Lighting Fixtures", "OST_LightingFixtures"), ("Electrical Fixtures", "OST_ElectricalFixtures"),
+               ("Electrical Equipment", "OST_ElectricalEquipment"), ("Mechanical Equipment", "OST_MechanicalEquipment"),
+               ("Specialty Equipment", "OST_SpecialityEquipment"), ("Planting", "OST_Planting"), ("Entourage", "OST_Entourage")):
+    _b = getattr(BuiltInCategory, _v, None)
+    if _b is not None:
+        _FAMILY_CATEGORIES[_k] = _b
+
 MAX_CHANGES = 200
 MAX_CREATED = 20
 MAX_DELETE = 20
@@ -395,9 +407,9 @@ class RevitRW(object):
         return self._where(self._element(element_id))
 
     def _symbols(self, category):
-        bic = {"Doors": BuiltInCategory.OST_Doors, "Windows": BuiltInCategory.OST_Windows}.get(category)
+        bic = _FAMILY_CATEGORIES.get(category)   # family 2: any family category
         if bic is None:
-            raise ActionError("category must be 'Doors' or 'Windows'")
+            raise ActionError("unknown family category %r; available: %s" % (category, ", ".join(sorted(_FAMILY_CATEGORIES))))
         out = []
         for s in FilteredElementCollector(self.doc).OfClass(FamilySymbol).OfCategory(bic):
             name = fix_plan.el_name(s)
@@ -574,6 +586,65 @@ class RevitRW(object):
             "affected": 1,
         })
         return True
+
+    def place_instance(self, type_name, x, y, level_name, rotation_deg=0, category=None):   # family 2
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        cats = [category] if category else sorted(_FAMILY_CATEGORIES)
+        hits = []
+        for cat in cats:
+            for s, n, full in self._symbols(cat):
+                if full == type_name or n == type_name:
+                    hits.append((s, cat, full))
+        exact = [h for h in hits if h[2] == type_name]
+        if exact:
+            hits = exact
+        if not hits:
+            raise ActionError("no loaded family type %r%s; list names with list_family_types(category)" % (type_name, (" in " + category) if category else ""))
+        if len(hits) > 1:
+            raise ActionError("type name %r is ambiguous (%s); use 'Family: Type' or give the category" % (type_name, ", ".join(sorted(set(h[2] + " [" + h[1] + "]" for h in hits)))[:300]))
+        sym, cat, full = hits[0]
+        if cat in ("Doors", "Windows"):
+            raise ActionError("doors and windows need a host wall: use place_door or place_window")
+        try:
+            ptype = str(sym.Family.FamilyPlacementType)
+        except Exception:
+            ptype = "OneLevelBased"
+        if ptype not in ("OneLevelBased", "TwoLevelsBased"):
+            raise ActionError("%r is a %s family; only level-based families can be placed at a point" % (full, ptype))
+        lv = self._by_name(Level, level_name, "level")
+        xs = [_num(v, "coordinate") for v in (x, y)]
+        if max(abs(v) for v in xs) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        rot = _num(rotation_deg, "rotation_deg")
+        if abs(rot) > 360:
+            raise ActionError("rotation_deg must be between -360 and 360")
+        if not sym.IsActive:
+            sym.Activate()
+            self.doc.Regenerate()
+        st = StructuralType.Column if cat == "Columns" else StructuralType.NonStructural
+        inst = self.doc.Create.NewFamilyInstance(XYZ(_ft(xs[0]), _ft(xs[1]), lv.Elevation), sym, lv, st)
+        self.doc.Regenerate()
+        if rot:
+            pt = inst.Location.Point
+            ElementTransformUtils.RotateElement(self.doc, inst.Id, Line.CreateBound(pt, XYZ(pt.X, pt.Y, pt.Z + 1)), math.radians(rot))
+            self.doc.Regenerate()
+        self._check_bounds(inst)
+        nid = _int(fix_plan.id_int(inst.Id))
+        self._created.add(nid)
+        text = "'%s' at (%.2f, %.2f) m on %s" % (full, xs[0], xs[1], fix_plan.el_name(lv))
+        if rot:
+            text += ", rotated %.1f deg" % rot
+        self._record((nid, "(new instance)"), {
+            "target_id": nid,
+            "scope": "created",
+            "label": inst.Category.Name if inst.Category is not None else cat,
+            "param_name": "(new instance)",
+            "old": u"",
+            "new": text,
+            "affected": 1,
+        })
+        return nid
 
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]

@@ -7,6 +7,10 @@ from Autodesk.Revit.DB import (
     UnitUtils,
     UnitTypeId,
     SpecTypeId,
+    FamilySymbol,
+    Level,
+    WallType,
+    Element,
 )
 
 from System import Int64
@@ -159,6 +163,32 @@ class RevitRO(object):
             return {"start": s, "end": e, "length_m": round(_m(c.Length), 4)}
         except Exception:
             return None
+
+    # C15: what EXISTS in the project (loaded types, levels), not what is placed
+    def _nm(self, e):
+        try:
+            return Element.Name.GetValue(e)
+        except Exception:
+            return e.Name
+
+    def list_levels(self):
+        return [{"id": int(str(lv.Id.Value)), "name": self._nm(lv), "elevation_m": round(_m(lv.Elevation), 3)}
+                for lv in FilteredElementCollector(self.doc).OfClass(Level)]
+
+    def list_wall_types(self):
+        return sorted(self._nm(t) for t in FilteredElementCollector(self.doc).OfClass(WallType))
+
+    def list_family_types(self, category):
+        names = {"Doors": "OST_Doors", "Windows": "OST_Windows", "Columns": "OST_StructuralColumns",
+                 "Architectural Columns": "OST_Columns", "Furniture": "OST_Furniture", "Furniture Systems": "OST_FurnitureSystems",
+                 "Generic Models": "OST_GenericModel", "Casework": "OST_Casework", "Plumbing Fixtures": "OST_PlumbingFixtures",
+                 "Lighting Fixtures": "OST_LightingFixtures", "Electrical Fixtures": "OST_ElectricalFixtures",
+                 "Electrical Equipment": "OST_ElectricalEquipment", "Mechanical Equipment": "OST_MechanicalEquipment",
+                 "Specialty Equipment": "OST_SpecialityEquipment", "Planting": "OST_Planting", "Entourage": "OST_Entourage"}
+        bic = getattr(BuiltInCategory, names.get(category, ""), None) if category in names else None
+        if bic is None:
+            return {"error": "unknown family category; available: " + ", ".join(sorted(names))}
+        return sorted("%s: %s" % (s.FamilyName, self._nm(s)) for s in FilteredElementCollector(self.doc).OfClass(FamilySymbol).OfCategory(bic))
 
     def get_relationship(self, element_id, kind):
 

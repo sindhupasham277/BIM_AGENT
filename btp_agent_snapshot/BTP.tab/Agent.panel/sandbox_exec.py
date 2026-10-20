@@ -271,6 +271,9 @@ PUBLIC_METHODS = (
     "get_level_of_element",
     "get_host_id",
     "get_line",   # G5 C11
+    "list_levels",   # C15
+    "list_wall_types",   # C15
+    "list_family_types",   # C15
 )
 
 BLOCKED_ATTR_PREFIXES = ("_", "func_", "im_", "gi_", "f_", "co_", "tb_", "cell_")
