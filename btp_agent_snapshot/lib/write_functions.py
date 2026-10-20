@@ -142,6 +142,29 @@ def _run_action(doc, args, expected_old):
     return {"status": "applied", "changed": changes, "warnings": list(_wh.warnings)}
 
 
+def temporary_view(doc, view, ids, mode):
+    """Family 5, DISPLAY ONLY: temporary hide/isolate/reset in the active view (not saved with the model).
+    Revit requires a Transaction even for these, so it lives here. NOT on the apply whitelist."""
+    from Autodesk.Revit.DB import TemporaryViewMode
+    if mode not in ("isolate", "hide", "reset"):
+        raise ValueError("mode must be isolate, hide or reset")
+    t = Transaction(doc, "AI Agent: temporary " + mode)
+    t.Start()
+    try:
+        if mode == "isolate":
+            view.IsolateElementsTemporary(ids)
+        elif mode == "hide":
+            view.HideElementsTemporary(ids)
+        else:
+            view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate)
+        if t.Commit() != TransactionStatus.Committed:
+            raise RuntimeError("Revit did not commit the temporary view change")
+    except Exception:
+        if t.HasStarted() and not t.HasEnded():
+            t.RollBack()
+        raise
+
+
 _WRITE_WHITELIST = {"set_parameter": _set_parameter, "run_action": _run_action}    # Revit-side whitelist
 
 

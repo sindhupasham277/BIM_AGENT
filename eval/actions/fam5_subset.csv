@@ -1,0 +1,5 @@
+id,group,pass,seconds,why,tools,proposals,items,reply,session_id,prompt
+E1,existing,1,14.1,selected counts: [8],select_elements:ok final_reply:ok,0,[],success,act-eval-E1-48d670,Highlight all the walls that are longer than 10 metres.
+V1,view,0,15.3,tools: view_action:error view_action:error select_elements:ok final_reply:ok,view_action:error view_action:error select_elements:ok final_reply:ok,0,[],success,act-eval-V1-f8724b,Isolate all the doors in the active view.
+V2,view,1,15.6,tools: query_elements:ok view_action:ok final_reply:ok,query_elements:ok view_action:ok final_reply:ok,0,[],success,act-eval-V2-c6dee6,Zoom the view to door zz-99.
+V3,view,1,3.1,tools: view_action:ok final_reply:ok,view_action:ok final_reply:ok,0,[],success,act-eval-V3-ca94b7,Reset the temporary hide or isolate in the active view.

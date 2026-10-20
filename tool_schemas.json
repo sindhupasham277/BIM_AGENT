@@ -286,5 +286,68 @@
                 "code"
             ]
         }
+    },
+    "view_action": {
+        "name": "view_action",
+        "description": "Change only the DISPLAY of the active Revit view, never the model: action 'isolate' or 'hide' (temporary), 'zoom' (zoom the view to the elements) or 'reset' (turn off temporary hide/isolate). Target elements by category with optional filters (same as query_elements) or by element_ids. Runs immediately; no confirmation is needed.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "isolate",
+                        "hide",
+                        "zoom",
+                        "reset"
+                    ]
+                },
+                "category": {
+                    "type": "string"
+                },
+                "filters": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "parameter": {
+                                "type": "string"
+                            },
+                            "operator": {
+                                "type": "string",
+                                "enum": [
+                                    "==",
+                                    "!=",
+                                    ">",
+                                    "<",
+                                    ">=",
+                                    "<=",
+                                    "contains",
+                                    "is_null",
+                                    "is_not_null"
+                                ]
+                            },
+                            "value": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "parameter",
+                            "operator",
+                            "value"
+                        ]
+                    }
+                },
+                "element_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "required": [
+                "action"
+            ]
+        }
     }
 }

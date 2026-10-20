@@ -865,6 +865,56 @@ def route_action_preview(doc, request):
         )
 
 
+# ============================================================
+# /view_action  (family 5: DISPLAY ONLY - temporary hide/isolate, zoom, reset; Revit needs a Transaction for temporary view modes, done in write_functions.temporary_view)
+# ============================================================
+
+@api.route("/view_action", methods=["POST"])
+def route_view_action(doc, uidoc, request):
+    try:
+        from System import Int64
+        from System.Collections.Generic import List
+        import sys
+        LIB = r"C:\Users\sindh\AppData\Roaming\pyRevit\Extensions\btp_agent.extension\lib"
+        if LIB not in sys.path:
+            sys.path.append(LIB)
+        import write_functions
+        from Autodesk.Revit.DB import ElementId
+        data = request.data
+        action = data.get("action")
+        if action not in ("isolate", "hide", "reset", "zoom"):
+            return routes.make_response(data={"error": "action must be isolate, hide, zoom or reset"}, status=400)
+        view = uidoc.ActiveView
+        if action == "reset":
+            write_functions.temporary_view(doc, view, None, "reset")
+            return {"status": "ok", "action": "reset", "view": view.Name, "count": 0}
+        ids = List[ElementId]()
+        given = data.get("element_ids") or []
+        if given:
+            for i in given:
+                ids.Add(ElementId(Int64(int(i))))
+        else:
+            category = data.get("category")
+            if category not in CATEGORY_MAP:
+                return routes.make_response(data={"error": "unknown category %r; available: %s" % (category, ", ".join(sorted(CATEGORY_MAP)))}, status=400)
+            op_map = {"==": "eq", "!=": "neq", ">": "gt", "<": "lt", ">=": "gte", "<=": "lte",
+                      "contains": "contains", "is_null": "is_null", "is_not_null": "is_not_null"}
+            converted = [{"param": f["parameter"], "op": op_map[f["operator"]], "value": f.get("value")} for f in data.get("filters", [])]
+            for r in query_elements(doc, category, converted, []):
+                ids.Add(ElementId(Int64(int(str(r["_id"])))))
+        if ids.Count == 0:
+            return {"status": "ok", "action": action, "view": view.Name, "count": 0, "note": "no matching elements; the view was not changed"}
+        if action in ("isolate", "hide"):
+            write_functions.temporary_view(doc, view, ids, action)
+        else:
+            uidoc.ShowElements(ids)
+        return {"status": "ok", "action": action, "view": view.Name, "count": ids.Count}
+
+    except Exception as e:
+        import traceback
+        return routes.make_response(data={"error": traceback.format_exc()}, status=500)
+
+
 @api.route("/model_info", methods=["GET"])
 def route_model_info(doc, request):
     try:

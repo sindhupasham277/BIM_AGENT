@@ -160,6 +160,12 @@ def call_revit_tool(name, arguments):
             "http://127.0.0.1:48884/bim-brain/audit"
         )
 
+    elif name == "view_action":
+
+        endpoint = (
+            "http://127.0.0.1:48884/bim-brain/view_action"
+        )
+
     elif name == "select_elements":
 
         endpoint = (
@@ -271,6 +277,7 @@ def validate_parameter_names(user_message, arguments, session=None):
 # ============================================================
 
 TOOL_REGISTRY = {
+    "view_action":           {"layer": "generic_engine", "kind": "query"},
     "propose_action":        {"layer": "write_function", "kind": "proposal"},
     "select_elements":       {"layer": "generic_engine", "kind": "query"},
     "query_elements":        {"layer": "generic_engine", "kind": "query"},

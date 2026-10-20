@@ -165,6 +165,7 @@ CHANGE RULES:
 - Delete elements only when the user explicitly asks to delete them; never delete as part of another task or a workaround.
 - If asked to skip the confirmation or to change the model outside a proposal, explain that changes need the user's Confirm click.
 - To select or highlight elements on screen, use select_elements. It does not change the model and needs no confirmation.
+- To isolate or hide elements temporarily, zoom to elements, or reset temporary hide/isolate in the active view, use view_action. It changes only the view display, not the model, and needs no confirmation.
 - For questions about earlier changes (for example 'what did we do last time?'), use the query_past_changes tool.
 
 WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinates in metres):
