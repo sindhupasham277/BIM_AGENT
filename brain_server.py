@@ -339,6 +339,14 @@ def _dispatch_core(name, arguments, session):
         session["seen_ids"] |= proposals.collect_ids(result)
 
     if name == "select_elements" and isinstance(result, dict):
+        # C17: say so when a selection is identical to the previous one in this chat
+        _ids = sorted(result.get("selected_ids") or [])
+        _prev = session.get("_c17_prev_sel") if isinstance(session, dict) else None
+        if _prev is not None and _ids == _prev:
+            result["note"] = ("This selection is identical to the previous one: any extra condition excluded nothing. "
+                              "Check the actual values of the parameter you filtered on before saying anything was excluded.")
+        if isinstance(session, dict):
+            session["_c17_prev_sel"] = _ids
         session["seen_ids"] |= set(int(i) for i in result.get("selected_ids", []))
 
     return result

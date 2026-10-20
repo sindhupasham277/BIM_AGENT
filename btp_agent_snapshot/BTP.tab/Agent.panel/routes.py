@@ -31,6 +31,25 @@ CATEGORY_MAP = {
 #    # Converts Revit internal metric values to meters / square meters / cubic meters 
 # ============================================================ 
  
+def _int_value(p):   # C17: choice (enum) parameters return their display text; Yes/No and plain integers stay numbers
+    n = p.AsInteger()
+    try:
+        if p.Definition.GetDataType() == SpecTypeId.Boolean.YesNo:
+            return n
+    except Exception:
+        pass
+    try:
+        s = p.AsValueString()
+    except Exception:
+        s = None
+    if s:
+        try:
+            int(s)
+            return n
+        except ValueError:
+            return s
+    return n
+
 def get_param_value(doc, el, param_name): 
  
     p = el.LookupParameter(param_name) 
@@ -97,7 +116,7 @@ def get_param_value(doc, el, param_name):
         return p.AsString() 
  
     elif st == StorageType.Integer: 
-        return p.AsInteger() 
+        return _int_value(p)
  
     elif st == StorageType.ElementId: 
         return p.AsValueString() 

@@ -31,6 +31,25 @@ def _m(v):
     return UnitUtils.ConvertFromInternalUnits(v, UnitTypeId.Meters)
 
 
+def _int_value(p):   # C17: choice (enum) parameters return their display text; Yes/No and plain integers stay numbers
+    n = p.AsInteger()
+    try:
+        if p.Definition.GetDataType() == SpecTypeId.Boolean.YesNo:
+            return n
+    except Exception:
+        pass
+    try:
+        s = p.AsValueString()
+    except Exception:
+        s = None
+    if s:
+        try:
+            int(s)
+            return n
+        except ValueError:
+            return s
+    return n
+
 def _metric(p):
     raw = p.AsDouble()
     try:
@@ -116,7 +135,7 @@ class RevitRO(object):
             return param.AsString()
 
         if storage == StorageType.Integer:
-            return param.AsInteger()
+            return _int_value(param)
 
         if storage == StorageType.Double:
             return _metric(param)   # G5 C11: m, m2, m3
