@@ -125,6 +125,35 @@ def propose_set_parameter(session, category, element_ids, param_name, value, aud
 MAX_CODE_CHARS = 4000
 
 
+_KIND_WORDS = {"Floors": ("floor", "slab"), "Ceilings": ("ceiling",), "Text Notes": ("note", "text", "label", "annotat"),
+               "Windows": ("window",), "Doors": ("door",), "Walls": ("wall",), "Sheets": ("sheet",)}
+
+
+def _substitution_check(session, changes):
+    # C28: every created element kind (and any type-parameter change) must be something the user asked for in this chat
+    said = [str(session.get("last_user_text") or "")]
+    for m in (session.get("messages") or [])[-12:]:
+        if isinstance(m, dict) and m.get("role") == "user" and isinstance(m.get("content"), str):
+            said.append(m["content"])
+    said = " ".join(said).lower()
+    labels = set(str(c.get("label")) for c in changes if c.get("scope") == "created")
+    bad = []
+    for lab in sorted(labels):
+        if lab in _KIND_WORDS and not any(w in said for w in _KIND_WORDS[lab]):
+            bad.append(lab)
+        elif lab.endswith("Tags") and "tag" not in said:
+            bad.append(lab)
+        elif lab == "Views" and not ("Levels" in labels or "view" in said or "plan" in said):
+            bad.append(lab)
+    if any(c.get("scope") == "type" for c in changes) and "type" not in said:
+        bad.append("a change to a TYPE parameter (it would change every element of that type)")
+    if bad:
+        return ("Not proposed: the card would create or change %s, but the user's request does not ask for that. Do not substitute "
+                "another element or setting for a feature that is not available: tell the user plainly that the requested feature is "
+                "not available here and offer alternatives in your reply only." % ", ".join(bad))
+    return None
+
+
 def propose_action(session, description, code):
     # Creates an ACTION proposal from a DRY RUN (rolled back on the Revit side).
     # Never changes the model: only the user's Confirm click can apply it.
@@ -141,6 +170,9 @@ def propose_action(session, description, code):
     if not changes:
         return {"status": "no_changes", "result": out.get("result"),
                 "note": "The dry run changed nothing, so no proposal was created. Report only what the result shows and never invent a reason (a null result means nothing was found or set)."}
+    _sub = _substitution_check(session, changes)
+    if _sub:
+        return {"status": "invalid", "errors": [_sub]}
     if len(changes) > MAX_ELEMENTS:
         raise ValueError("more than %d changes; narrow the action" % MAX_ELEMENTS)
     pid = "P-" + uuid.uuid4().hex[:6]
