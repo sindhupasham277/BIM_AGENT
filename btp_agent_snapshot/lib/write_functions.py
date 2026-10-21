@@ -105,30 +105,17 @@ def _action_modules():
 
 
 def preview_action(doc, code):
-    """DRY RUN (G5 C22): runs the snippet and TEST-COMMITS it inside a TransactionGroup that is ALWAYS rolled back,
-    so Revit's commit-time checks run before any card is offered. Nothing persists, nothing enters the undo history."""
-    from Autodesk.Revit.DB import TransactionGroup
+    """DRY RUN: runs the snippet in a Transaction that is ALWAYS rolled back."""
     action_exec, revit_rw = _action_modules()
     rw = revit_rw.RevitRW(doc)
-    g = TransactionGroup(doc, "AI Agent: preview (rolled back)")
-    g.Start()
+    t = Transaction(doc, "AI Agent: preview (rolled back)")
+    t.Start()
+    _attach_warning_handler(t)   # no Revit dialog can block a dry run
     try:
-        t = Transaction(doc, "AI Agent: preview test commit")
-        t.Start()
-        wh = _attach_warning_handler(t)   # no Revit dialog can block a dry run
-        try:
-            out = action_exec.run_action_code(code, rw)
-            if out.get("status") == "ok" and out.get("changes"):
-                if t.Commit() != TransactionStatus.Committed:
-                    out = {"status": "error",
-                           "message": "Revit would refuse this change: " + ("; ".join(wh.errors) or "it did not commit"),
-                           "changes": out.get("changes")}
-        finally:
-            if t.HasStarted() and not t.HasEnded():
-                t.RollBack()
+        out = action_exec.run_action_code(code, rw)
     finally:
-        if g.HasStarted() and not g.HasEnded():
-            g.RollBack()
+        if t.HasStarted() and not t.HasEnded():
+            t.RollBack()
     return out
 
 
