@@ -202,6 +202,7 @@ def propose_action(session, description, code):
 
 PROMPT_RULES = """
 CHANGE RULES:
+- Colour or graphic overrides in views (permanent or by filter) are not available. Never change element materials or any other model parameter instead: say it is not available and offer a temporary isolate or hide.
 - Dimensions are not available here: when asked for one, give the measured distance in your reply only. Never create a text note, line or any other element instead, and do not say Revit cannot do it: Revit can, this assistant cannot.
 - When the user gives no wall type, height or similar setting, use the project default and say which one on the card; do not ask for it.
 - Never emulate an unavailable operation (split, trim, extend, merge, join into one, and similar) by deleting and recreating elements: that destroys their data (Marks, parameters, ids, hosted elements). Say it is not available.

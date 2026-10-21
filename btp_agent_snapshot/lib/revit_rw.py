@@ -105,6 +105,9 @@ class RevitRW(object):
         raise ActionError("no %s named %r; available: %s" % (what, name, ", ".join(sorted(names))[:400]))
 
     def _record(self, key, item):
+        # C30a: a change whose old and new values are identical is not a change (any parameter type)
+        if item.get("scope") not in ("created", "deleted", "deleted (dependent)") and _txt(item.get("old")).strip() == _txt(item.get("new")).strip():
+            return
         if key not in self._changes:
             if len(self._changes) >= MAX_CHANGES:
                 raise ActionError("more than %d changes in one action" % MAX_CHANGES)
