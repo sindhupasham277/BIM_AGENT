@@ -69,6 +69,22 @@ class MessagePayload(BaseModel):
 
 _sessions = {}
 
+# C29: one Revit bridge call at a time (parallel chats picked up each other's dry runs); model calls stay parallel
+import threading as _threading
+import requests as _rq
+_REVIT_LOCK = _threading.Lock()
+def _revit_locked(fn):
+    def wrapper(url, *args, **kwargs):
+        if "127.0.0.1:48884" in str(url):
+            with _REVIT_LOCK:
+                return fn(url, *args, **kwargs)
+        return fn(url, *args, **kwargs)
+    return wrapper
+if not getattr(_rq.post, "_c29", False):
+    _rq.post = _revit_locked(_rq.post); _rq.post._c29 = True
+    _rq.get = _revit_locked(_rq.get); _rq.get._c29 = True
+
+
 
 # ============================================================
 # Tool audit log
