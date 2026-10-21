@@ -170,6 +170,8 @@ def propose_action(session, description, code):
 
 PROMPT_RULES = """
 CHANGE RULES:
+- Dimensions are not available here: when asked for one, give the measured distance in your reply only. Never create a text note, line or any other element instead, and do not say Revit cannot do it: Revit can, this assistant cannot.
+- When the user gives no wall type, height or similar setting, use the project default and say which one on the card; do not ask for it.
 - Never emulate an unavailable operation (split, trim, extend, merge, join into one, and similar) by deleting and recreating elements: that destroys their data (Marks, parameters, ids, hosted elements). Say it is not available.
 - Creating a new proposal replaces any older unconfirmed card in this chat (only the newest card can be confirmed); mention this if the user had an earlier card waiting.
 - You cannot undo changes yourself. Every applied action is ONE Revit transaction, so when the user asks to undo, tell them to press Ctrl+Z (or Undo) once in Revit: that restores everything the action changed, including the old values.
@@ -236,6 +238,23 @@ SNIPPET PYTHON (Python 2.7 subset; snippets time out after 5 s):
 - Not allowed: import, while, try/except, lambda, def, ** (power), % formatting, f-strings, isinstance, hasattr, type, getattr, open, eval, attributes starting with _, Transaction, doc, repeating a list or text with *. Check for None with == None. Build text with + and str().
 - Assign a short summary to result.
 """
+
+# C27: the live parameter list from the model, so the agent never needs to guess or invent one
+def _live_parameter_list():
+    try:
+        cats = requests.get(REVIT_BASE + "/schema", timeout=15).json().get("categories", {})
+    except Exception:
+        return ""
+    if not cats:
+        return ""
+    lines = ["- %s: %s" % (c, ", ".join(sorted(cats[c]))) for c in sorted(cats)]
+    return ("\n\nPARAMETERS IN THIS MODEL (read from the live model when this session started; this is the real list; "
+            "a parameter can still be empty on some elements; never claim a listed parameter is missing, and check the "
+            "model with a tool before claiming anything else is missing):\n" + "\n".join(lines))
+
+
+PROMPT_RULES = PROMPT_RULES + _live_parameter_list()
+
 
 
 # ============================================================
