@@ -6,6 +6,16 @@
 import csv, json, re, sqlite3, statistics, sys, time, uuid
 import requests
 
+# parallel-safe: with BTP_SKIP_BRIDGE=1 this runner never calls Revit itself (only the brain does, through its lock)
+import os as _os
+class _Fake:
+    def json(self): return {"title": "parallel-run", "results": [], "status": "skipped"}
+    def raise_for_status(self): pass
+def _bridge_get(url, *a, **k):
+    return _Fake() if _os.environ.get("BTP_SKIP_BRIDGE") else requests.get(url, *a, **k)
+def _bridge_post(url, *a, **k):
+    return _Fake() if _os.environ.get("BTP_SKIP_BRIDGE") else requests.post(url, *a, **k)
+
 BRAIN = "http://127.0.0.1:8000"
 REVIT = "http://127.0.0.1:48884/bim-brain"
 
@@ -90,14 +100,14 @@ def main():
     db, tests_path, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
     tests = json.load(open(tests_path, encoding="utf-8-sig"))
     requests.get(BRAIN + "/openapi.json", timeout=5).raise_for_status()
-    title = requests.get(REVIT + "/model_info", timeout=30).json().get("title")
-    walls = requests.post(REVIT + "/query", json={"category": "Walls", "filters": [], "return_fields": ["Mark"]}, timeout=60).json()["results"]
+    title = _bridge_get(REVIT + "/model_info", timeout=30).json().get("title")
+    walls = _bridge_post(REVIT + "/query", json={"category": "Walls", "filters": [], "return_fields": ["Mark"]}, timeout=60).json()["results"]
     marks = dict((int(r["_id"]), r.get("Mark")) for r in walls)  # /query returns ids as text
     print("model: %s | walls: %d | tests: %d" % (title, len(marks), len(tests)))
     rows = []
     for t in tests:
         try:
-            requests.post(REVIT + "/view_action", json={"action": "reset"}, timeout=30)   # C24c: no view state between tests
+            _bridge_post(REVIT + "/view_action", json={"action": "reset"}, timeout=30)   # C24c: no view state between tests
         except Exception:
             pass
         sid = "act-eval-%s-%s" % (t["id"], uuid.uuid4().hex[:6])
