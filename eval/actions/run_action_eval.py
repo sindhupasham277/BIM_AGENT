@@ -96,6 +96,10 @@ def main():
     print("model: %s | walls: %d | tests: %d" % (title, len(marks), len(tests)))
     rows = []
     for t in tests:
+        try:
+            requests.post(REVIT + "/view_action", json={"action": "reset"}, timeout=30)   # C24c: no view state between tests
+        except Exception:
+            pass
         sid = "act-eval-%s-%s" % (t["id"], uuid.uuid4().hex[:6])
         t0 = time.time()
         try:

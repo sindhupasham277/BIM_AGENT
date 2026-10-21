@@ -940,6 +940,9 @@ class RevitRW(object):
                     tagged.add(_int(fix_plan.id_int(t.TaggedLocalElementId)))
                 except Exception:
                     pass
+        what = category or "elements"
+        if not ids:
+            raise ActionError("no %s are visible in view '%s' (a temporary hide or isolate may be active; reset the view first)" % (what, fix_plan.el_name(view)))
         made = []
         for n in ids:
             if n in tagged:
@@ -957,6 +960,8 @@ class RevitRW(object):
                 raise ActionError("could not tag id %s in view '%s' (is a tag family loaded for this category?): %s" % (n, fix_plan.el_name(view), ex))
             label = tag.Category.Name if tag.Category is not None else "Tags"
             made.append(self._record_new(tag, label, "tag for id %s in view '%s'" % (n, fix_plan.el_name(view)), "(new tag)"))
+        if not made:
+            raise ActionError("all %d %s visible in view '%s' are already tagged; nothing to add" % (len(ids), what, fix_plan.el_name(view)))
         return made
 
     def add_text_note(self, text, x=None, y=None, near_element_id=None):   # family 7
