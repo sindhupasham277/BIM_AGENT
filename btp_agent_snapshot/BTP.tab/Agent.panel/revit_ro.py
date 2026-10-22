@@ -254,8 +254,10 @@ class RevitRO(object):
         for s in self._schedules():
             if self._nm(s) == key or str(s.Id.Value) == key:
                 body = s.GetTableData().GetSectionData(SectionType.Body)
-                rows = [[s.GetCellText(SectionType.Body, r, c) for c in range(body.NumberOfColumns)] for r in range(min(body.NumberOfRows, int(max_rows) + 1))]
-                return {"name": self._nm(s), "id": int(str(s.Id.Value)), "total_rows": body.NumberOfRows, "rows": rows}
+                rows = [[s.GetCellText(SectionType.Body, r, c) for c in range(body.NumberOfColumns)] for r in range(body.NumberOfRows)]
+                cols = rows[0] if rows else []
+                data = [x for x in rows[1:] if any(str(c).strip() for c in x)]   # row 0 = headings; blank spacer rows dropped
+                return {"name": self._nm(s), "id": int(str(s.Id.Value)), "columns": cols, "rows": data[:int(max_rows)], "row_count": len(data)}
         return {"error": "no schedule %r" % key}
 
     def get_relationship(self, element_id, kind):

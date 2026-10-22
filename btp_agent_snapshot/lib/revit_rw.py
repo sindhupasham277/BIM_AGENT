@@ -1128,9 +1128,11 @@ class RevitRW(object):
         s = self._find_schedule(schedule)
         body = s.GetTableData().GetSectionData(SectionType.Body)
         rows = []
-        for r in range(min(body.NumberOfRows, int(max_rows) + 1)):
+        for r in range(body.NumberOfRows):
             rows.append([s.GetCellText(SectionType.Body, r, c) for c in range(body.NumberOfColumns)])
-        return {"name": fix_plan.el_name(s), "id": _int(fix_plan.id_int(s.Id)), "total_rows": body.NumberOfRows, "rows": rows}
+        cols = rows[0] if rows else []
+        data = [x for x in rows[1:] if any(_txt(c).strip() for c in x)]   # row 0 = headings; blank spacer rows dropped
+        return {"name": fix_plan.el_name(s), "id": _int(fix_plan.id_int(s.Id)), "columns": cols, "rows": data[:int(max_rows)], "row_count": len(data)}
 
     def create_schedule(self, category, fields, name=None, sort_by=None, filters=None):
         from Autodesk.Revit.DB import ViewSchedule, ScheduleSortGroupField, ScheduleFilter, ScheduleFilterType, SectionType
@@ -1193,7 +1195,7 @@ class RevitRW(object):
             bits.append("filter %s %s %s" % (fld, op, value))
         self.doc.Regenerate()
         try:
-            bits.append("%d table rows" % vs.GetTableData().GetSectionData(SectionType.Body).NumberOfRows)
+            bits.append("%d rows" % self.read_schedule(_int(fix_plan.id_int(vs.Id)), 0)["row_count"])
         except Exception:
             pass
         return self._record_new(vs, "Schedules", "schedule '%s' (%s): %s" % (nm, category, "; ".join(bits)), "(new schedule)")
