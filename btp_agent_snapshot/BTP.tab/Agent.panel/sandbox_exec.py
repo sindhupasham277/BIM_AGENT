@@ -280,6 +280,11 @@ PUBLIC_METHODS = (
     "list_schedules",   # schedules
     "read_schedule",   # schedules
     "list_views",   # views
+    "get_warnings",   # health
+    "find_clashes",   # health
+    "room_problems",   # health
+    "duplicate_marks",   # health
+    "model_health",   # health
 )
 
 BLOCKED_ATTR_PREFIXES = ("_", "func_", "im_", "gi_", "f_", "co_", "tb_", "cell_")

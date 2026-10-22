@@ -260,6 +260,28 @@ class RevitRO(object):
                 return {"name": self._nm(s), "id": int(str(s.Id.Value)), "columns": cols, "rows": data[:int(max_rows)], "row_count": len(data)}
         return {"error": "no schedule %r" % key}
 
+    # ---- Model health (roadmap feature 3, read-only) ----
+    def get_warnings(self, max_groups=50):
+        import health_checks
+        return health_checks.get_warnings(self.doc, max_groups)
+
+    def find_clashes(self, category_a, category_b, max_elements=300):
+        import health_checks
+        pass
+        return health_checks.find_clashes(self.doc, category_a, category_b, max_elements)
+
+    def room_problems(self):
+        import health_checks
+        return health_checks.room_problems(self.doc)
+
+    def duplicate_marks(self, category):
+        import health_checks
+        return health_checks.duplicate_marks(self.doc, category)
+
+    def model_health(self):
+        import health_checks
+        return health_checks.model_health(self.doc)
+
     def list_views(self, kind=None):   # views, read-only
         from Autodesk.Revit.DB import View, ViewSheet, ViewSchedule, Viewport
         sm = {}

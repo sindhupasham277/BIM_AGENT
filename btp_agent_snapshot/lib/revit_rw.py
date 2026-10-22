@@ -1556,5 +1556,27 @@ class RevitRW(object):
         return self._record_new(vp, "Viewports", "view '%s' (%s, id %d) placed on sheet '%s - %s'" % (fix_plan.el_name(v), v.ViewType, _int(fix_plan.id_int(v.Id)), sh.SheetNumber, fix_plan.el_name(sh)), "(view on sheet)")
 
 
+    # ---- Model health (roadmap feature 3, read-only) ----
+    def get_warnings(self, max_groups=50):
+        import health_checks
+        return health_checks.get_warnings(self.doc, max_groups)
+
+    def find_clashes(self, category_a, category_b, max_elements=300):
+        import health_checks
+        self.doc.Regenerate()
+        return health_checks.find_clashes(self.doc, category_a, category_b, max_elements)
+
+    def room_problems(self):
+        import health_checks
+        return health_checks.room_problems(self.doc)
+
+    def duplicate_marks(self, category):
+        import health_checks
+        return health_checks.duplicate_marks(self.doc, category)
+
+    def model_health(self):
+        import health_checks
+        return health_checks.model_health(self.doc)
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
