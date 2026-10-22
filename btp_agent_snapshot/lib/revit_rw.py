@@ -12,7 +12,8 @@ from Autodesk.Revit.DB import Plane
 
 # Family 2: family categories that place_instance / list_family_types understand (names as the agent uses them)
 _FAMILY_CATEGORIES = {}
-for _k, _v in (("Doors", "OST_Doors"), ("Windows", "OST_Windows"), ("Columns", "OST_StructuralColumns"),
+for _k, _v in (("Doors", "OST_Doors"), ("Windows", "OST_Windows"), ("Columns", "OST_StructuralColumns"), ("Structural Columns", "OST_StructuralColumns"),   # C35 alias
+              
                ("Architectural Columns", "OST_Columns"), ("Furniture", "OST_Furniture"), ("Furniture Systems", "OST_FurnitureSystems"),
                ("Generic Models", "OST_GenericModel"), ("Casework", "OST_Casework"), ("Plumbing Fixtures", "OST_PlumbingFixtures"),
                ("Lighting Fixtures", "OST_LightingFixtures"), ("Electrical Fixtures", "OST_ElectricalFixtures"),

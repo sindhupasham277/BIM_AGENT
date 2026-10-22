@@ -202,6 +202,8 @@ def propose_action(session, description, code):
 
 PROMPT_RULES = """
 CHANGE RULES:
+- Columns and Structural Columns are the same category here (Revit names it Structural Columns); both names work in every tool. Never refuse an element because of that name.
+- Directions and axes: east = +X, west = -X, north = +Y, south = -Y; the x axis is the line y = 0 and the y axis is the line x = 0 (through the project origin). Use these without asking and state them on the card.
 - Colour or graphic overrides in views (permanent or by filter) are not available. Never change element materials or any other model parameter instead: say it is not available and offer a temporary isolate or hide.
 - Dimensions are not available here: when asked for one, give the measured distance in your reply only. Never create a text note, line or any other element instead, and do not say Revit cannot do it: Revit can, this assistant cannot.
 - Defaults apply only to settings: when the user gives no wall type, height, or an obvious door or window type, use the project default and say which one on the card. Never use a default for WHAT or WHERE: a missing location, size, target element or count must be asked for.

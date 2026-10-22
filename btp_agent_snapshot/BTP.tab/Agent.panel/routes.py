@@ -22,6 +22,7 @@ CATEGORY_MAP = {
     "Walls": BuiltInCategory.OST_Walls, 
     "Columns": BuiltInCategory.OST_StructuralColumns, 
     "Levels": BuiltInCategory.OST_Levels,   # C16
+    "Structural Columns": BuiltInCategory.OST_StructuralColumns,   # C35 alias
 } 
  
  

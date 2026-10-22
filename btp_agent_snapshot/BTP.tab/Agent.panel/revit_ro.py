@@ -23,6 +23,7 @@ CATEGORY_MAP = {
     "Rooms": BuiltInCategory.OST_Rooms,
     "Levels": BuiltInCategory.OST_Levels,
     "Columns": BuiltInCategory.OST_StructuralColumns,   # G5 C11: Revit Structural Columns
+    "Structural Columns": BuiltInCategory.OST_StructuralColumns,   # C35 alias
 }
 
 
@@ -198,7 +199,7 @@ class RevitRO(object):
         return sorted(self._nm(t) for t in FilteredElementCollector(self.doc).OfClass(WallType))
 
     def list_family_types(self, category):
-        names = {"Doors": "OST_Doors", "Windows": "OST_Windows", "Columns": "OST_StructuralColumns",
+        names = {"Doors": "OST_Doors", "Windows": "OST_Windows", "Columns": "OST_StructuralColumns", "Structural Columns": "OST_StructuralColumns",
                  "Architectural Columns": "OST_Columns", "Furniture": "OST_Furniture", "Furniture Systems": "OST_FurnitureSystems",
                  "Generic Models": "OST_GenericModel", "Casework": "OST_Casework", "Plumbing Fixtures": "OST_PlumbingFixtures",
                  "Lighting Fixtures": "OST_LightingFixtures", "Electrical Fixtures": "OST_ElectricalFixtures",
