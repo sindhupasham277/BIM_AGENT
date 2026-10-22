@@ -1578,5 +1578,120 @@ class RevitRW(object):
         import health_checks
         return health_checks.model_health(self.doc)
 
+    # ---- Rooms (roadmap feature 4) ----
+    def _rooms(self, level=None):
+        out = []
+        for r in FilteredElementCollector(self.doc).OfCategory(BuiltInCategory.OST_Rooms).WhereElementIsNotElementType():
+            if level is not None and r.LevelId != level.Id:
+                continue
+            out.append(r)
+        return out
+
+    def _room_info(self, r):
+        p = r.get_Parameter(BuiltInParameter.ROOM_NAME)
+        loc = r.Location.Point if r.Location is not None else None
+        return {"id": _int(fix_plan.id_int(r.Id)), "number": r.Number, "name": p.AsString() if p is not None else None,
+                "level": fix_plan.el_name(r.Level) if r.Level is not None else None, "area_m2": round(r.Area * 0.09290304, 2),
+                "x": round(loc.X * 0.3048, 3) if loc else None, "y": round(loc.Y * 0.3048, 3) if loc else None}
+
+    def list_rooms(self, level_name=None):
+        lv = self._by_name(Level, level_name, "level") if level_name else None
+        return sorted([self._room_info(r) for r in self._rooms(lv)], key=lambda x: str(x["number"]))
+
+    def place_room(self, level_name, x, y, name=None, number=None):
+        from Autodesk.Revit.DB import UV
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        lv = self._by_name(Level, level_name, "level")
+        xm, ym = _num(x, "x"), _num(y, "y")
+        if max(abs(xm), abs(ym)) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        pt = XYZ(_ft(xm), _ft(ym), lv.Elevation + _ft(1))
+        for r in self._rooms(lv):
+            if r.Location is not None and r.IsPointInRoom(pt):
+                raise ActionError("(%.2f, %.2f) on %s is already inside room %s (id %d); nothing placed" % (xm, ym, fix_plan.el_name(lv), r.Number, _int(fix_plan.id_int(r.Id))))
+        num = _txt(number).strip() if number is not None else None
+        if num and num in [r.Number for r in self._rooms()]:
+            raise ActionError("room number %r is already used" % num)
+        room = self.doc.Create.NewRoom(lv, UV(_ft(xm), _ft(ym)))
+        self.doc.Regenerate()
+        if room.Area <= 0:
+            raise ActionError("no enclosed area at (%.2f, %.2f) on %s; nothing placed" % (xm, ym, fix_plan.el_name(lv)))
+        if name:
+            room.get_Parameter(BuiltInParameter.ROOM_NAME).Set(_txt(name).strip())
+        if num:
+            room.Number = num
+        i = self._room_info(room)
+        return self._record_new(room, "Rooms", "room %s '%s' on %s at (%.2f, %.2f) m, area %.2f m2" % (i["number"], i["name"], fix_plan.el_name(lv), xm, ym, i["area_m2"]), "(new room)")
+
+    def place_rooms_in_empty_regions(self, level_name):
+        lv = self._by_name(Level, level_name, "level")
+        self.doc.Regenerate()
+        made = []
+        for c in self.doc.get_PlanTopology(lv).Circuits:
+            if c.IsRoomLocated:
+                continue
+            if len(self._created) + len(made) >= MAX_CREATED:
+                raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+            made.append(self.doc.Create.NewRoom(None, c))
+        if not made:
+            raise ActionError("every enclosed area on %s already has a room; nothing placed" % fix_plan.el_name(lv))
+        self.doc.Regenerate()
+        ids = []
+        for room in made:
+            i = self._room_info(room)
+            ids.append(self._record_new(room, "Rooms", "room %s on %s in an enclosed area without a room, area %.2f m2" % (i["number"], fix_plan.el_name(lv), i["area_m2"]), "(new room)"))
+        return ids
+
+    def renumber_rooms(self, level_name, start=101, prefix=""):
+        lv = self._by_name(Level, level_name, "level")
+        rooms = [r for r in self._rooms(lv) if r.Location is not None]
+        if not rooms:
+            raise ActionError("no placed rooms on %s" % fix_plan.el_name(lv))
+        rooms.sort(key=lambda r: (-round(r.Location.Point.Y, 1), round(r.Location.Point.X, 1)))
+        s = int(_num(start, "start"))
+        pairs = [(r, "%s%d" % (_txt(prefix) if prefix else "", s + i)) for i, r in enumerate(rooms)]
+        others = set(x.Number for x in self._rooms() if x.LevelId != lv.Id)
+        clash = [v for _, v in pairs if v in others]
+        if clash:
+            raise ActionError("numbers already used on other levels: %s" % ", ".join(clash))
+        orig = [(r, r.Number) for r in rooms]
+        for i, r in enumerate(rooms):
+            r.Number = "tmp-%d-%d" % (s, i)
+        for r, v in pairs:
+            r.Number = v
+        n = 0
+        for (r, old), (_, new) in zip(orig, pairs):
+            if old != new:
+                rid = _int(fix_plan.id_int(r.Id))
+                self._record((rid, "Number"), {"target_id": rid, "scope": "instance", "label": "Rooms", "param_name": "Number",
+                                               "old": old, "new": new + " (top to bottom, left to right)", "affected": 1})
+                n += 1
+        return n
+
+    def tag_rooms(self, view=None):
+        from Autodesk.Revit.DB import LinkElementId, UV, ViewType
+        v = self.doc.ActiveView if view is None else self._find_view(view)
+        if v.ViewType not in (ViewType.FloorPlan, ViewType.CeilingPlan):
+            raise ActionError("room tags go in floor or ceiling plans; view %r is a %s" % (fix_plan.el_name(v), v.ViewType))
+        lvl = v.GenLevel
+        tagged = set()
+        for t in FilteredElementCollector(self.doc, v.Id).OfCategory(BuiltInCategory.OST_RoomTags):
+            try:
+                tagged.add(_int(fix_plan.id_int(t.TaggedLocalRoomId)))
+            except Exception:
+                pass
+        rooms = [r for r in self._rooms(lvl) if r.Location is not None and _int(fix_plan.id_int(r.Id)) not in tagged]
+        if not rooms:
+            raise ActionError("every placed room on %s is already tagged in view %r" % (fix_plan.el_name(lvl), fix_plan.el_name(v)))
+        if len(self._created) + len(rooms) > MAX_CREATED:
+            raise ActionError("%d tags would exceed %d new elements in one action" % (len(rooms), MAX_CREATED))
+        for r in rooms:
+            p = r.Location.Point
+            tag = self.doc.Create.NewRoomTag(LinkElementId(r.Id), UV(p.X, p.Y), v.Id)
+            self._record_new(tag, "Room Tags", "tag for room %s in view '%s'" % (r.Number, fix_plan.el_name(v)), "(new tag)")
+        return len(rooms)
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
