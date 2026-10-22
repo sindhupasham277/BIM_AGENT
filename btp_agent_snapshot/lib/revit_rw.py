@@ -612,6 +612,13 @@ class RevitRW(object):
             for s, n, full in self._symbols(cat):
                 if full == type_name or n == type_name:
                     hits.append((s, cat, full))
+        seen, uniq = set(), []   # category aliases (Columns / Structural Columns) list the same type twice
+        for h in hits:
+            k = _int(fix_plan.id_int(h[0].Id))
+            if k not in seen:
+                seen.add(k)
+                uniq.append(h)
+        hits = uniq
         exact = [h for h in hits if h[2] == type_name]
         if exact:
             hits = exact
@@ -638,7 +645,7 @@ class RevitRW(object):
         if not sym.IsActive:
             sym.Activate()
             self.doc.Regenerate()
-        st = StructuralType.Column if cat == "Columns" else StructuralType.NonStructural
+        st = StructuralType.Column if cat in ("Columns", "Structural Columns") else StructuralType.NonStructural
         inst = self.doc.Create.NewFamilyInstance(XYZ(_ft(xs[0]), _ft(xs[1]), lv.Elevation), sym, lv, st)
         self.doc.Regenerate()
         if rot:

@@ -29,7 +29,7 @@
  },
  {
   "check": "place column",
-  "pass": false
+  "pass": true
  },
  {
   "check": "create level",
