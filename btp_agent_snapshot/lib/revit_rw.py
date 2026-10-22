@@ -1149,9 +1149,20 @@ class RevitRW(object):
         want = [_txt(f).strip() for f in (fields or []) if _txt(f).strip()]
         if not want:
             raise ActionError("a schedule needs at least one field")
-        nm = _txt(name).strip() if name else "%s Schedule (AI)" % category
-        if nm in [fix_plan.el_name(s) for s in self._schedules()]:
-            raise ActionError("a schedule named %r already exists" % nm)
+        taken = set(fix_plan.el_name(s) for s in self._schedules())
+        def _free(base):
+            if base not in taken:
+                return base
+            i = 2
+            while ("%s %d" % (base, i)) in taken:
+                i += 1
+            return "%s %d" % (base, i)
+        if name:
+            nm = _txt(name).strip()
+            if nm in taken:
+                raise ActionError("a schedule named %r already exists; a free name is %r (or leave the name out)" % (nm, _free(nm)))
+        else:
+            nm = _free("%s Schedule (AI)" % category)   # no name given: a free default
         vs = ViewSchedule.CreateSchedule(self.doc, ElementId(bic))
         avail = {}
         for f in vs.Definition.GetSchedulableFields():
