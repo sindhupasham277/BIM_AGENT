@@ -69,6 +69,24 @@ class MessagePayload(BaseModel):
 
 _sessions = {}
 
+# C37: whenever a reply comes with a card, state the truth in code (the AI once said 'Change applied' for a pending card)
+import functools as _functools
+C37_NOTE = "Nothing has been changed yet: review the card and click Confirm to apply it, or Reject."
+def _c37_card_note(fn):
+    @_functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        out = fn(*args, **kwargs)
+        try:
+            if isinstance(out, dict) and out.get("proposals"):
+                txt = out.get("response") or ""
+                if C37_NOTE not in txt:
+                    out["response"] = (txt.rstrip() + "\n\n" + C37_NOTE).strip()
+        except Exception:
+            pass
+        return out
+    return wrapper
+
+
 # C29: one Revit bridge call at a time (parallel chats picked up each other's dry runs); model calls stay parallel
 import threading as _threading
 import requests as _rq
@@ -506,6 +524,7 @@ def proposal_status(proposal_id: str, payload: RejectPayload):
 
 
 @app.post("/chat")
+@_c37_card_note
 def handle_message(payload: MessagePayload):
 
     # --------------------------------------------------------
