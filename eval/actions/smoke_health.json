@@ -1,0 +1,40 @@
+[
+ {
+  "id": "SH1",
+  "group": "health",
+  "prompt": "Give me a model health report.",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "warning"
+   ]
+  }
+ },
+ {
+  "id": "SH2",
+  "group": "health",
+  "prompt": "Do any walls clash with structural columns?",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "6"
+   ]
+  }
+ },
+ {
+  "id": "SH3",
+  "group": "health",
+  "prompt": "Are there any duplicate door marks?",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ },
+ {
+  "id": "SH4",
+  "group": "health",
+  "prompt": "Are any rooms unplaced or not enclosed?",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ }
+]
