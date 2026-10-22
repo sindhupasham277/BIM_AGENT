@@ -1510,7 +1510,7 @@ class RevitRW(object):
             raise ActionError("Revit cannot duplicate view %r this way" % fix_plan.el_name(src))
         v = self.doc.GetElement(src.Duplicate(opt))
         nm = self._name_view(v, name, fix_plan.el_name(src) + " Copy (AI)")
-        return self._record_new(v, "Views", "duplicate of '%s'%s: '%s'" % (fix_plan.el_name(src), " with detailing" if with_detailing else "", nm), "(new view)")
+        return self._record_new(v, "Views", "duplicate of '%s' (%s, id %d)%s: '%s'" % (fix_plan.el_name(src), src.ViewType, _int(fix_plan.id_int(src.Id)), " with detailing" if with_detailing else "", nm), "(new view)")
 
     def _view_record(self, v, what, old, new):
         vid = _int(fix_plan.id_int(v.Id))
@@ -1553,7 +1553,7 @@ class RevitRW(object):
         else:
             pt = XYZ(_ft(_num(x, "x")), _ft(_num(y, "y")), 0)
         vp = Viewport.Create(self.doc, sh.Id, v.Id, pt)
-        return self._record_new(vp, "Viewports", "view '%s' placed on sheet '%s - %s'" % (fix_plan.el_name(v), sh.SheetNumber, fix_plan.el_name(sh)), "(view on sheet)")
+        return self._record_new(vp, "Viewports", "view '%s' (%s, id %d) placed on sheet '%s - %s'" % (fix_plan.el_name(v), v.ViewType, _int(fix_plan.id_int(v.Id)), sh.SheetNumber, fix_plan.el_name(sh)), "(view on sheet)")
 
 
     def change_list(self):

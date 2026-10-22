@@ -1,0 +1,10 @@
+[
+ {
+  "id": "SV4",
+  "group": "views",
+  "prompt": "Place the view L1 - Architectural on sheet A102.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ }
+]
