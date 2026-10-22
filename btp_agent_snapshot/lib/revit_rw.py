@@ -878,6 +878,35 @@ class RevitRW(object):
             "new": "joins allowed at " + self._ends(after), "affected": 1})
         return True
 
+    def unjoin_walls(self, a_id, b_id):   # C32: release the join between wall A and wall B only (at A's end where B is joined)
+        from Autodesk.Revit.DB import WallUtils
+        a = self._wall(a_id)
+        aid, bid = _int(fix_plan.id_int(a.Id)), _int(b_id)
+        if aid == bid:
+            raise ActionError("a wall cannot be unjoined from itself")
+        names = ("start", "end")
+        done, others = [], []
+        for i in (0, 1):
+            try:
+                at = [_int(fix_plan.id_int(e.Id)) for e in a.Location.get_ElementsAtJoin(i)]
+            except Exception:
+                at = []
+            at = [x for x in at if x != aid]
+            if bid in at:
+                WallUtils.DisallowWallJoinAtEnd(a, i)
+                done.append(names[i])
+                others.extend([x for x in at if x != bid])
+        if not done:
+            raise ActionError("walls %s and %s are not joined at either end of wall %s" % (aid, bid, aid))
+        self.doc.Regenerate()
+        text = "unjoined from id %s at %s" % (bid, " and ".join(done))
+        if others:
+            text += " (Revit releases the whole end, so the joins with ids %s at that end are released too)" % ", ".join(str(x) for x in sorted(set(others)))
+        self._record((aid, "(join %s)" % bid), {
+            "target_id": aid, "scope": "new element" if aid in self._created else "instance", "label": "Walls",
+            "param_name": "(join)", "old": "joined with id %s at %s" % (bid, " and ".join(done)), "new": text, "affected": 1})
+        return True
+
     def unjoin_wall(self, wall_id):   # family 6: Disallow Join at both ends
         return self._wall_joins(wall_id, False)
 
