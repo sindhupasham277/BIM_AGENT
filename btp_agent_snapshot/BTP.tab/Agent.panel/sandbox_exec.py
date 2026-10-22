@@ -279,6 +279,7 @@ PUBLIC_METHODS = (
     "get_wall_joins",   # C18
     "list_schedules",   # schedules
     "read_schedule",   # schedules
+    "list_views",   # views
 )
 
 BLOCKED_ATTR_PREFIXES = ("_", "func_", "im_", "gi_", "f_", "co_", "tb_", "cell_")

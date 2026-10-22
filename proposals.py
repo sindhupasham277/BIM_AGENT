@@ -143,7 +143,7 @@ def _substitution_check(session, changes):
             bad.append(lab)
         elif lab.endswith("Tags") and "tag" not in said:
             bad.append(lab)
-        elif lab == "Views" and not ("Levels" in labels or "view" in said or "plan" in said):
+        elif lab == "Views" and not ("Levels" in labels or any(w in said for w in ("view", "plan", "section", "3d", "duplicate"))):
             bad.append(lab)
     if any(c.get("scope") == "type" for c in changes) and "type" not in said:
         bad.append("a change to a TYPE parameter (it would change every element of that type)")
@@ -244,6 +244,7 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 - unjoin_walls(a_id, b_id): release only the join between wall A and wall B (at the end of A where B is joined); to unjoin a wall from specific walls, call it once per pair. unjoin_wall(wall_id) releases ALL joins at BOTH ends of THAT wall, including walls the user did not mention: never call unjoin_wall on the other walls to unjoin one wall from them. allow_wall_joins(wall_id) allows joins at both ends again (Revit's Allow Join). join_geometry(a_id, b_id) / unjoin_geometry(a_id, b_id): join or unjoin the geometry of two elements. All return True.
 - tag_elements(element_ids=None, category=None, with_leader=False): tags elements in the ACTIVE view (already tagged ones are skipped; returns the new tag ids). add_text_note(text, x=None, y=None, near_element_id=None): text note in the active view at (x, y) or next to an element (returns its id). create_sheet(number, name, title_block=None): new sheet with a unique number (returns its id).
 - Schedules: list_schedulable_fields(category) gives the exact field names (use them as listed); create_schedule(category, fields, name=None, sort_by=None, filters=None) creates one schedule and returns its id (if the user did not name the schedule, leave name out: a free default is chosen) To change an existing schedule: add_schedule_field(schedule, field, hidden=False), remove_schedule_field(schedule, field), set_schedule_sort(schedule, field, ascending=True), set_schedule_filter(schedule, filters) (replaces all filters; [] removes them); place_schedule_on_sheet(schedule, sheet_number, x=None, y=None) places it on a sheet (centre by default). schedule is its name or id. (filters are [field, '=' | '!=' | 'contains', value]; a Level filter takes the level name); list_schedules() and read_schedule(name_or_id) read existing schedules (revit_ro and revit_rw; read_schedule returns {name, id, columns, rows, row_count}: rows are data rows only, row_count is the true number of data rows).
+- Views and sheets: list_views(kind=None) gives [{id, name, type, level, on_sheet}] (revit_ro and revit_rw); list_view_templates(), list_title_blocks(). create_plan_view(level_name, kind='floor'|'ceiling', name=None, template=None, scale=None) (scale 100 means 1:100); create_section(x1, y1, x2, y2, depth_m=5, name=None); create_3d_view(name=None); duplicate_view(view, name=None, with_detailing=False); apply_view_template(view, template); set_view_scale(view, scale); place_view_on_sheet(view, sheet_number, x=None, y=None) (a model view can be on one sheet only). Leave name out unless the user gave one: a free name is chosen. view is its name or id.
 - delete_elements(element_ids): model elements only (not levels, grids, views or types); at most 20 requested and 100 in total including dependent elements.
 - place_door(wall_id, type_name, distance_m) and place_window(wall_id, type_name, distance_m, sill_height_m=None): distance_m is measured along the host wall from its start and must be inside the wall's length (check get_line(wall_id)); sill 0-10 m.
 - At most 20 new elements and 200 changes per action.
@@ -252,7 +253,7 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 
 MODEL CATEGORIES: Doors, Windows, Rooms, Walls, Columns, and Levels (for queries). 'Columns' is Revit's Structural Columns category, so every element in it is a structural column; do not decide 'structural' from a parameter.
 
-NOT AVAILABLE (say so plainly, then say which part you can do): aligning elements; creating roofs or rooms; creating element kinds other than walls, doors, windows and level-based family instances; deleting levels, grids, views or types; dimensions, creating or editing views, placing views on sheets, export or printing; anything outside the open model.
+NOT AVAILABLE (say so plainly, then say which part you can do): aligning elements; creating roofs or rooms; creating element kinds other than walls, doors, windows and level-based family instances; deleting levels, grids, views or types; dimensions, elevation views, view filters and graphic overrides, export or printing; anything outside the open model.
 
 LIMITS ARE SAFETY POLICY:
 - If a request exceeds a limit above, state the limit and ask the user to narrow the request. Never split the request, repeat calls, or chain smaller steps to get past a limit.

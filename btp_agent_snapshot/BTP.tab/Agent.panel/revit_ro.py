@@ -260,6 +260,28 @@ class RevitRO(object):
                 return {"name": self._nm(s), "id": int(str(s.Id.Value)), "columns": cols, "rows": data[:int(max_rows)], "row_count": len(data)}
         return {"error": "no schedule %r" % key}
 
+    def list_views(self, kind=None):   # views, read-only
+        from Autodesk.Revit.DB import View, ViewSheet, ViewSchedule, Viewport
+        sm = {}
+        for vp in FilteredElementCollector(self.doc).OfClass(Viewport):
+            sh = self.doc.GetElement(vp.SheetId)
+            sm[int(str(vp.ViewId.Value))] = sh.SheetNumber if sh is not None else "?"
+        out = []
+        for v in FilteredElementCollector(self.doc).OfClass(View):
+            if v.IsTemplate or isinstance(v, (ViewSheet, ViewSchedule)):
+                continue
+            vt = str(v.ViewType)
+            if kind and str(kind).lower() not in vt.lower():
+                continue
+            lv = None
+            try:
+                lv = self._nm(v.GenLevel) if v.GenLevel is not None else None
+            except Exception:
+                pass
+            vid = int(str(v.Id.Value))
+            out.append({"id": vid, "name": self._nm(v), "type": vt, "level": lv, "on_sheet": sm.get(vid)})
+        return sorted(out, key=lambda x: (x["type"], x["name"]))
+
     def get_relationship(self, element_id, kind):
 
         if kind != "rooms_bounding_door":

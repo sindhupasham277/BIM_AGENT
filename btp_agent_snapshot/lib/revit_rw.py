@@ -1347,5 +1347,206 @@ class RevitRW(object):
         return self._record_new(inst, label, "schedule '%s' placed on sheet '%s - %s'" % (fix_plan.el_name(vs), sh.SheetNumber, fix_plan.el_name(sh)), "(schedule on sheet)")
 
 
+    # ---- Views and sheet sets (roadmap feature 2) ----
+    def _all_views(self):
+        from Autodesk.Revit.DB import View, ViewSheet, ViewSchedule
+        return [v for v in FilteredElementCollector(self.doc).OfClass(View) if not v.IsTemplate and not isinstance(v, (ViewSheet, ViewSchedule))]
+
+    def _view_sheet_map(self):
+        from Autodesk.Revit.DB import Viewport
+        m = {}
+        for vp in FilteredElementCollector(self.doc).OfClass(Viewport):
+            sh = self.doc.GetElement(vp.SheetId)
+            m[_int(fix_plan.id_int(vp.ViewId))] = sh.SheetNumber if sh is not None else "?"
+        return m
+
+    def list_views(self, kind=None):
+        sm = self._view_sheet_map()
+        out = []
+        for v in self._all_views():
+            vt = str(v.ViewType)
+            if kind and _txt(kind).lower() not in vt.lower():
+                continue
+            lv = None
+            try:
+                lv = fix_plan.el_name(v.GenLevel) if v.GenLevel is not None else None
+            except Exception:
+                pass
+            vid = _int(fix_plan.id_int(v.Id))
+            out.append({"id": vid, "name": fix_plan.el_name(v), "type": vt, "level": lv, "on_sheet": sm.get(vid)})
+        return sorted(out, key=lambda x: (x["type"], x["name"]))
+
+    def list_view_templates(self):
+        from Autodesk.Revit.DB import View
+        return sorted(fix_plan.el_name(v) for v in FilteredElementCollector(self.doc).OfClass(View) if v.IsTemplate)
+
+    def list_title_blocks(self):
+        return sorted("%s: %s" % (s.FamilyName, fix_plan.el_name(s)) for s in FilteredElementCollector(self.doc).OfClass(FamilySymbol).OfCategory(BuiltInCategory.OST_TitleBlocks))
+
+    def _find_view(self, view):
+        key = _txt(view).strip()
+        for v in self._all_views():
+            if fix_plan.el_name(v) == key or str(_int(fix_plan.id_int(v.Id))) == key:
+                return v
+        raise ActionError("no view %r (use list_views)" % key)
+
+    def _free_view_name(self, base):
+        taken = set(fix_plan.el_name(v) for v in self._all_views())
+        if base not in taken:
+            return base
+        i = 2
+        while ("%s %d" % (base, i)) in taken:
+            i += 1
+        return "%s %d" % (base, i)
+
+    def _name_view(self, v, name, default):
+        if name:
+            nm = _txt(name).strip()
+            if nm in set(fix_plan.el_name(x) for x in self._all_views() if x.Id != v.Id):
+                raise ActionError("a view named %r already exists; a free name is %r (or leave the name out)" % (nm, self._free_view_name(nm)))
+        else:
+            nm = self._free_view_name(default)
+        v.Name = nm
+        return nm
+
+    def _vft(self, family):
+        from Autodesk.Revit.DB import ViewFamilyType
+        for t in FilteredElementCollector(self.doc).OfClass(ViewFamilyType):
+            if t.ViewFamily == family:
+                return t
+        raise ActionError("this project has no %s view type" % family)
+
+    def _template_and_scale(self, v, template, scale, bits):
+        from Autodesk.Revit.DB import View
+        if template:
+            tn = _txt(template).strip()
+            ts = [t for t in FilteredElementCollector(self.doc).OfClass(View) if t.IsTemplate and fix_plan.el_name(t) == tn]
+            if not ts:
+                raise ActionError("no view template %r; templates: %s" % (tn, ", ".join(self.list_view_templates()) or "none"))
+            try:
+                v.ViewTemplateId = ts[0].Id
+            except Exception as ex:
+                raise ActionError("template %r cannot be applied to this view: %s" % (tn, ex))
+            bits.append("template '%s'" % tn)
+        if scale:
+            sc = int(_num(scale, "scale"))
+            if not 1 <= sc <= 5000:
+                raise ActionError("scale must be between 1 and 5000 (for 1:100 give 100)")
+            try:
+                v.Scale = sc
+            except Exception as ex:
+                raise ActionError("Revit refused scale 1:%d for this view (a template may control it): %s" % (sc, ex))
+            bits.append("1:%d" % sc)
+
+    def create_plan_view(self, level_name, kind="floor", name=None, template=None, scale=None):
+        from Autodesk.Revit.DB import ViewFamily, ViewPlan
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        k = _txt(kind).strip().lower()
+        if k not in ("floor", "ceiling"):
+            raise ActionError("kind must be floor or ceiling")
+        lv = self._by_name(Level, level_name, "level")
+        v = ViewPlan.Create(self.doc, self._vft(ViewFamily.FloorPlan if k == "floor" else ViewFamily.CeilingPlan).Id, lv.Id)
+        nm = self._name_view(v, name, "%s - %s Plan (AI)" % (fix_plan.el_name(lv), "Floor" if k == "floor" else "Ceiling"))
+        bits = []
+        self._template_and_scale(v, template, scale, bits)
+        return self._record_new(v, "Views", "%s plan '%s' for level %s%s" % (k, nm, fix_plan.el_name(lv), (" (" + ", ".join(bits) + ")") if bits else ""), "(new view)")
+
+    def create_section(self, x1, y1, x2, y2, depth_m=5, name=None):
+        from Autodesk.Revit.DB import ViewFamily, ViewSection, BoundingBoxXYZ, Transform
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        xs = [_num(v, "coordinate") for v in (x1, y1, x2, y2)]
+        if max(abs(v) for v in xs) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        dep = _num(depth_m, "depth_m")
+        if not 0.1 <= dep <= 200:
+            raise ActionError("depth_m must be between 0.1 and 200")
+        p0, p1 = XYZ(_ft(xs[0]), _ft(xs[1]), 0), XYZ(_ft(xs[2]), _ft(xs[3]), 0)
+        vec = p1.Subtract(p0)
+        w = vec.GetLength()
+        if w < _ft(0.5):
+            raise ActionError("a section line must be at least 0.5 m long")
+        elev = sorted(lv.Elevation for lv in FilteredElementCollector(self.doc).OfClass(Level))
+        lo, hi = elev[0] - _ft(1), elev[-1] + _ft(4)
+        dx = vec.Normalize()
+        up = XYZ.BasisZ
+        t = Transform.Identity
+        t.Origin = p0.Add(vec.Multiply(0.5))
+        t.BasisX = dx
+        t.BasisY = up
+        t.BasisZ = dx.CrossProduct(up)
+        box = BoundingBoxXYZ()
+        box.Transform = t
+        box.Min = XYZ(-w / 2.0, lo, 0)
+        box.Max = XYZ(w / 2.0, hi, _ft(dep))
+        v = ViewSection.CreateSection(self.doc, self._vft(ViewFamily.Section).Id, box)
+        nm = self._name_view(v, name, "Section (AI)")
+        return self._record_new(v, "Views", "section '%s' along (%.2f, %.2f) to (%.2f, %.2f) m, depth %.2f m" % (nm, xs[0], xs[1], xs[2], xs[3], dep), "(new view)")
+
+    def create_3d_view(self, name=None):
+        from Autodesk.Revit.DB import ViewFamily, View3D
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        v = View3D.CreateIsometric(self.doc, self._vft(ViewFamily.ThreeDimensional).Id)
+        nm = self._name_view(v, name, "3D (AI)")
+        return self._record_new(v, "Views", "3D view '%s'" % nm, "(new view)")
+
+    def duplicate_view(self, view, name=None, with_detailing=False):
+        from Autodesk.Revit.DB import ViewDuplicateOption
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        src = self._find_view(view)
+        opt = ViewDuplicateOption.WithDetailing if with_detailing else ViewDuplicateOption.Duplicate
+        if not src.CanViewBeDuplicated(opt):
+            raise ActionError("Revit cannot duplicate view %r this way" % fix_plan.el_name(src))
+        v = self.doc.GetElement(src.Duplicate(opt))
+        nm = self._name_view(v, name, fix_plan.el_name(src) + " Copy (AI)")
+        return self._record_new(v, "Views", "duplicate of '%s'%s: '%s'" % (fix_plan.el_name(src), " with detailing" if with_detailing else "", nm), "(new view)")
+
+    def _view_record(self, v, what, old, new):
+        vid = _int(fix_plan.id_int(v.Id))
+        self._record((vid, what), {"target_id": vid, "scope": "new element" if vid in self._created else "instance",
+                                  "label": "Views", "param_name": what, "old": old, "new": new, "affected": 1})
+
+    def apply_view_template(self, view, template):
+        v = self._find_view(view)
+        old = fix_plan.el_name(self.doc.GetElement(v.ViewTemplateId)) if v.ViewTemplateId.IntegerValue > 0 else "none"
+        bits = []
+        self._template_and_scale(v, template, None, bits)
+        self._view_record(v, "(template)", old, _txt(template).strip())
+        return True
+
+    def set_view_scale(self, view, scale):
+        v = self._find_view(view)
+        old = "1:%d" % v.Scale
+        bits = []
+        self._template_and_scale(v, None, scale, bits)
+        self._view_record(v, "(scale)", old, "1:%d" % v.Scale)
+        return True
+
+    def place_view_on_sheet(self, view, sheet_number, x=None, y=None):
+        from Autodesk.Revit.DB import ViewSheet, Viewport
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        v = self._find_view(view)
+        num = _txt(sheet_number).strip()
+        sheets = list(FilteredElementCollector(self.doc).OfClass(ViewSheet))
+        sh = [s for s in sheets if s.SheetNumber == num]
+        if not sh:
+            raise ActionError("no sheet numbered %r; sheets: %s" % (num, ", ".join(sorted(s.SheetNumber for s in sheets))[:300]))
+        sh = sh[0]
+        if not Viewport.CanAddViewToSheet(self.doc, sh.Id, v.Id):
+            on = self._view_sheet_map().get(_int(fix_plan.id_int(v.Id)))
+            raise ActionError("view %r cannot be placed on sheet %s%s" % (fix_plan.el_name(v), num, (" - it is already on sheet %s (a model view can be on one sheet only)" % on) if on else ""))
+        if x is None or y is None:
+            o = sh.Outline
+            pt = XYZ((o.Min.U + o.Max.U) / 2.0, (o.Min.V + o.Max.V) / 2.0, 0)
+        else:
+            pt = XYZ(_ft(_num(x, "x")), _ft(_num(y, "y")), 0)
+        vp = Viewport.Create(self.doc, sh.Id, v.Id, pt)
+        return self._record_new(vp, "Viewports", "view '%s' placed on sheet '%s - %s'" % (fix_plan.el_name(v), sh.SheetNumber, fix_plan.el_name(sh)), "(view on sheet)")
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
