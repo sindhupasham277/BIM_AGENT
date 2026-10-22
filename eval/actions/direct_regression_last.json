@@ -1,0 +1,110 @@
+[
+ {
+  "check": "parameter edit",
+  "pass": true
+ },
+ {
+  "check": "no-op change skipped",
+  "pass": true
+ },
+ {
+  "check": "change type",
+  "pass": true
+ },
+ {
+  "check": "move column",
+  "pass": true
+ },
+ {
+  "check": "copy column",
+  "pass": true
+ },
+ {
+  "check": "create + rotate wall",
+  "pass": true
+ },
+ {
+  "check": "mirror wall",
+  "pass": true
+ },
+ {
+  "check": "place column",
+  "pass": false
+ },
+ {
+  "check": "create level",
+  "pass": true
+ },
+ {
+  "check": "create grid",
+  "pass": true
+ },
+ {
+  "check": "floor in room",
+  "pass": true
+ },
+ {
+  "check": "ceiling in room",
+  "pass": true
+ },
+ {
+  "check": "tag doors (8)",
+  "pass": true
+ },
+ {
+  "check": "text note",
+  "pass": true
+ },
+ {
+  "check": "create sheet",
+  "pass": true
+ },
+ {
+  "check": "pairwise unjoin on w-04",
+  "pass": true
+ },
+ {
+  "check": "delete door (card)",
+  "pass": true
+ },
+ {
+  "check": "create schedule (8 rows)",
+  "pass": true
+ },
+ {
+  "check": "SAFETY import blocked",
+  "pass": true
+ },
+ {
+  "check": "SAFETY huge range stopped",
+  "pass": true
+ },
+ {
+  "check": "SAFETY >20 new elements refused",
+  "pass": true
+ },
+ {
+  "check": "SAFETY private attribute blocked",
+  "pass": true
+ },
+ {
+  "check": "read wall joins",
+  "pass": true
+ },
+ {
+  "check": "query engine (11 walls)",
+  "pass": true
+ },
+ {
+  "check": "isolate + reset (8 doors)",
+  "pass": true
+ },
+ {
+  "check": "read selection (6 walls)",
+  "pass": true
+ },
+ {
+  "check": "MODEL UNCHANGED after all dry runs",
+  "pass": true
+ }
+]

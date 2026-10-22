@@ -1,0 +1,50 @@
+﻿"""Direct regression suite: every capability and safety rule through the Revit bridge. Uses NO AI credits."""
+import json, sys, requests
+B = "http://127.0.0.1:48884/bim-brain"
+def post(route, body, t=120):
+    try:
+        return requests.post(B + "/" + route, json=body, timeout=t).json()
+    except Exception as ex:
+        return {"status": "HTTP-ERROR", "message": str(ex)}
+def P(code): return post("action_preview", {"code": code})
+def S(code): return post("generated_snippet", {"code": code})
+def Q(cat, filters=None): return len(post("query", {"category": cat, "filters": filters or [], "return_fields": []}).get("results", []))
+def labels(r): return [c.get("label") for c in (r.get("changes") or [])]
+def news(r): return " || ".join(str(c.get("new")) for c in (r.get("changes") or []))
+R = []
+def check(name, ok, info=""):
+    R.append((name, bool(ok))); print("%s  %-38s %s" % ("PASS" if ok else "FAIL", name, str(info)[:110])); sys.stdout.flush()
+state = lambda: (Q("Walls"), Q("Doors"), Q("Windows"), Q("Levels"), len(S("result = revit_ro.list_schedules()").get("result") or []))
+before = state(); print("model before:", before)
+r = P("revit_rw.set_param(1674186, 'Comments', 'x')"); check("parameter edit", r.get("status") == "ok" and len(r.get("changes", [])) == 1, news(r))
+r = P("revit_rw.set_param(1674186, 'Top Constraint', 'L2')"); check("no-op change skipped", r.get("status") == "ok" and len(r.get("changes", [])) == 0, r.get("status"))
+r = P("revit_rw.change_type(1675635, 'Generic - 300mm')"); check("change type", r.get("status") == "ok" and "Generic - 300mm" in news(r), news(r) or r.get("message"))
+r = P("revit_rw.move_element(1678294, 0, 2, 0)"); check("move column", r.get("status") == "ok" and "7.807" in news(r), news(r) or r.get("message"))
+r = P("revit_rw.copy_element(1678294, 3, 0, 0)"); check("copy column", r.get("status") == "ok" and "3.000, 0.000, 0.000" in news(r), news(r) or r.get("message"))
+r = P("w = revit_rw.create_wall('L1', 60, 0, 70, 0)\nrevit_rw.rotate_element(w, 90, 60, 0)"); check("create + rotate wall", r.get("status") == "ok" and "60.000, 10.000" in news(r), news(r) or r.get("message"))
+r = P("revit_rw.mirror_element(1674186, 0, 0, 1, 0)"); check("mirror wall", r.get("status") == "ok" and "-12.807" in news(r), news(r) or r.get("message"))
+r = P("revit_rw.place_instance('HSS152.4X152.4X7.9', 5, 5, 'L1')"); check("place column", "Structural Columns" in labels(r), news(r) or r.get("message"))
+r = P("revit_rw.create_level('L3', 7.2)"); check("create level", "Levels" in labels(r), news(r) or r.get("message"))
+r = P("revit_rw.create_grid('G1', 0, -20, 0, 30)"); check("create grid", "Grids" in labels(r), news(r) or r.get("message"))
+r = P("revit_rw.create_floor_in_room(1680622)"); check("floor in room", "Floors" in labels(r), news(r) or r.get("message"))
+r = P("revit_rw.create_ceiling_in_room(1680622, 2.7)"); check("ceiling in room", "Ceilings" in labels(r), news(r) or r.get("message"))
+post("view_action", {"action": "reset"})
+r = P("result = len(revit_rw.tag_elements(category='Doors'))"); check("tag doors (8)", r.get("result") == 8, r.get("result") or r.get("message"))
+r = P("revit_rw.add_text_note('probe', 0, 0)"); check("text note", "Text Notes" in labels(r), news(r) or r.get("message"))
+r = P("revit_rw.create_sheet('A799', 'Regression')"); check("create sheet", "Sheets" in labels(r), news(r) or r.get("message"))
+r = P("revit_rw.unjoin_walls(1674186, 1674187)"); check("pairwise unjoin on w-04", r.get("status") == "ok" and all(c.get("target_id") == 1674186 for c in r.get("changes", [])), news(r) or r.get("message"))
+r = P("revit_rw.delete_elements([1674233])"); check("delete door (card)", r.get("status") == "ok" and any(c.get("target_id") == 1674233 for c in r.get("changes", [])), r.get("status"))
+r = P("sid = revit_rw.create_schedule('Doors', ['Mark', 'Fire Rating'], name='Regression Doors', sort_by='Mark')\nresult = revit_rw.read_schedule(sid)['row_count']"); check("create schedule (8 rows)", r.get("result") == 8, news(r) or r.get("message"))
+r = P("import os"); check("SAFETY import blocked", r.get("status") == "rejected", r.get("message"))
+r = P("for i in range(1000000000):\n    pass"); check("SAFETY huge range stopped", r.get("status") == "error" and "too large" in str(r.get("message")), r.get("message"))
+r = P("for i in range(21):\n    revit_rw.create_wall('L1', 100 + i, 100, 100 + i, 105)"); check("SAFETY >20 new elements refused", r.get("status") == "error" and "more than 20" in str(r.get("message")), r.get("message"))
+r = P("result = revit_rw.__class__"); check("SAFETY private attribute blocked", r.get("status") == "rejected", r.get("message"))
+r = S("result = revit_ro.get_wall_joins(1674186)"); check("read wall joins", (r.get("result") or {}).get("start") == [1674187], r.get("result"))
+check("query engine (11 walls)", Q("Walls") == 11)
+v = post("view_action", {"action": "isolate", "category": "Doors"}); post("view_action", {"action": "reset"}); check("isolate + reset (8 doors)", v.get("count") == 8, v)
+post("select", {"category": "Walls", "filters": [{"parameter": "Length", "operator": ">", "value": "20"}]})
+s = post("selection", {}); check("read selection (6 walls)", s.get("count") == 6, s.get("count"))
+after = state(); check("MODEL UNCHANGED after all dry runs", after == before, "%s -> %s" % (before, after))
+n = sum(1 for _, ok in R if ok)
+print("DIRECT REGRESSION: %d/%d passed (0 AI credits used)" % (n, len(R)))
+json.dump([{"check": a, "pass": b} for a, b in R], open("eval/actions/direct_regression_last.json", "w"), indent=1)
