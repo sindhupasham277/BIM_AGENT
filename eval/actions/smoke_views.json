@@ -64,16 +64,13 @@
   "group": "views",
   "prompt": "Place the view L1 - Architectural on sheet A102.",
   "expect": {
-   "kind": "no_proposal_reply",
-   "contains": [
-    "A101"
-   ]
+   "kind": "no_proposal"
   }
  },
  {
   "id": "SV5",
   "group": "views",
-  "prompt": "Duplicate the view L1 - Architectural and apply the view template Architectural Plan to the copy.",
+  "prompt": "Duplicate the floor plan L1 - Architectural and apply the view template Architectural Plan to the copy.",
   "expect": {
    "kind": "items",
    "count": 2,

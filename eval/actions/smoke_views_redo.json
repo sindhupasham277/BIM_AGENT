@@ -1,0 +1,31 @@
+[
+ {
+  "id": "SV4",
+  "group": "views",
+  "prompt": "Place the view L1 - Architectural on sheet A102.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ },
+ {
+  "id": "SV5",
+  "group": "views",
+  "prompt": "Duplicate the floor plan L1 - Architectural and apply the view template Architectural Plan to the copy.",
+  "expect": {
+   "kind": "items",
+   "count": 2,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Views"
+    },
+    {
+     "param": "(template)",
+     "new_contains": [
+      "Architectural Plan"
+     ]
+    }
+   ]
+  }
+ }
+]

@@ -1385,9 +1385,17 @@ class RevitRW(object):
 
     def _find_view(self, view):
         key = _txt(view).strip()
-        for v in self._all_views():
-            if fix_plan.el_name(v) == key or str(_int(fix_plan.id_int(v.Id))) == key:
+        views = self._all_views()
+        for v in views:
+            if str(_int(fix_plan.id_int(v.Id))) == key:
                 return v
+        hits = [v for v in views if fix_plan.el_name(v) == key]
+        if len(hits) > 1:
+            sm = self._view_sheet_map()
+            desc = ["id %d (%s%s)" % (_int(fix_plan.id_int(v.Id)), v.ViewType, (", on sheet %s" % sm[_int(fix_plan.id_int(v.Id))]) if _int(fix_plan.id_int(v.Id)) in sm else "") for v in hits]
+            raise ActionError("%d views are named %r: %s; give the id" % (len(hits), key, ", ".join(desc)))
+        if hits:
+            return hits[0]
         raise ActionError("no view %r (use list_views)" % key)
 
     def _free_view_name(self, base):
@@ -1511,7 +1519,7 @@ class RevitRW(object):
 
     def apply_view_template(self, view, template):
         v = self._find_view(view)
-        old = fix_plan.el_name(self.doc.GetElement(v.ViewTemplateId)) if v.ViewTemplateId.IntegerValue > 0 else "none"
+        old = fix_plan.el_name(self.doc.GetElement(v.ViewTemplateId)) if fix_plan.id_int(v.ViewTemplateId) > 0 else "none"
         bits = []
         self._template_and_scale(v, template, None, bits)
         self._view_record(v, "(template)", old, _txt(template).strip())
