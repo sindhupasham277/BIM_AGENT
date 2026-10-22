@@ -914,7 +914,14 @@
   "group": "t5",
   "prompt": "Create a door schedule with Mark and Fire Rating.",
   "expect": {
-   "kind": "no_proposal"
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Schedules"
+    }
+   ]
   }
  },
  {
