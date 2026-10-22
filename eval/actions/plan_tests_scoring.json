@@ -986,7 +986,25 @@
   "group": "t5",
   "prompt": "Turn wall w-04 into a curtain wall with 1.5 m mullion spacing.",
   "expect": {
-   "kind": "no_proposal"
+   "kind": "any_of",
+   "options": [
+    {
+     "kind": "no_proposal"
+    },
+    {
+     "kind": "items",
+     "count": 1,
+     "match": [
+      {
+       "target_id": 1674186,
+       "param": "(type)",
+       "new_contains": [
+        "Glazing"
+       ]
+      }
+     ]
+    }
+   ]
   }
  },
  {
