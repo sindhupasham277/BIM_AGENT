@@ -1082,5 +1082,122 @@ class RevitRW(object):
         return out
 
 
+    # ---- Schedules (roadmap feature 1, step 1) ----
+    def _schedules(self):
+        from Autodesk.Revit.DB import ViewSchedule
+        out = []
+        for s in FilteredElementCollector(self.doc).OfClass(ViewSchedule):
+            try:
+                if s.IsTemplate or s.IsTitleblockRevisionSchedule:
+                    continue
+            except Exception:
+                pass
+            out.append(s)
+        return out
+
+    def _schedule_bic(self, category):
+        extra = {"Walls": "OST_Walls", "Rooms": "OST_Rooms", "Floors": "OST_Floors", "Ceilings": "OST_Ceilings"}
+        bic = _FAMILY_CATEGORIES.get(category)
+        if bic is None and category in extra:
+            bic = getattr(BuiltInCategory, extra[category], None)
+        if bic is None:
+            raise ActionError("unknown schedule category %r; available: %s" % (category, ", ".join(sorted(list(_FAMILY_CATEGORIES) + list(extra)))))
+        return bic
+
+    def list_schedulable_fields(self, category):   # read-only: a temporary schedule is made and deleted
+        from Autodesk.Revit.DB import ViewSchedule
+        vs = ViewSchedule.CreateSchedule(self.doc, ElementId(self._schedule_bic(category)))
+        try:
+            names = sorted(set(f.GetName(self.doc) for f in vs.Definition.GetSchedulableFields()))
+        finally:
+            self.doc.Delete(vs.Id)
+        return names
+
+    def list_schedules(self):
+        return sorted([{"id": _int(fix_plan.id_int(s.Id)), "name": fix_plan.el_name(s)} for s in self._schedules()], key=lambda x: x["name"])
+
+    def _find_schedule(self, schedule):
+        key = _txt(schedule).strip()
+        for s in self._schedules():
+            if fix_plan.el_name(s) == key or str(_int(fix_plan.id_int(s.Id))) == key:
+                return s
+        raise ActionError("no schedule %r; existing: %s" % (key, ", ".join(sorted(fix_plan.el_name(s) for s in self._schedules()))[:300]))
+
+    def read_schedule(self, schedule, max_rows=200):
+        from Autodesk.Revit.DB import SectionType
+        s = self._find_schedule(schedule)
+        body = s.GetTableData().GetSectionData(SectionType.Body)
+        rows = []
+        for r in range(min(body.NumberOfRows, int(max_rows) + 1)):
+            rows.append([s.GetCellText(SectionType.Body, r, c) for c in range(body.NumberOfColumns)])
+        return {"name": fix_plan.el_name(s), "id": _int(fix_plan.id_int(s.Id)), "total_rows": body.NumberOfRows, "rows": rows}
+
+    def create_schedule(self, category, fields, name=None, sort_by=None, filters=None):
+        from Autodesk.Revit.DB import ViewSchedule, ScheduleSortGroupField, ScheduleFilter, ScheduleFilterType, SectionType
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        bic = self._schedule_bic(category)
+        want = [_txt(f).strip() for f in (fields or []) if _txt(f).strip()]
+        if not want:
+            raise ActionError("a schedule needs at least one field")
+        nm = _txt(name).strip() if name else "%s Schedule (AI)" % category
+        if nm in [fix_plan.el_name(s) for s in self._schedules()]:
+            raise ActionError("a schedule named %r already exists" % nm)
+        vs = ViewSchedule.CreateSchedule(self.doc, ElementId(bic))
+        avail = {}
+        for f in vs.Definition.GetSchedulableFields():
+            avail.setdefault(f.GetName(self.doc).lower(), f)
+        missing = [w for w in want if w.lower() not in avail]
+        if missing:
+            import difflib
+            names = sorted(f.GetName(self.doc) for f in avail.values())
+            close = []
+            for m in missing:
+                close += difflib.get_close_matches(m, names, n=5, cutoff=0.5)
+            raise ActionError("no field %s in %s schedules; closest: %s; %d fields in total (list them with list_schedulable_fields('%s'))"
+                              % (", ".join(repr(m) for m in missing), category, ", ".join(close) or "none", len(names), category))
+        added = {}
+        for w in want:
+            added[w.lower()] = vs.Definition.AddField(avail[w.lower()])
+        vs.Name = nm
+        bits = ["fields " + ", ".join(want)]
+        if sort_by:
+            k = _txt(sort_by).strip().lower()
+            if k not in added:
+                raise ActionError("sort_by must be one of the schedule's fields: %s" % ", ".join(want))
+            vs.Definition.AddSortGroupField(ScheduleSortGroupField(added[k].FieldId))
+            bits.append("sorted by " + _txt(sort_by).strip())
+        ops = {"=": ScheduleFilterType.Equal, "==": ScheduleFilterType.Equal, "!=": ScheduleFilterType.NotEqual, "contains": ScheduleFilterType.Contains}
+        for flt in (filters or []):
+            if not isinstance(flt, (list, tuple)) or len(flt) != 3:
+                raise ActionError("each filter is [field, operator, value]")
+            fld, op, value = _txt(flt[0]).strip(), _txt(flt[1]).strip().lower(), _txt(flt[2]).strip()
+            if fld.lower() not in added:
+                if fld.lower() not in avail:
+                    raise ActionError("no field %r in %s schedules to filter on" % (fld, category))
+                added[fld.lower()] = vs.Definition.AddField(avail[fld.lower()])
+                added[fld.lower()].IsHidden = True   # Revit filters need the field in the schedule; added hidden
+                bits.append("hidden field %s added for the filter" % fld)
+            if op not in ops:
+                raise ActionError("filter operator must be =, != or contains")
+            if fld.lower() == "level":
+                lid = None
+                for lv in FilteredElementCollector(self.doc).OfClass(Level):
+                    if fix_plan.el_name(lv) == value:
+                        lid = lv.Id
+                if lid is None:
+                    raise ActionError("no level %r; levels: %s" % (value, ", ".join(self._names_of(Level))))
+                vs.Definition.AddFilter(ScheduleFilter(added["level"].FieldId, ops[op], lid))
+            else:
+                vs.Definition.AddFilter(ScheduleFilter(added[fld.lower()].FieldId, ops[op], value))
+            bits.append("filter %s %s %s" % (fld, op, value))
+        self.doc.Regenerate()
+        try:
+            bits.append("%d table rows" % vs.GetTableData().GetSectionData(SectionType.Body).NumberOfRows)
+        except Exception:
+            pass
+        return self._record_new(vs, "Schedules", "schedule '%s' (%s): %s" % (nm, category, "; ".join(bits)), "(new schedule)")
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]

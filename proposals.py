@@ -126,7 +126,7 @@ MAX_CODE_CHARS = 4000
 
 
 _KIND_WORDS = {"Floors": ("floor", "slab"), "Ceilings": ("ceiling",), "Text Notes": ("note", "text", "label", "annotat"),
-               "Windows": ("window",), "Doors": ("door",), "Walls": ("wall",), "Sheets": ("sheet",)}
+               "Windows": ("window",), "Doors": ("door",), "Walls": ("wall",), "Sheets": ("sheet",), "Schedules": ("schedule",)}
 
 
 def _substitution_check(session, changes):
@@ -242,6 +242,7 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 - create_floor_in_room(room_id, floor_type_name=None): floor from the room's own boundary on the room's level. create_floor(level_name, x1, y1, x2, y2, floor_type_name=None): rectangular floor. create_ceiling_in_room(room_id, height_m, ceiling_type_name=None): ceiling from the room boundary at height_m above its level. The project's default types are used unless a type is named; list names with list_floor_types() and list_ceiling_types() (revit_rw only).
 - unjoin_walls(a_id, b_id): release only the join between wall A and wall B (at the end of A where B is joined); to unjoin a wall from specific walls, call it once per pair. unjoin_wall(wall_id) releases ALL joins at BOTH ends of THAT wall, including walls the user did not mention: never call unjoin_wall on the other walls to unjoin one wall from them. allow_wall_joins(wall_id) allows joins at both ends again (Revit's Allow Join). join_geometry(a_id, b_id) / unjoin_geometry(a_id, b_id): join or unjoin the geometry of two elements. All return True.
 - tag_elements(element_ids=None, category=None, with_leader=False): tags elements in the ACTIVE view (already tagged ones are skipped; returns the new tag ids). add_text_note(text, x=None, y=None, near_element_id=None): text note in the active view at (x, y) or next to an element (returns its id). create_sheet(number, name, title_block=None): new sheet with a unique number (returns its id).
+- Schedules: list_schedulable_fields(category) gives the exact field names (use them as listed); create_schedule(category, fields, name=None, sort_by=None, filters=None) creates one schedule and returns its id (filters are [field, '=' | '!=' | 'contains', value]; a Level filter takes the level name); list_schedules() and read_schedule(name_or_id) read existing schedules (revit_ro and revit_rw; read_schedule returns {name, id, total_rows, rows}).
 - delete_elements(element_ids): model elements only (not levels, grids, views or types); at most 20 requested and 100 in total including dependent elements.
 - place_door(wall_id, type_name, distance_m) and place_window(wall_id, type_name, distance_m, sill_height_m=None): distance_m is measured along the host wall from its start and must be inside the wall's length (check get_line(wall_id)); sill 0-10 m.
 - At most 20 new elements and 200 changes per action.
@@ -250,7 +251,7 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 
 MODEL CATEGORIES: Doors, Windows, Rooms, Walls, Columns, and Levels (for queries). 'Columns' is Revit's Structural Columns category, so every element in it is a structural column; do not decide 'structural' from a parameter.
 
-NOT AVAILABLE (say so plainly, then say which part you can do): aligning elements; creating roofs or rooms; creating element kinds other than walls, doors, windows and level-based family instances; deleting levels, grids, views or types; dimensions, schedules, creating or editing views, placing views on sheets, export or printing; anything outside the open model.
+NOT AVAILABLE (say so plainly, then say which part you can do): aligning elements; creating roofs or rooms; creating element kinds other than walls, doors, windows and level-based family instances; deleting levels, grids, views or types; dimensions, creating or editing views, placing views on sheets, export or printing; anything outside the open model.
 
 LIMITS ARE SAFETY POLICY:
 - If a request exceeds a limit above, state the limit and ask the user to narrow the request. Never split the request, repeat calls, or chain smaller steps to get past a limit.

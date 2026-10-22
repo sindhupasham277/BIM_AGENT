@@ -233,6 +233,31 @@ class RevitRO(object):
             out[key] = sorted(ids)
         return out
 
+    def _schedules(self):   # schedules, read-only
+        from Autodesk.Revit.DB import ViewSchedule
+        out = []
+        for s in FilteredElementCollector(self.doc).OfClass(ViewSchedule):
+            try:
+                if s.IsTemplate or s.IsTitleblockRevisionSchedule:
+                    continue
+            except Exception:
+                pass
+            out.append(s)
+        return out
+
+    def list_schedules(self):
+        return sorted([{"id": int(str(s.Id.Value)), "name": self._nm(s)} for s in self._schedules()], key=lambda x: x["name"])
+
+    def read_schedule(self, schedule, max_rows=200):
+        from Autodesk.Revit.DB import SectionType
+        key = str(schedule).strip()
+        for s in self._schedules():
+            if self._nm(s) == key or str(s.Id.Value) == key:
+                body = s.GetTableData().GetSectionData(SectionType.Body)
+                rows = [[s.GetCellText(SectionType.Body, r, c) for c in range(body.NumberOfColumns)] for r in range(min(body.NumberOfRows, int(max_rows) + 1))]
+                return {"name": self._nm(s), "id": int(str(s.Id.Value)), "total_rows": body.NumberOfRows, "rows": rows}
+        return {"error": "no schedule %r" % key}
+
     def get_relationship(self, element_id, kind):
 
         if kind != "rooms_bounding_door":
