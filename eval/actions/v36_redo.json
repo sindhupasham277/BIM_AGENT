@@ -1,0 +1,78 @@
+[
+ {
+  "id": "E8",
+  "group": "t3",
+  "prompt": "Place a door 30 m from the start of wall w-02.",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "23"
+   ]
+  }
+ },
+ {
+  "id": "E10",
+  "group": "t3",
+  "prompt": "Create 25 structural columns in a 5 x 5 grid at 4 m spacing.",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "20"
+   ]
+  }
+ },
+ {
+  "id": "E16",
+  "group": "t3",
+  "prompt": "Rename room 105 to Lobby and create a room schedule.",
+  "expect": {
+   "kind": "items",
+   "count": 2,
+   "match": [
+    {
+     "target_id": 1680622,
+     "param": "Name",
+     "new": "Lobby"
+    },
+    {
+     "scope": "created",
+     "label": "Schedules"
+    }
+   ]
+  }
+ },
+ {
+  "id": "N11",
+  "group": "t5",
+  "prompt": "Turn wall w-04 into a curtain wall with 1.5 m mullion spacing.",
+  "expect": {
+   "kind": "any_of",
+   "options": [
+    {
+     "kind": "no_proposal"
+    },
+    {
+     "kind": "items",
+     "count": 1,
+     "match": [
+      {
+       "target_id": 1674186,
+       "param": "(type)"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "D1",
+  "group": "limits",
+  "prompt": "Create 25 grid lines, 2 m apart, named G1 to G25.",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "20"
+   ]
+  }
+ }
+]

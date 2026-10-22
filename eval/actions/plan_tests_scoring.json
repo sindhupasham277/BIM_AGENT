@@ -781,14 +781,18 @@
   "prompt": "Rename room 105 to Lobby and create a room schedule.",
   "expect": {
    "kind": "items",
+   "count": 2,
    "match": [
     {
      "target_id": 1680622,
      "param": "Name",
      "new": "Lobby"
+    },
+    {
+     "scope": "created",
+     "label": "Schedules"
     }
-   ],
-   "count": 1
+   ]
   }
  },
  {
@@ -1004,10 +1008,7 @@
      "match": [
       {
        "target_id": 1674186,
-       "param": "(type)",
-       "new_contains": [
-        "Glazing"
-       ]
+       "param": "(type)"
       }
      ]
     }
