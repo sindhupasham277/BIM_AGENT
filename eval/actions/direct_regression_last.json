@@ -80,6 +80,18 @@
   "pass": true
  },
  {
+  "check": "create plan view",
+  "pass": true
+ },
+ {
+  "check": "create section",
+  "pass": true
+ },
+ {
+  "check": "place view on sheet",
+  "pass": true
+ },
+ {
   "check": "SAFETY import blocked",
   "pass": true
  },

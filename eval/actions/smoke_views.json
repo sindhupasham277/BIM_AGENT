@@ -1,0 +1,112 @@
+[
+ {
+  "id": "SV1",
+  "group": "views",
+  "prompt": "Create a floor plan for level L2 at 1:50.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Views",
+     "new_contains": [
+      "L2",
+      "1:50"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SV2",
+  "group": "views",
+  "prompt": "Make a section through wall w-04.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Views",
+     "new_contains": [
+      "section"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SV3",
+  "group": "views",
+  "prompt": "Create sheet A790 named Level 2 and place a new L2 floor plan on it.",
+  "expect": {
+   "kind": "items",
+   "count": 3,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Sheets"
+    },
+    {
+     "scope": "created",
+     "label": "Views"
+    },
+    {
+     "scope": "created",
+     "label": "Viewports"
+    }
+   ]
+  }
+ },
+ {
+  "id": "SV4",
+  "group": "views",
+  "prompt": "Place the view L1 - Architectural on sheet A102.",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "A101"
+   ]
+  }
+ },
+ {
+  "id": "SV5",
+  "group": "views",
+  "prompt": "Duplicate the view L1 - Architectural and apply the view template Architectural Plan to the copy.",
+  "expect": {
+   "kind": "items",
+   "count": 2,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Views"
+    },
+    {
+     "param": "(template)",
+     "new_contains": [
+      "Architectural Plan"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SV6",
+  "group": "views",
+  "prompt": "Create a 3D view.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Views",
+     "new_contains": [
+      "3D"
+     ]
+    }
+   ]
+  }
+ }
+]
