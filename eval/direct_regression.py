@@ -35,6 +35,8 @@ r = P("revit_rw.create_sheet('A799', 'Regression')"); check("create sheet", "She
 r = P("revit_rw.unjoin_walls(1674186, 1674187)"); check("pairwise unjoin on w-04", r.get("status") == "ok" and all(c.get("target_id") == 1674186 for c in r.get("changes", [])), news(r) or r.get("message"))
 r = P("revit_rw.delete_elements([1674233])"); check("delete door (card)", r.get("status") == "ok" and any(c.get("target_id") == 1674233 for c in r.get("changes", [])), r.get("status"))
 r = P("sid = revit_rw.create_schedule('Doors', ['Mark', 'Fire Rating'], name='Regression Doors', sort_by='Mark')\nresult = revit_rw.read_schedule(sid)['row_count']"); check("create schedule (8 rows)", r.get("result") == 8, news(r) or r.get("message"))
+r = P("revit_rw.add_schedule_field('Audit_1', 'Level')\nresult = revit_rw.read_schedule('Audit_1', 1)['columns']"); check("edit schedule field", r.get("status") == "ok" and "Level" in (r.get("result") or []), r.get("result") or r.get("message"))
+r = P("revit_rw.place_schedule_on_sheet('Audit_1', 'A101')"); check("place schedule on sheet", r.get("status") == "ok" and "A101" in news(r), news(r) or r.get("message"))
 r = P("import os"); check("SAFETY import blocked", r.get("status") == "rejected", r.get("message"))
 r = P("for i in range(1000000000):\n    pass"); check("SAFETY huge range stopped", r.get("status") == "error" and "too large" in str(r.get("message")), r.get("message"))
 r = P("for i in range(21):\n    revit_rw.create_wall('L1', 100 + i, 100, 100 + i, 105)"); check("SAFETY >20 new elements refused", r.get("status") == "error" and "more than 20" in str(r.get("message")), r.get("message"))

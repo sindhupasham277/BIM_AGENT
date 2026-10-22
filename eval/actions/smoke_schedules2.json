@@ -1,0 +1,50 @@
+[
+ {
+  "id": "SF1",
+  "group": "schedules",
+  "prompt": "Add the Level field to the schedule Audit_1.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "param": "(fields)",
+     "new_contains": [
+      "Level"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SF2",
+  "group": "schedules",
+  "prompt": "Remove the Fire Rating field from the schedule Audit_1.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "param": "(fields)"
+    }
+   ]
+  }
+ },
+ {
+  "id": "SF3",
+  "group": "schedules",
+  "prompt": "Place the schedule Audit_1 on sheet A101.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "new_contains": [
+      "A101"
+     ]
+    }
+   ]
+  }
+ }
+]

@@ -72,6 +72,14 @@
   "pass": true
  },
  {
+  "check": "edit schedule field",
+  "pass": true
+ },
+ {
+  "check": "place schedule on sheet",
+  "pass": true
+ },
+ {
   "check": "SAFETY import blocked",
   "pass": true
  },
