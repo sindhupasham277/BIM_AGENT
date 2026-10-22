@@ -1219,5 +1219,133 @@ class RevitRW(object):
         return self._record_new(vs, "Schedules", "schedule '%s' (%s): %s" % (nm, category, "; ".join(bits)), "(new schedule)")
 
 
+    # ---- Schedules step 2: edit and place on a sheet ----
+    def _sched_fields(self, vs):
+        out = {}
+        defn = vs.Definition
+        for i in range(defn.GetFieldCount()):
+            f = defn.GetField(i)
+            out[f.GetName().lower()] = f
+        return out
+
+    def _sched_names(self, vs):
+        defn = vs.Definition
+        return [defn.GetField(i).GetName() for i in range(defn.GetFieldCount()) if not defn.GetField(i).IsHidden]
+
+    def _sched_avail(self, vs):
+        avail = {}
+        for f in vs.Definition.GetSchedulableFields():
+            avail.setdefault(f.GetName(self.doc).lower(), f)
+        return avail
+
+    def _sched_record(self, vs, what, key, old, new):
+        sid = _int(fix_plan.id_int(vs.Id))
+        self._record((sid, what, key), {"target_id": sid, "scope": "new element" if sid in self._created else "instance",
+                                       "label": "Schedules", "param_name": what, "old": old, "new": new, "affected": 1})
+
+    def add_schedule_field(self, schedule, field, hidden=False):
+        import difflib
+        vs = self._find_schedule(schedule)
+        name = _txt(field).strip()
+        have = self._sched_fields(vs)
+        if name.lower() in have:
+            raise ActionError("the schedule already has the field %r" % name)
+        avail = self._sched_avail(vs)
+        if name.lower() not in avail:
+            names = sorted(f.GetName(self.doc) for f in avail.values())
+            raise ActionError("no field %r for this schedule; closest: %s" % (name, ", ".join(difflib.get_close_matches(name, names, n=5, cutoff=0.5)) or "none"))
+        before = ", ".join(self._sched_names(vs))
+        f = vs.Definition.AddField(avail[name.lower()])
+        if hidden:
+            f.IsHidden = True
+        self.doc.Regenerate()
+        self._sched_record(vs, "(fields)", "add " + name, before, ", ".join(self._sched_names(vs)) + (" (+ hidden %s)" % name if hidden else ""))
+        return True
+
+    def remove_schedule_field(self, schedule, field):
+        vs = self._find_schedule(schedule)
+        name = _txt(field).strip()
+        have = self._sched_fields(vs)
+        if name.lower() not in have:
+            raise ActionError("the schedule has no field %r; its fields: %s" % (name, ", ".join(self._sched_names(vs))))
+        if len(self._sched_names(vs)) <= 1 and not have[name.lower()].IsHidden:
+            raise ActionError("a schedule needs at least one field; %r is the last one" % name)
+        before = ", ".join(self._sched_names(vs))
+        vs.Definition.RemoveField(have[name.lower()].FieldId)
+        self.doc.Regenerate()
+        self._sched_record(vs, "(fields)", "remove " + name, before, ", ".join(self._sched_names(vs)))
+        return True
+
+    def set_schedule_sort(self, schedule, field, ascending=True):
+        from Autodesk.Revit.DB import ScheduleSortGroupField, ScheduleSortOrder
+        vs = self._find_schedule(schedule)
+        name = _txt(field).strip()
+        have = self._sched_fields(vs)
+        if name.lower() not in have:
+            raise ActionError("sort field %r must be in the schedule; its fields: %s" % (name, ", ".join(self._sched_names(vs))))
+        vs.Definition.ClearSortGroupFields()
+        vs.Definition.AddSortGroupField(ScheduleSortGroupField(have[name.lower()].FieldId, ScheduleSortOrder.Ascending if ascending else ScheduleSortOrder.Descending))
+        self.doc.Regenerate()
+        self._sched_record(vs, "(sort)", "sort", "", "sorted by %s %s" % (name, "ascending" if ascending else "descending"))
+        return True
+
+    def set_schedule_filter(self, schedule, filters):
+        from Autodesk.Revit.DB import ScheduleFilter, ScheduleFilterType
+        vs = self._find_schedule(schedule)
+        ops = {"=": ScheduleFilterType.Equal, "==": ScheduleFilterType.Equal, "!=": ScheduleFilterType.NotEqual, "contains": ScheduleFilterType.Contains}
+        have = self._sched_fields(vs)
+        avail = self._sched_avail(vs)
+        vs.Definition.ClearFilters()
+        bits = []
+        for flt in (filters or []):
+            if not isinstance(flt, (list, tuple)) or len(flt) != 3:
+                raise ActionError("each filter is [field, operator, value]")
+            fld, op, value = _txt(flt[0]).strip(), _txt(flt[1]).strip().lower(), _txt(flt[2]).strip()
+            if op not in ops:
+                raise ActionError("filter operator must be =, != or contains")
+            if fld.lower() not in have:
+                if fld.lower() not in avail:
+                    raise ActionError("no field %r to filter on" % fld)
+                have[fld.lower()] = vs.Definition.AddField(avail[fld.lower()])
+                have[fld.lower()].IsHidden = True
+                bits.append("hidden field %s added" % fld)
+            if fld.lower() == "level":
+                lid = None
+                for lv in FilteredElementCollector(self.doc).OfClass(Level):
+                    if fix_plan.el_name(lv) == value:
+                        lid = lv.Id
+                if lid is None:
+                    raise ActionError("no level %r; levels: %s" % (value, ", ".join(self._names_of(Level))))
+                vs.Definition.AddFilter(ScheduleFilter(have["level"].FieldId, ops[op], lid))
+            else:
+                vs.Definition.AddFilter(ScheduleFilter(have[fld.lower()].FieldId, ops[op], value))
+            bits.append("%s %s %s" % (fld, op, value))
+        self.doc.Regenerate()
+        n = self.read_schedule(_int(fix_plan.id_int(vs.Id)), 0)["row_count"]
+        self._sched_record(vs, "(filter)", "filter", "", ("filters: " + "; ".join(bits) if bits else "no filters") + "; %d rows" % n)
+        return True
+
+    def place_schedule_on_sheet(self, schedule, sheet_number, x=None, y=None):
+        from Autodesk.Revit.DB import ViewSheet, ScheduleSheetInstance
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        vs = self._find_schedule(schedule)
+        num = _txt(sheet_number).strip()
+        sheets = list(FilteredElementCollector(self.doc).OfClass(ViewSheet))
+        sh = [s for s in sheets if s.SheetNumber == num]
+        if not sh:
+            raise ActionError("no sheet numbered %r; sheets: %s" % (num, ", ".join(sorted(s.SheetNumber for s in sheets))[:300]))
+        sh = sh[0]
+        if x is None or y is None:
+            o = sh.Outline
+            pt = XYZ((o.Min.U + o.Max.U) / 2.0, (o.Min.V + o.Max.V) / 2.0, 0)
+        else:
+            pt = XYZ(_ft(_num(x, "x")), _ft(_num(y, "y")), 0)
+        inst = ScheduleSheetInstance.Create(self.doc, sh.Id, vs.Id, pt)
+        self.doc.Regenerate()
+        label = inst.Category.Name if inst.Category is not None else "Schedule on sheet"
+        return self._record_new(inst, label, "schedule '%s' placed on sheet '%s - %s'" % (fix_plan.el_name(vs), sh.SheetNumber, fix_plan.el_name(sh)), "(schedule on sheet)")
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
