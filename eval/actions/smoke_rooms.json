@@ -1,0 +1,57 @@
+[
+ {
+  "id": "SR1",
+  "group": "rooms",
+  "prompt": "Renumber the rooms on L1 starting from 201.",
+  "expect": {
+   "kind": "items",
+   "count": 8,
+   "match": [
+    {
+     "param": "Number"
+    }
+   ]
+  }
+ },
+ {
+  "id": "SR2",
+  "group": "rooms",
+  "prompt": "Tag all rooms in the current view.",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "already"
+   ]
+  }
+ },
+ {
+  "id": "SR3",
+  "group": "rooms",
+  "prompt": "Place a room at (0, 0) on L1.",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "105"
+   ]
+  }
+ },
+ {
+  "id": "SR4",
+  "group": "rooms",
+  "prompt": "Place rooms in all enclosed areas on L1 that have no room.",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "already"
+   ]
+  }
+ },
+ {
+  "id": "SR5",
+  "group": "rooms",
+  "prompt": "Create a room on level L2 at (0, 0).",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ }
+]
