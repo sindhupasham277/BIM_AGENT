@@ -182,6 +182,12 @@ def call_revit_tool(name, arguments):
             "http://127.0.0.1:48884/bim-brain/view_action"
         )
 
+    elif name == "get_selection":
+
+        endpoint = (
+            "http://127.0.0.1:48884/bim-brain/selection"
+        )
+
     elif name == "select_elements":
 
         endpoint = (
@@ -293,6 +299,7 @@ def validate_parameter_names(user_message, arguments, session=None):
 # ============================================================
 
 TOOL_REGISTRY = {
+    "get_selection":         {"layer": "generic_engine", "kind": "query"},
     "view_action":           {"layer": "generic_engine", "kind": "query"},
     "propose_action":        {"layer": "write_function", "kind": "proposal"},
     "select_elements":       {"layer": "generic_engine", "kind": "query"},
@@ -350,6 +357,9 @@ def _dispatch_core(name, arguments, session):
             return {"error": str(ex)}
 
     result = call_revit_tool(name, arguments)
+
+    if name == "get_selection" and isinstance(result, dict):   # C33: the user's own selection counts as seen
+        session["seen_ids"] |= set(int(x["id"]) for x in result.get("selected", []))
 
     if name in ("query_elements", "run_audit"):
         session["seen_ids"] |= proposals.collect_ids(result)

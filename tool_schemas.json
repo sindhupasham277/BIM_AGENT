@@ -349,5 +349,13 @@
                 "action"
             ]
         }
+    },
+    "get_selection": {
+        "name": "get_selection",
+        "description": "READ-ONLY: returns the elements the user has selected in Revit right now (id, category, name, Mark, up to 200) and the active view. Use it whenever the user says selected, this, these or the one I picked. No input.",
+        "input_schema": {
+            "type": "object",
+            "properties": {}
+        }
     }
 }

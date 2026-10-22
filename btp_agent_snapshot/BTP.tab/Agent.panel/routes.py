@@ -941,6 +941,34 @@ def route_view_action(doc, uidoc, request):
         return routes.make_response(data={"error": traceback.format_exc()}, status=500)
 
 
+# ============================================================
+# /selection  (C33: READ-ONLY - what the user has selected in Revit right now)
+# ============================================================
+
+@api.route("/selection", methods=["POST"])
+def route_selection(doc, uidoc, request):
+    try:
+        from Autodesk.Revit.DB import Element as _E
+        out = []
+        for eid in uidoc.Selection.GetElementIds():
+            el = doc.GetElement(eid)
+            if el is None:
+                continue
+            try:
+                nm = _E.Name.GetValue(el)
+            except Exception:
+                nm = getattr(el, "Name", "")
+            mark = None
+            p = el.LookupParameter("Mark")
+            if p is not None and p.HasValue:
+                mark = p.AsString()
+            out.append({"id": int(str(eid.Value)), "category": el.Category.Name if el.Category is not None else None, "name": nm, "mark": mark})
+        return {"status": "ok", "count": len(out), "selected": out[:200], "view": uidoc.ActiveView.Name}
+    except Exception as e:
+        import traceback
+        return routes.make_response(data={"error": traceback.format_exc()}, status=500)
+
+
 @api.route("/model_info", methods=["GET"])
 def route_model_info(doc, request):
     try:
