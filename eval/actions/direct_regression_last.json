@@ -92,6 +92,14 @@
   "pass": true
  },
  {
+  "check": "health: planted duplicate",
+  "pass": true
+ },
+ {
+  "check": "health: planted clash",
+  "pass": true
+ },
+ {
   "check": "SAFETY import blocked",
   "pass": true
  },

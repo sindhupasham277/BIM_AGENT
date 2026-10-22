@@ -40,6 +40,8 @@ r = P("revit_rw.place_schedule_on_sheet('Audit_1', 'A101')"); check("place sched
 r = P("revit_rw.create_plan_view('L2', scale=50)"); check("create plan view", "Views" in labels(r) and "1:50" in news(r), news(r) or r.get("message"))
 r = P("revit_rw.create_section(-12.173, 0, 17.827, 0)"); check("create section", "Views" in labels(r), news(r) or r.get("message"))
 r = P("v = revit_rw.create_plan_view('L2')\nrevit_rw.place_view_on_sheet(v, 'A101')"); check("place view on sheet", "Viewports" in labels(r), news(r) or r.get("message"))
+r = P("revit_rw.set_param(1678957, 'Mark', '100')\nresult = revit_rw.duplicate_marks('Doors')"); check("health: planted duplicate", any(d.get("mark") == "100" for d in (r.get("result") or {}).get("duplicates", [])), r.get("result") or r.get("message"))
+r = P("w = revit_rw.create_wall('L1', 10, 5.807, 16, 5.807)\nresult = revit_rw.find_clashes('Walls', 'Columns')"); check("health: planted clash", any(1678294 in pr for pr in (r.get("result") or {}).get("pairs", [])) and len((r.get("result") or {}).get("pairs", [])) == 7, (r.get("result") or {}).get("pairs") or r.get("message"))
 r = P("import os"); check("SAFETY import blocked", r.get("status") == "rejected", r.get("message"))
 r = P("for i in range(1000000000):\n    pass"); check("SAFETY huge range stopped", r.get("status") == "error" and "too large" in str(r.get("message")), r.get("message"))
 r = P("for i in range(21):\n    revit_rw.create_wall('L1', 100 + i, 100, 100 + i, 105)"); check("SAFETY >20 new elements refused", r.get("status") == "error" and "more than 20" in str(r.get("message")), r.get("message"))
