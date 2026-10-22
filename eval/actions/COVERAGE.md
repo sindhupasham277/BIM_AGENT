@@ -27,3 +27,9 @@ treated as data, no card; F4 undo -> Ctrl+Z (after C20); C21 -> confirming an ol
 Hard-testing fixes this round: C17 (choice parameters as text, identical-selection note, no invented reasons), C18 (Revit join
 records, inference labelling), C19 (NON-MODEL always labelled, limits first, copy vs move, no substitute cards), C20 (undo), C21
 (superseded cards). Scoring policy and every expectation change: test_sets_errata.md, manual_catalogue_errata.md.
+
+## actions-v3.4 (4630a8f) hand tests, 2026-10-22 (panel, Confirm + Revit check + Ctrl+Z)
+- H1 (A1, S9): 6-wall Comments card confirmed; exactly w-04, w-02, w-01, w-03, w-10, w-09 = perimeter-check, others empty; one Ctrl+Z restored all. PASS
+- H2 (A4, S13): level L3 at 7.2 m + wall on L3 + door confirmed; walls 11->12, doors 8->9, windows/rooms/columns unchanged; one Ctrl+Z restored. PASS
+- H3 (A5): 16-element card confirmed; floors 2->10, ceilings 0->8; one Ctrl+Z restored. PASS
+- H4 (S7): card for w-01 Comments = A, then w-01 edited by hand to "manual", then Confirm: not applied (w-01 stayed "manual"). PASS
