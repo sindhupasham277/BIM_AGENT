@@ -420,6 +420,110 @@ class RevitRW(object):
             })
         return model_deleted
 
+    def _real_model(self, el):
+        """A model element that is not owned by a view (views carry their own Sun Path etc.)."""
+        from Autodesk.Revit.DB import View
+        if isinstance(el, View):   # views and sheets (Sheets reports a model category) are never model elements
+            return False
+        if not self._is_model(el):
+            return False
+        try:
+            if fix_plan.id_int(el.OwnerViewId) > 0:
+                return False
+        except Exception:
+            pass
+        c = el.Category
+        if c is not None and c.Name == "Sun Path":
+            return False
+        return True
+
+    def _model_count(self):
+        n = 0
+        for e in FilteredElementCollector(self.doc).WhereElementIsNotElementType():
+            try:
+                if self._real_model(e):
+                    n += 1
+            except Exception:
+                pass
+        return n
+
+    def delete_project_items(self, element_ids):
+        """Delete levels, grids, views (incl. schedules), sheets and types - never model elements."""
+        from Autodesk.Revit.DB import View
+        from System.Collections.Generic import List
+        if isinstance(element_ids, (int, float)) or isinstance(element_ids, _STR):
+            element_ids = [element_ids]
+        ids = []
+        for raw in element_ids:
+            n = _int(raw)
+            if n not in ids:
+                ids.append(n)
+        if not ids:
+            raise ActionError("no element ids given")
+        if len(ids) > MAX_DELETE:
+            raise ActionError("at most %d items can be deleted in one action" % MAX_DELETE)
+        active = self.doc.ActiveView
+        n_levels = len(list(FilteredElementCollector(self.doc).OfClass(Level)))
+        known = {}
+        targets = List[ElementId]()
+        for n in ids:
+            el = self._element(n)
+            if self._is_model(el) and not isinstance(el, View):
+                raise ActionError("id %s is a model element; use delete_elements for walls, doors, rooms and other model elements" % n)
+            if getattr(el, "Pinned", False):
+                raise ActionError("id %s is pinned; unpin it in Revit first" % n)
+            deps = []
+            try:
+                deps = [self.doc.GetElement(x) for x in el.GetDependentElements(None)]
+            except Exception:
+                deps = []
+            deps = [x for x in deps if x is not None and x.Id != el.Id]
+            model_deps = [x for x in deps if self._real_model(x)]
+            ex = ", ".join(self._describe(x)[1] for x in model_deps[:3])
+            if isinstance(el, Level):
+                if n_levels <= 1:
+                    raise ActionError("level %r is the last level; it cannot be deleted" % fix_plan.el_name(el))
+                if model_deps:
+                    raise ActionError("level %r hosts %d model elements (e.g. %s); move or delete them first - nothing deleted" % (fix_plan.el_name(el), len(model_deps), ex))
+            elif isinstance(el, ElementType):
+                if model_deps:
+                    raise ActionError("type %r is used by %d elements (e.g. %s); it cannot be deleted while in use" % (fix_plan.el_name(el), len(model_deps), ex))
+            elif isinstance(el, View):
+                if active is not None and el.Id == active.Id:
+                    raise ActionError("view %r is the active view; switch to another view first" % fix_plan.el_name(el))
+                if el.IsTemplate:
+                    users = [v for v in FilteredElementCollector(self.doc).OfClass(View) if not v.IsTemplate and v.ViewTemplateId == el.Id]
+                    if users:
+                        raise ActionError("view template %r is applied to %d views (e.g. %s); it cannot be deleted" % (fix_plan.el_name(el), len(users), ", ".join(fix_plan.el_name(v) for v in users[:3])))
+                if model_deps:
+                    raise ActionError("deleting view %r would remove %d model elements; nothing deleted" % (fix_plan.el_name(el), len(model_deps)))
+            elif not isinstance(el, Grid):
+                cat = el.Category.Name if el.Category is not None else type(el).__name__
+                raise ActionError("id %s (%s) is not a level, grid, view, sheet, schedule or type" % (n, cat))
+            known[n] = self._describe(el)
+            for x in deps:
+                known.setdefault(_int(fix_plan.id_int(x.Id)), self._describe(x))
+            targets.Add(el.Id)
+        before = self._model_count()
+        deleted = [_int(fix_plan.id_int(x)) for x in self.doc.Delete(targets)]
+        lost = before - self._model_count()
+        if lost > 0:
+            raise ActionError("Revit would also delete %d model elements; nothing deleted" % lost)
+        if len(deleted) > MAX_DELETE_TOTAL:
+            raise ActionError("this would delete %d items (limit %d)" % (len(deleted), MAX_DELETE_TOTAL))
+        for d in deleted:
+            cat, desc = known.get(d, ("dependent", "element id %d" % d))
+            self._record((d, "(deleted)"), {
+                "target_id": d,
+                "scope": "deleted" if d in ids else "deleted (dependent)",
+                "label": cat,
+                "param_name": "(deleted)",
+                "old": desc,
+                "new": "deleted",
+                "affected": 1,
+            })
+        return deleted
+
     def get_location(self, element_id):
         return self._where(self._element(element_id))
 
