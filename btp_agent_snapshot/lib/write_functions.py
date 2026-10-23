@@ -116,6 +116,17 @@ def preview_action(doc, code):
     finally:
         if t.HasStarted() and not t.HasEnded():
             t.RollBack()
+    if out.get("status") == "ok" and getattr(rw, "_stairs", None):   # stairs: trial build in their own scope, then cancelled
+        checks = []
+        for req in rw._stairs:
+            try:
+                info = _build_stairs(doc, req, True)
+            except Exception as ex:
+                info = {"error": str(ex)}
+            if info.get("error"):
+                return {"status": "error", "message": "stairs check failed: " + info["error"], "changes": out.get("changes", [])}
+            checks.append(info["summary"])
+        out["result"] = {"snippet_result": out.get("result"), "stairs_check": checks}
     return out
 
 
@@ -207,6 +218,65 @@ def _do_pdf_export(doc, ids, base, folder):
         return "PDF export FAILED: %s" % ex
 
 
+def _build_stairs(doc, req, trial):
+    """trial=True: build inside a StairsEditScope and cancel (preview check); trial=False: build and commit (after Confirm)."""
+    from Autodesk.Revit.DB import Line, XYZ, ElementId
+    from Autodesk.Revit.DB import StairsEditScope
+    from Autodesk.Revit.DB.Architecture import StairsRun, StairsRunJustification
+    from System import Int64
+    base, top = doc.GetElement(ElementId(Int64(req["base"]))), doc.GetElement(ElementId(Int64(req["top"])))
+    scope = StairsEditScope(doc, "AI Agent: stairs" + (" (check)" if trial else ""))
+    t = None
+    try:
+        sid = scope.Start(base.Id, top.Id)
+        t = Transaction(doc, "AI Agent: stairs run")
+        t.Start()
+        h = _attach_warning_handler(t)
+        st = doc.GetElement(sid)
+        want = st.DesiredRisersNumber
+        tread = st.ActualTreadDepth
+        p0 = XYZ(req["x1"], req["y1"], base.Elevation)
+        dv = XYZ(req["dx"], req["dy"], 0)
+        run, used = None, 0
+        for k in (want - 1, want, want + 1):
+            if k < 2:
+                continue
+            r = StairsRun.CreateStraightRun(doc, sid, Line.CreateBound(p0, p0.Add(dv.Multiply(k * tread))), StairsRunJustification.Center)
+            doc.Regenerate()
+            if doc.GetElement(sid).ActualRisersNumber == want:
+                run, used = r, k
+                break
+            doc.Delete(r.Id)
+        if run is None:
+            raise Exception("could not fit the %d risers needed in one straight run" % want)
+        run.ActualRunWidth = req["width"]
+        if t.Commit() != TransactionStatus.Committed:
+            raise Exception("Revit did not commit the stairs run" + ((": " + "; ".join(h.errors)) if getattr(h, "errors", None) else ""))
+        st = doc.GetElement(sid)
+        x1, y1, x2, y2, w = req["txt"]
+        end = p0.Add(dv.Multiply(used * tread))
+        summary = "straight stairs %s to %s: %d risers of %.0f mm, treads %.0f mm, run %.2f m from (%.2f, %.2f) to (%.2f, %.2f) m, width %.2f m" % (
+            base.Name, top.Name, st.ActualRisersNumber, st.ActualRiserHeight * 304.8, st.ActualTreadDepth * 304.8,
+            used * tread * 0.3048, x1, y1, end.X * 0.3048, end.Y * 0.3048, w)
+        if trial:
+            scope.Cancel()
+        else:
+            scope.Commit(h)
+        return {"summary": summary}
+    except Exception as ex:
+        try:
+            if t is not None and t.HasStarted() and not t.HasEnded():
+                t.RollBack()
+        except Exception:
+            pass
+        try:
+            if scope.IsActive:
+                scope.Cancel()
+        except Exception:
+            pass
+        return {"error": str(ex)}
+
+
 def _run_action(doc, args, expected_old):
     """APPLY: one Transaction; rolled back unless the run matches the preview."""
     action_exec, revit_rw = _action_modules()
@@ -244,6 +314,12 @@ def _run_action(doc, args, expected_old):
         else:
             ids, base = entry
             notes.append(_do_pdf_export(doc, ids, base, revit_rw.EXPORT_DIR))
+    for req in getattr(rw, "_stairs", []):   # stairs: built after the commit, in their own stairs scope (own undo step)
+        try:
+            info = _build_stairs(doc, req, False)
+        except Exception as ex:
+            info = {"error": str(ex)}
+        notes.append(("Stairs FAILED: " + info["error"]) if info.get("error") else ("Stairs created: " + info["summary"]))
     return {"status": "applied", "changed": changes, "warnings": notes}
 
 

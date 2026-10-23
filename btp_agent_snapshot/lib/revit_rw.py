@@ -2433,5 +2433,76 @@ class RevitRW(object):
         return nm
 
 
+    # ---- Railings (ordinary transaction) and stairs (validated here; built in their own StairsEditScope) ----
+    def create_railing(self, level_name, points, railing_type=None):
+        from Autodesk.Revit.DB import CurveLoop, Line
+        from Autodesk.Revit.DB.Architecture import Railing, RailingType
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        lv = self._by_name(Level, level_name, "level")
+        pts = list(points) if isinstance(points, (list, tuple)) else []
+        if not 2 <= len(pts) <= 20:
+            raise ActionError("a railing path needs 2-20 points like [[x1, y1], [x2, y2]]")
+        xy = []
+        for p in pts:
+            if not isinstance(p, (list, tuple)) or len(p) != 2:
+                raise ActionError("each point must be [x, y] in metres")
+            x, y = _num(p[0], "x"), _num(p[1], "y")
+            if max(abs(x), abs(y)) > MAX_COORD_M:
+                raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+            xy.append((x, y))
+        types = list(FilteredElementCollector(self.doc).OfClass(RailingType))
+        if not types:
+            raise ActionError("no railing types are loaded in this project")
+        if railing_type:
+            want = _txt(railing_type).strip()
+            hits = [t for t in types if fix_plan.el_name(t) == want]
+            if len(hits) != 1:
+                raise ActionError("%s railing type %r; loaded: %s" % ("ambiguous" if hits else "no", want, ", ".join(sorted(fix_plan.el_name(t) for t in types))[:400]))
+            rt = hits[0]
+        else:
+            rt = types[0]
+        z = lv.Elevation
+        loop = CurveLoop()
+        total = 0.0
+        for i in range(len(xy) - 1):
+            a, b = xy[i], xy[i + 1]
+            seg = ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5
+            if seg < 0.1:
+                raise ActionError("railing segments must be at least 0.1 m long")
+            total += seg
+            loop.Append(Line.CreateBound(XYZ(_ft(a[0]), _ft(a[1]), z), XYZ(_ft(b[0]), _ft(b[1]), z)))
+        if not Railing.IsValidPathForRailing(loop):
+            raise ActionError("Revit says this path is not valid for a railing (it must be continuous and not self-intersecting)")
+        r = Railing.Create(self.doc, loop, rt.Id, lv.Id)
+        return self._record_new(r, "Railings", "railing '%s' on %s along %d points, length %.2f m" % (fix_plan.el_name(rt), fix_plan.el_name(lv), len(xy), total), "(new railing)")
+
+    def create_stairs(self, base_level, top_level, x1, y1, x2, y2, width_m=1.2):
+        lb = self._by_name(Level, base_level, "level")
+        lt = self._by_name(Level, top_level, "level")
+        if lt.Elevation <= lb.Elevation:
+            raise ActionError("the top level (%s) must be above the base level (%s)" % (fix_plan.el_name(lt), fix_plan.el_name(lb)))
+        xs = [_num(v, "coordinate") for v in (x1, y1, x2, y2)]
+        if max(abs(v) for v in xs) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        w = _num(width_m, "width_m")
+        if not 0.6 <= w <= 5:
+            raise ActionError("stairs width must be 0.6-5 m")
+        dx, dy = xs[2] - xs[0], xs[3] - xs[1]
+        dist = (dx * dx + dy * dy) ** 0.5
+        if dist < 0.5:
+            raise ActionError("give a direction point at least 0.5 m from the start")
+        if not hasattr(self, "_stairs"):
+            self._stairs = []
+        if self._stairs:
+            raise ActionError("one stairs per action")
+        self._stairs.append({"base": _int(fix_plan.id_int(lb.Id)), "top": _int(fix_plan.id_int(lt.Id)), "x1": _ft(xs[0]), "y1": _ft(xs[1]),
+                             "dx": dx / dist, "dy": dy / dist, "width": _ft(w), "txt": (xs[0], xs[1], xs[2], xs[3], w)})
+        lid = _int(fix_plan.id_int(lb.Id))
+        self._record((lid, "(stairs)"), {"target_id": lid, "scope": "deferred", "label": "Stairs", "param_name": "(stairs)", "old": "none",
+            "new": "straight stairs from %s to %s starting at (%.2f, %.2f) m, climbing toward (%.2f, %.2f), width %.2f m - built after Confirm as its own step (its own Ctrl+Z)" % (fix_plan.el_name(lb), fix_plan.el_name(lt), xs[0], xs[1], xs[2], xs[3], w), "affected": 1})
+        return True
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]

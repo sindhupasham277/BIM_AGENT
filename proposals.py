@@ -126,7 +126,7 @@ MAX_CODE_CHARS = 4000
 
 
 _KIND_WORDS = {"Floors": ("floor", "slab"), "Ceilings": ("ceiling",), "Text Notes": ("note", "text", "label", "annotat"),
-               "Windows": ("window",), "Doors": ("door",), "Walls": ("wall",), "Sheets": ("sheet",), "Schedules": ("schedule",), "Rooms": ("room",), "Room Tags": ("tag",), "Wall Openings": ("opening",), "Shaft Openings": ("shaft",), "Structural Framing": ("beam", "brace", "framing"), "Roofs": ("roof",), "Groups": ("group",), "Curtain Grids": ("grid", "curtain"), "Curtain Wall Mullions": ("mullion",)}
+               "Windows": ("window",), "Doors": ("door",), "Walls": ("wall",), "Sheets": ("sheet",), "Schedules": ("schedule",), "Rooms": ("room",), "Room Tags": ("tag",), "Wall Openings": ("opening",), "Shaft Openings": ("shaft",), "Structural Framing": ("beam", "brace", "framing"), "Roofs": ("roof",), "Groups": ("group",), "Curtain Grids": ("grid", "curtain"), "Curtain Wall Mullions": ("mullion",), "Railings": ("railing",), "Stairs": ("stair",)}
 
 
 def _substitution_check(session, changes):
@@ -256,6 +256,7 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 - delete_project_items(element_ids) deletes levels, grids, views, schedules, sheets and types (by id; at most 20). It refuses a level that hosts model elements, the last level, a type in use, the active view and a view template still applied, and refuses anything that would remove model elements. Deleting a sheet removes its viewports but keeps the views. Model elements use delete_elements.
 - Sloped: create_sloped_floor(level_name, x1, y1, x2, y2, slope_deg, direction, floor_type=None, structural=False) and create_sloped_ceiling(level_name, x1, y1, x2, y2, height_m, slope_deg, direction, ceiling_type=None): rectangles that rise toward direction (north, south, east or west), 0.5-45 degrees. Existing floors and ceilings cannot be re-sloped; say so.
 - Curtain walls (the wall must already have a curtain wall type; use change_type first if needed): add_curtain_grid_line(wall_id, orientation, offset_m) with orientation vertical (offset along the wall) or horizontal (offset above the base); add_mullions(wall_id, mullion_type=None) on all grid lines; set_curtain_spacing(wall_id, orientation, spacing_m) makes a copy of the wall's curtain type with Fixed Distance spacing and switches only this wall to it (other walls keep the original type); say so.
+- Railings: create_railing(level_name, points, railing_type=None) along [[x, y], ...] (2-20 points). Stairs: create_stairs(base_level, top_level, x1, y1, x2, y2, width_m=1.2) makes one straight run starting at (x1, y1) and climbing toward (x2, y2); the preview checks it in Revit and reports risers and run length; after Confirm the stairs are built as their own step (their own Ctrl+Z) with Revit's default railings. One stairs per card. Ramps: the Revit API has no ramp-creation method; say so and do not substitute sloped floors.
 - delete_elements(element_ids): model elements only (not levels, grids, views or types); at most 20 requested and 100 in total including dependent elements.
 - place_door(wall_id, type_name, distance_m) and place_window(wall_id, type_name, distance_m, sill_height_m=None): distance_m is measured along the host wall from its start and must be inside the wall's length (check get_line(wall_id)); sill 0-10 m.
 - At most 20 new elements and 200 changes per action.
@@ -264,7 +265,7 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 
 MODEL CATEGORIES: Doors, Windows, Rooms, Walls, Columns, and Levels (for queries). 'Columns' is Revit's Structural Columns category, so every element in it is a structural column; do not decide 'structural' from a parameter.
 
-NOT AVAILABLE (say so plainly, then say which part you can do): aligning elements; creating element kinds that none of the listed methods creates; dimensions, elevation views, view filters and graphic overrides, printing; anything outside the open model.
+NOT AVAILABLE (say so plainly, then say which part you can do): aligning elements; creating ramps (the Revit API has no ramp-creation method); creating element kinds that none of the listed methods creates; dimensions, elevation views, view filters and graphic overrides, printing; anything outside the open model.
 
 LIMITS ARE SAFETY POLICY:
 - If a request exceeds a limit above, state the limit and ask the user to narrow the request. Never split the request, repeat calls, or chain smaller steps to get past a limit.
@@ -324,7 +325,10 @@ def result_message(p, result, after):
             p["args"]["param_name"], p["args"]["value"], n, "" if n == 1 else "s")
     _pdf = ("PDF written", "PDF NOT written", "PDF export", "Export written", "Export NOT written", "Export problem", "Export FAILED")   # export results are not Revit warnings
     _ex = [w for w in (result.get("warnings") or []) if str(w).startswith(_pdf)]
-    _wr = [w for w in (result.get("warnings") or []) if not str(w).startswith(_pdf)]
+    _stn = [w for w in (result.get("warnings") or []) if str(w).startswith(("Stairs created", "Stairs FAILED"))]
+    _wr = [w for w in (result.get("warnings") or []) if not str(w).startswith(_pdf + ("Stairs created", "Stairs FAILED"))]
+    if _stn:
+        msg += " Stairs: " + "; ".join(str(w).rstrip(".") for w in _stn)[:400] + "."
     if _ex:
         msg += " Export: " + "; ".join(str(w).rstrip(".") for w in _ex)[:300] + "."
     if _wr:
