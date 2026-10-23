@@ -33,3 +33,6 @@ records, inference labelling), C19 (NON-MODEL always labelled, limits first, cop
 - H2 (A4, S13): level L3 at 7.2 m + wall on L3 + door confirmed; walls 11->12, doors 8->9, windows/rooms/columns unchanged; one Ctrl+Z restored. PASS
 - H3 (A5): 16-element card confirmed; floors 2->10, ceilings 0->8; one Ctrl+Z restored. PASS
 - H4 (S7): card for w-01 Comments = A, then w-01 edited by hand to "manual", then Confirm: not applied (w-01 stayed "manual"). PASS
+
+## actions-v3.11 PDF export hand test, 2026-10-23 (panel, Confirm)
+- "Export sheets A101 and A102 to a PDF named Issue-01." -> card (1 item, "written only after Confirm") -> Confirm -> Exports\Issue-01.pdf created; model unchanged. PASS
