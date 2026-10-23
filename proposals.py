@@ -314,8 +314,13 @@ def result_message(p, result, after):
     else:
         msg = "Applied %s = %s (%d target%s)." % (
             p["args"]["param_name"], p["args"]["value"], n, "" if n == 1 else "s")
-    if result.get("warnings"):
-        msg += " Revit warnings: " + "; ".join(str(w).rstrip(".") for w in result["warnings"])[:300] + "."
+    _pdf = ("PDF written", "PDF NOT written", "PDF export")   # export results are not Revit warnings
+    _ex = [w for w in (result.get("warnings") or []) if str(w).startswith(_pdf)]
+    _wr = [w for w in (result.get("warnings") or []) if not str(w).startswith(_pdf)]
+    if _ex:
+        msg += " Export: " + "; ".join(str(w).rstrip(".") for w in _ex)[:300] + "."
+    if _wr:
+        msg += " Revit warnings: " + "; ".join(str(w).rstrip(".") for w in _wr)[:300] + "."
     if p.get("audit_name") and after is not None:
         msg += " Re-audit '%s': %s -> %s violations." % (p["audit_name"], p["violations_before"], after)
     return msg
