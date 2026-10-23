@@ -42,3 +42,9 @@ records, inference labelling), C19 (NON-MODEL always labelled, limits first, cop
   -> one card with 3 export items -> Confirm -> written: Check-DWG.dwg (30 KB) + Check-DWG.pcp (Revit's plot-config companion),
   "Check-PNG - Floor Plan - L1 - Architectural.png" (33 KB; Revit appends the view name), Check-IFC.ifc (1494 KB; exported in a
   rolled-back transaction). Panel showed all three under "Export:". NWC: Navisworks exporter not installed -> refused (correct). PASS
+
+## Stairs panel test, 2026-10-23 (one chat, one Confirm)
+- "Create straight stairs from L1 to L2 starting at (40, 0) and climbing toward (50, 0), 1.2 m wide."
+  -> card (1 item, "built after Confirm as its own step") -> Confirm -> "Stairs created: straight stairs L1 to L2: 21 risers of
+  171 mm, treads 275 mm, run 5.50 m from (40.00, 0.00) to (45.50, 0.00) m, width 1.20 m" (matches the preview's trial build);
+  stairs in model 0 -> 1; Ctrl+Z -> 0. PASS
