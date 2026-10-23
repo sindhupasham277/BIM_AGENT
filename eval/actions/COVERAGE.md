@@ -36,3 +36,9 @@ records, inference labelling), C19 (NON-MODEL always labelled, limits first, cop
 
 ## actions-v3.11 PDF export hand test, 2026-10-23 (panel, Confirm)
 - "Export sheets A101 and A102 to a PDF named Issue-01." -> card (1 item, "written only after Confirm") -> Confirm -> Exports\Issue-01.pdf created; model unchanged. PASS
+
+## Exports panel test, 2026-10-23 (one chat, one Confirm)
+- "Export view 32 as a DWG named Check-DWG and as a PNG named Check-PNG, and export the whole model as IFC named Check-IFC."
+  -> one card with 3 export items -> Confirm -> written: Check-DWG.dwg (30 KB) + Check-DWG.pcp (Revit's plot-config companion),
+  "Check-PNG - Floor Plan - L1 - Architectural.png" (33 KB; Revit appends the view name), Check-IFC.ifc (1494 KB; exported in a
+  rolled-back transaction). Panel showed all three under "Export:". NWC: Navisworks exporter not installed -> refused (correct). PASS
