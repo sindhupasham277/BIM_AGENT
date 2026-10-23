@@ -1845,5 +1845,63 @@ class RevitRW(object):
         return self._record_new(inst, "Structural Framing", "brace '%s: %s' from (%.2f, %.2f) on %s to (%.2f, %.2f) on %s, length %.2f m" % (sym.FamilyName, fix_plan.el_name(sym), xs[0], xs[1], fix_plan.el_name(lb), xs[2], xs[3], fix_plan.el_name(lt), length), "(new brace)")
 
 
+    # ---- Roofs (modelling MUST #3) ----
+    def create_roof(self, level_name, x1, y1, x2, y2, slope_deg=0, roof_type=None, overhang_m=0):
+        import math
+        from Autodesk.Revit.DB import CurveArray, Line, RoofType, ModelCurveArray
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        lv = self._by_name(Level, level_name, "level")
+        xs = [_num(v, "coordinate") for v in (x1, y1, x2, y2)]
+        if max(abs(v) for v in xs) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        sl, ov = _num(slope_deg, "slope_deg"), _num(overhang_m, "overhang_m")
+        if not 0 <= sl <= 60:
+            raise ActionError("slope must be 0-60 degrees (0 = flat)")
+        if not 0 <= ov <= 5:
+            raise ActionError("overhang must be 0-5 m")
+        xa, xb = min(xs[0], xs[2]) - ov, max(xs[0], xs[2]) + ov
+        ya, yb = min(xs[1], xs[3]) - ov, max(xs[1], xs[3]) + ov
+        if not (0.5 <= xb - xa <= 200 and 0.5 <= yb - ya <= 200):
+            raise ActionError("each side of the roof must be 0.5-200 m (including overhang)")
+        types = list(FilteredElementCollector(self.doc).OfClass(RoofType))
+        if not types:
+            raise ActionError("no roof types are loaded in this project")
+        full = lambda t: "%s: %s" % (t.FamilyName, fix_plan.el_name(t))
+        if roof_type:
+            want = _txt(roof_type).strip()
+            hits = [t for t in types if full(t) == want or fix_plan.el_name(t) == want]
+            if len(hits) != 1:
+                raise ActionError("%s roof type %r; loaded: %s" % ("ambiguous" if hits else "no", want, ", ".join(sorted(full(t) for t in types))[:400]))
+            rt = hits[0]
+        else:
+            basic = [t for t in types if t.FamilyName == "Basic Roof"]
+            rt = (basic or types)[0]
+        z = lv.Elevation
+        pts = [XYZ(_ft(xa), _ft(ya), z), XYZ(_ft(xb), _ft(ya), z), XYZ(_ft(xb), _ft(yb), z), XYZ(_ft(xa), _ft(yb), z)]
+        fp = CurveArray()
+        for i in range(4):
+            fp.Append(Line.CreateBound(pts[i], pts[(i + 1) % 4]))
+        import clr
+        ref = clr.Reference[ModelCurveArray](ModelCurveArray())   # Revit needs an initialised array (null is rejected)
+        res = self.doc.Create.NewFootPrintRoof(fp, lv, rt, ref)
+        roof = res[0] if isinstance(res, tuple) else res
+        mapping = ref.Value
+        if sl > 0:
+            if mapping is None or mapping.Size == 0:
+                raise ActionError("the roof was made but its edges could not be read, so the slope cannot be set; nothing applied")
+            ratio = math.tan(math.radians(sl))
+            for i in range(mapping.Size):
+                mc = mapping.get_Item(i)
+                roof.set_DefinesSlope(mc, True)
+                roof.set_SlopeAngle(mc, ratio)
+        self.doc.Regenerate()
+        shape = "flat" if sl == 0 else "hip, all 4 edges sloped %.1f deg" % sl
+        bb = roof.get_BoundingBox(None)
+        if bb is not None:
+            shape += "; top %.2f m above the level" % ((bb.Max.Z - z) * 0.3048)
+        return self._record_new(roof, "Roofs", "roof '%s' on %s, %.2f x %.2f m (%s%s)" % (full(rt), fix_plan.el_name(lv), xb - xa, yb - ya, shape, (", overhang %.2f m" % ov) if ov else ""), "(new roof)")
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
