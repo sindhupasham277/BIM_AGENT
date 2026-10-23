@@ -126,7 +126,7 @@ MAX_CODE_CHARS = 4000
 
 
 _KIND_WORDS = {"Floors": ("floor", "slab"), "Ceilings": ("ceiling",), "Text Notes": ("note", "text", "label", "annotat"),
-               "Windows": ("window",), "Doors": ("door",), "Walls": ("wall",), "Sheets": ("sheet",), "Schedules": ("schedule",), "Rooms": ("room",), "Room Tags": ("tag",), "Wall Openings": ("opening",), "Shaft Openings": ("shaft",), "Structural Framing": ("beam", "brace", "framing"), "Roofs": ("roof",), "Groups": ("group",)}
+               "Windows": ("window",), "Doors": ("door",), "Walls": ("wall",), "Sheets": ("sheet",), "Schedules": ("schedule",), "Rooms": ("room",), "Room Tags": ("tag",), "Wall Openings": ("opening",), "Shaft Openings": ("shaft",), "Structural Framing": ("beam", "brace", "framing"), "Roofs": ("roof",), "Groups": ("group",), "Curtain Grids": ("grid", "curtain"), "Curtain Wall Mullions": ("mullion",)}
 
 
 def _substitution_check(session, changes):
@@ -255,6 +255,7 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 - Exports: export_views(format, views, file_name) with format pdf, dwg, png or jpg and views as names, ids or sheet numbers (1-20); export_model(format, file_name) with format ifc or nwc (NWC needs the Navisworks exporter add-in). Files are written only after Confirm, into the user's approved Exports folder, never overwriting. Tell the user the files are written when they Confirm.
 - delete_project_items(element_ids) deletes levels, grids, views, schedules, sheets and types (by id; at most 20). It refuses a level that hosts model elements, the last level, a type in use, the active view and a view template still applied, and refuses anything that would remove model elements. Deleting a sheet removes its viewports but keeps the views. Model elements use delete_elements.
 - Sloped: create_sloped_floor(level_name, x1, y1, x2, y2, slope_deg, direction, floor_type=None, structural=False) and create_sloped_ceiling(level_name, x1, y1, x2, y2, height_m, slope_deg, direction, ceiling_type=None): rectangles that rise toward direction (north, south, east or west), 0.5-45 degrees. Existing floors and ceilings cannot be re-sloped; say so.
+- Curtain walls (the wall must already have a curtain wall type; use change_type first if needed): add_curtain_grid_line(wall_id, orientation, offset_m) with orientation vertical (offset along the wall) or horizontal (offset above the base); add_mullions(wall_id, mullion_type=None) on all grid lines; set_curtain_spacing(wall_id, orientation, spacing_m) makes a copy of the wall's curtain type with Fixed Distance spacing and switches only this wall to it (other walls keep the original type); say so.
 - delete_elements(element_ids): model elements only (not levels, grids, views or types); at most 20 requested and 100 in total including dependent elements.
 - place_door(wall_id, type_name, distance_m) and place_window(wall_id, type_name, distance_m, sill_height_m=None): distance_m is measured along the host wall from its start and must be inside the wall's length (check get_line(wall_id)); sill 0-10 m.
 - At most 20 new elements and 200 changes per action.

@@ -2289,5 +2289,149 @@ class RevitRW(object):
         return self._record_new(c, "Ceilings", "sloped ceiling '%s' on %s from %.2f m, %.2f x %.2f m, rising %.1f deg toward the %s over %.2f m (measured height span %.2f m)" % (tname, fix_plan.el_name(lv), h, xb - xa, yb - ya, sl, dr, run, self._span(c)), "(new ceiling)")
 
 
+    # ---- Curtain walls: grid lines, mullions, spacing ----
+    def _curtain_wall(self, wall_id):
+        from Autodesk.Revit.DB import Wall
+        w = self._el_by_int(wall_id)
+        if w is None or not isinstance(w, Wall):
+            raise ActionError("element %s is not a wall" % wall_id)
+        g = w.CurtainGrid
+        if g is None:
+            raise ActionError("wall %s is not a curtain wall; change it to a curtain wall type first" % wall_id)
+        return w, g
+
+    def add_curtain_grid_line(self, wall_id, orientation, offset_m):
+        from Autodesk.Revit.DB import Line
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        w, g = self._curtain_wall(wall_id)
+        o = _txt(orientation).strip().lower()
+        if o not in ("vertical", "horizontal"):
+            raise ActionError("orientation must be vertical or horizontal")
+        off = _num(offset_m, "offset_m")
+        lc = w.Location.Curve if w.Location is not None else None
+        if lc is None or not isinstance(lc, Line):
+            raise ActionError("grid lines are supported on straight curtain walls only")
+        p0 = lc.GetEndPoint(0)
+        dv = lc.GetEndPoint(1).Subtract(p0).Normalize()
+        L = lc.Length * 0.3048
+        bb = w.get_BoundingBox(None)
+        H = (bb.Max.Z - bb.Min.Z) * 0.3048
+        if o == "vertical":
+            if not 0.05 < off < L - 0.05:
+                raise ActionError("a vertical grid line must be inside the wall's length (0-%.2f m)" % L)
+            q = p0.Add(dv.Multiply(_ft(off)))
+            pos = XYZ(q.X, q.Y, (bb.Min.Z + bb.Max.Z) / 2.0)
+        else:
+            if not 0.05 < off < H - 0.05:
+                raise ActionError("a horizontal grid line must be inside the wall's height (0-%.2f m)" % H)
+            q = p0.Add(dv.Multiply(_ft(L / 2.0)))
+            pos = XYZ(q.X, q.Y, bb.Min.Z + _ft(off))
+        want_vertical = (o == "vertical")
+        gl, last = None, "no grid line was created"
+        for is_u in ((False, True) if want_vertical else (True, False)):
+            try:
+                gl = g.AddGridLine(is_u, pos, False)
+            except Exception as ex:
+                gl, last = None, str(ex)
+            if gl is None:
+                continue
+            c = gl.FullCurve
+            a, b = c.GetEndPoint(0), c.GetEndPoint(1)
+            is_vert = abs(b.Z - a.Z) > ((b.X - a.X) ** 2 + (b.Y - a.Y) ** 2) ** 0.5
+            if is_vert == want_vertical:
+                break
+            self.doc.Delete(gl.Id)
+            gl = None
+        if gl is None:
+            raise ActionError("Revit could not add a %s grid line at %.2f m (%s)" % (o, off, last))
+        mk = w.LookupParameter("Mark")
+        wn = (mk.AsString() if mk is not None and mk.HasValue else None) or "id %d" % _int(fix_plan.id_int(w.Id))
+        where = "%.2f m from the wall's start" % off if want_vertical else "%.2f m above the wall's base" % off
+        return self._record_new(gl, "Curtain Grids", "%s curtain grid line on wall %s at %s" % (o, wn, where), "(new grid line)")
+
+    def add_mullions(self, wall_id, mullion_type=None):
+        from Autodesk.Revit.DB import MullionType
+        w, g = self._curtain_wall(wall_id)
+        types = list(FilteredElementCollector(self.doc).OfClass(MullionType))
+        if not types:
+            raise ActionError("no mullion types are loaded in this project")
+        if mullion_type:
+            want = _txt(mullion_type).strip()
+            hits = [t for t in types if fix_plan.el_name(t) == want]
+            if len(hits) != 1:
+                raise ActionError("%s mullion type %r; loaded: %s" % ("ambiguous" if hits else "no", want, ", ".join(sorted(fix_plan.el_name(t) for t in types))[:400]))
+            mt = hits[0]
+        else:
+            rect = [x for x in types if "rectangular" in fix_plan.el_name(x).lower()]
+            plain = [x for x in types if "corner" not in fix_plan.el_name(x).lower()]
+            mt = (rect or plain or types)[0]   # corner mullions only fit wall corners
+        ids = list(g.GetUGridLineIds()) + list(g.GetVGridLineIds())
+        if not ids:
+            raise ActionError("this curtain wall has no grid lines; add grid lines or set a spacing first")
+        made, last = 0, ""
+        for gid in ids:
+            gl = self.doc.GetElement(gid)
+            try:
+                segs = list(gl.AllSegmentCurves)
+                if not segs:
+                    continue
+                res = gl.AddMullions(segs[0], mt, False)   # a real segment curve; False = all segments of this line
+            except Exception as ex:
+                last = str(ex)
+                continue
+            made += sum(1 for _ in res) if res is not None else 0
+        if made == 0:
+            raise ActionError("no mullions added (every grid line already has mullions, or Revit refused: %s)" % (last or "no reason given"))
+        if made > MAX_DELETE_TOTAL:   # mullions are parts of one wall: separate cap, one card line, one Ctrl+Z
+            raise ActionError("this would add %d mullions (limit %d mullions per action)" % (made, MAX_DELETE_TOTAL))
+        wid = _int(fix_plan.id_int(w.Id))
+        self._record((wid, "(mullions)"), {"target_id": wid, "scope": "instance", "label": "Curtain Wall Mullions", "param_name": "(mullions)",
+            "old": "none added", "new": "%d mullions of type '%s' on %d grid lines" % (made, fix_plan.el_name(mt), len(ids)), "affected": made})
+        return made
+
+    def set_curtain_spacing(self, wall_id, orientation, spacing_m):
+        w, g = self._curtain_wall(wall_id)
+        o = _txt(orientation).strip().lower()
+        if o not in ("vertical", "horizontal"):
+            raise ActionError("orientation must be vertical or horizontal")
+        sp = _num(spacing_m, "spacing_m")
+        if not 0.3 <= sp <= 20:
+            raise ActionError("spacing must be 0.3-20 m")
+        old_t = self.doc.GetElement(w.GetTypeId())
+        old_name = fix_plan.el_name(old_t)
+        taken = set(fix_plan.el_name(t) for t in FilteredElementCollector(self.doc).OfClass(type(old_t)))
+        base = "%s (AI %s %.2f m)" % (old_name, o, sp)
+        nm, k = base, 2
+        while nm in taken:
+            nm = "%s %d" % (base, k)
+            k += 1
+        new_t = old_t.Duplicate(nm)
+        pl = new_t.get_Parameter(BuiltInParameter.SPACING_LAYOUT_VERT if o == "vertical" else BuiltInParameter.SPACING_LAYOUT_HORIZ)
+        pv = new_t.get_Parameter(BuiltInParameter.SPACING_LENGTH_VERT if o == "vertical" else BuiltInParameter.SPACING_LENGTH_HORIZ)
+        if pl is None or pv is None or pl.IsReadOnly or pv.IsReadOnly:
+            raise ActionError("type %r has no editable %s grid spacing; nothing changed" % (old_name, o))
+        ok = False
+        for i in range(6):
+            try:
+                pl.Set(i)
+                if (pl.AsValueString() or "").strip().lower() == "fixed distance":
+                    ok = True
+                    break
+            except Exception:
+                pass
+        if not ok:
+            raise ActionError("could not set the %s grid layout to Fixed Distance; nothing changed" % o)
+        pv.Set(_ft(sp))
+        w.ChangeTypeId(new_t.Id)
+        self.doc.Regenerate()
+        n_lines = len(list(w.CurtainGrid.GetVGridLineIds() if o == "vertical" else w.CurtainGrid.GetUGridLineIds()))
+        wid = _int(fix_plan.id_int(w.Id))
+        self._record_new(new_t, "Wall Types", "curtain type '%s' = copy of '%s' with %s grid Fixed Distance %.2f m (layout reads '%s'); other walls keep '%s'" % (nm, old_name, o, sp, pl.AsValueString(), old_name), "(new type)")
+        self._record((wid, "(type)"), {"target_id": wid, "scope": "instance", "label": "Walls", "param_name": "(type)",
+            "old": old_name, "new": "%s (%d %s grid lines now)" % (nm, n_lines, o), "affected": 1})
+        return nm
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
