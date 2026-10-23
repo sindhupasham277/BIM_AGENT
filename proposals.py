@@ -126,7 +126,7 @@ MAX_CODE_CHARS = 4000
 
 
 _KIND_WORDS = {"Floors": ("floor", "slab"), "Ceilings": ("ceiling",), "Text Notes": ("note", "text", "label", "annotat"),
-               "Windows": ("window",), "Doors": ("door",), "Walls": ("wall",), "Sheets": ("sheet",), "Schedules": ("schedule",), "Rooms": ("room",), "Room Tags": ("tag",), "Wall Openings": ("opening",), "Shaft Openings": ("shaft",), "Structural Framing": ("beam", "brace", "framing"), "Roofs": ("roof",)}
+               "Windows": ("window",), "Doors": ("door",), "Walls": ("wall",), "Sheets": ("sheet",), "Schedules": ("schedule",), "Rooms": ("room",), "Room Tags": ("tag",), "Wall Openings": ("opening",), "Shaft Openings": ("shaft",), "Structural Framing": ("beam", "brace", "framing"), "Roofs": ("roof",), "Groups": ("group",)}
 
 
 def _substitution_check(session, changes):
@@ -251,6 +251,7 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 - Openings: create_wall_opening(wall_id, distance_m, width_m, height_m, sill_m=0) cuts a rectangular opening in a straight wall, centred distance_m from the wall's start; create_shaft(bottom_level, top_level, x1, y1, x2, y2) cuts a rectangular shaft through floors, ceilings and roofs between two levels.
 - Beams and braces: list_family_types('Structural Framing') lists the loaded framing types; create_beam(type_name, level_name, x1, y1, x2, y2) places a beam along a line at the level's elevation; create_brace(type_name, base_level, x1, y1, top_level, x2, y2) places a sloped brace between two levels. Framing families cannot be loaded; if none are loaded, say so.
 - Roofs: create_roof(level_name, x1, y1, x2, y2, slope_deg=0, roof_type=None, overhang_m=0) makes a rectangular footprint roof on a level (0 = flat; otherwise all four edges slope, a hip roof). Only rectangles: for a roof over the building, use the walls' extents and say the roof is rectangular.
+- Wall length: change_wall_length(wall_id, end, by_m) with end 'start' or 'end'; positive extends, negative shortens (refused if it would cut off a door or window). Ceilings: create_ceiling(level_name, x1, y1, x2, y2, height_m=2.7, ceiling_type=None) for a rectangle. Groups: create_group(element_ids, name=None); place_group(group_name, x, y). Grouped elements can no longer be moved or rotated one by one; say so.
 - delete_elements(element_ids): model elements only (not levels, grids, views or types); at most 20 requested and 100 in total including dependent elements.
 - place_door(wall_id, type_name, distance_m) and place_window(wall_id, type_name, distance_m, sill_height_m=None): distance_m is measured along the host wall from its start and must be inside the wall's length (check get_line(wall_id)); sill 0-10 m.
 - At most 20 new elements and 200 changes per action.

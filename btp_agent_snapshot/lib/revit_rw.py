@@ -1903,5 +1903,137 @@ class RevitRW(object):
         return self._record_new(roof, "Roofs", "roof '%s' on %s, %.2f x %.2f m (%s%s)" % (full(rt), fix_plan.el_name(lv), xb - xa, yb - ya, shape, (", overhang %.2f m" % ov) if ov else ""), "(new roof)")
 
 
+    # ---- SHOULD features: wall length, ceiling by rectangle, groups ----
+    def _el_by_int(self, eid):
+        from System import Int64
+        return self.doc.GetElement(ElementId(Int64(_int(eid))))
+
+    def change_wall_length(self, wall_id, end, by_m):
+        from Autodesk.Revit.DB import Wall, Line, FamilyInstance
+        w = self._el_by_int(wall_id)
+        if w is None or not isinstance(w, Wall):
+            raise ActionError("element %s is not a wall" % wall_id)
+        lc = w.Location
+        if lc is None or not isinstance(lc.Curve, Line):
+            raise ActionError("only straight walls can be extended or shortened")
+        e = _txt(end).strip().lower()
+        if e not in ("start", "end"):
+            raise ActionError("end must be 'start' or 'end'")
+        by = _num(by_m, "by_m")
+        p0, p1 = lc.Curve.GetEndPoint(0), lc.Curve.GetEndPoint(1)
+        dv = p1.Subtract(p0).Normalize()
+        L = p0.DistanceTo(p1) * 0.3048
+        newL = L + by
+        if not 0.3 <= newL <= 1000:
+            raise ActionError("the wall would be %.2f m long; it must stay 0.3-1000 m" % newL)
+        lo, hi = (-by, L) if e == "start" else (0.0, L + by)
+        cut = []
+        for fi in FilteredElementCollector(self.doc).OfClass(FamilyInstance):
+            try:
+                if fi.Host is None or fi.Host.Id != w.Id or fi.Location is None:
+                    continue
+                t = fi.Location.Point.Subtract(p0).DotProduct(dv) * 0.3048
+            except Exception:
+                continue
+            if t < lo + 0.1 or t > hi - 0.1:
+                mk = fi.LookupParameter("Mark")
+                cut.append("%s %s (id %d) at %.2f m" % (fi.Category.Name if fi.Category else "element", (mk.AsString() if mk is not None and mk.HasValue else ""), _int(fix_plan.id_int(fi.Id)), t))
+        if cut:
+            raise ActionError("shortening would cut off: %s; nothing changed" % "; ".join(cut))
+        if e == "end":
+            lc.Curve = Line.CreateBound(p0, p1.Add(dv.Multiply(_ft(by))))
+        else:
+            lc.Curve = Line.CreateBound(p0.Subtract(dv.Multiply(_ft(by))), p1)
+        self.doc.Regenerate()
+        wid = _int(fix_plan.id_int(w.Id))
+        mk = w.LookupParameter("Mark")
+        self._record((wid, "(length)"), {"target_id": wid, "scope": "instance", "label": "Walls", "param_name": "(length)",
+            "old": "%.2f m" % L, "new": "%.2f m (%s moved %+.2f m)" % (newL, e, by), "affected": 1})
+        return newL
+
+    def create_ceiling(self, level_name, x1, y1, x2, y2, height_m=2.7, ceiling_type=None):
+        from Autodesk.Revit.DB import Ceiling, CeilingType, CurveLoop, Line
+        from System.Collections.Generic import List
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        lv = self._by_name(Level, level_name, "level")
+        xs = [_num(v, "coordinate") for v in (x1, y1, x2, y2)]
+        if max(abs(v) for v in xs) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        h = _num(height_m, "height_m")
+        if not 0 <= h <= 20:
+            raise ActionError("height must be 0-20 m above the level")
+        xa, xb, ya, yb = min(xs[0], xs[2]), max(xs[0], xs[2]), min(xs[1], xs[3]), max(xs[1], xs[3])
+        if not (0.5 <= xb - xa <= 200 and 0.5 <= yb - ya <= 200):
+            raise ActionError("each side of the ceiling must be 0.5-200 m")
+        types = list(FilteredElementCollector(self.doc).OfClass(CeilingType))
+        tid = ElementId.InvalidElementId
+        if ceiling_type:
+            want = _txt(ceiling_type).strip()
+            hits = [t for t in types if fix_plan.el_name(t) == want]
+            if len(hits) != 1:
+                raise ActionError("%s ceiling type %r; loaded: %s" % ("ambiguous" if hits else "no", want, ", ".join(sorted(fix_plan.el_name(t) for t in types))[:400]))
+            tid = hits[0].Id
+        z = lv.Elevation
+        pts = [XYZ(_ft(xa), _ft(ya), z), XYZ(_ft(xb), _ft(ya), z), XYZ(_ft(xb), _ft(yb), z), XYZ(_ft(xa), _ft(yb), z)]
+        loop = CurveLoop()
+        for i in range(4):
+            loop.Append(Line.CreateBound(pts[i], pts[(i + 1) % 4]))
+        loops = List[CurveLoop]()
+        loops.Add(loop)
+        c = Ceiling.Create(self.doc, loops, tid, lv.Id)
+        c.get_Parameter(BuiltInParameter.CEILING_HEIGHTABOVELEVEL_PARAM).Set(_ft(h))
+        self.doc.Regenerate()
+        tname = fix_plan.el_name(self.doc.GetElement(c.GetTypeId()))
+        return self._record_new(c, "Ceilings", "ceiling '%s' on %s at %.2f m, %.2f x %.2f m from (%.2f, %.2f) to (%.2f, %.2f)" % (tname, fix_plan.el_name(lv), h, xb - xa, yb - ya, xa, ya, xb, yb), "(new ceiling)")
+
+    def create_group(self, element_ids, name=None):
+        from Autodesk.Revit.DB import GroupType
+        from System.Collections.Generic import List
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        ids = element_ids if isinstance(element_ids, (list, tuple)) else [element_ids]
+        if not 1 <= len(ids) <= 100:
+            raise ActionError("a group needs 1-100 elements")
+        els, kinds = [], {}
+        for i in ids:
+            el = self._el_by_int(i)
+            if el is None or el.Category is None:
+                raise ActionError("no model element with id %s" % i)
+            if fix_plan.id_int(el.GroupId) > 0:
+                raise ActionError("element %s is already in a group" % i)
+            els.append(el)
+            kinds[el.Category.Name] = kinds.get(el.Category.Name, 0) + 1
+        lst = List[ElementId]()
+        for el in els:
+            lst.Add(el.Id)
+        g = self.doc.Create.NewGroup(lst)
+        taken = set(fix_plan.el_name(t) for t in FilteredElementCollector(self.doc).OfClass(GroupType))
+        base = _txt(name).strip() if name else "Group (AI)"
+        if name and base in taken:
+            raise ActionError("a group named %r already exists" % base)
+        nm, k = base, 2
+        while nm in taken:
+            nm = "%s %d" % (base, k)
+            k += 1
+        g.GroupType.Name = nm
+        self.doc.Regenerate()
+        desc = ", ".join("%d %s" % (n, c) for c, n in sorted(kinds.items()))
+        return self._record_new(g, "Groups", "group '%s' with %s (grouped elements can no longer be moved one by one)" % (nm, desc), "(new group)")
+
+    def place_group(self, group_name, x, y):
+        from Autodesk.Revit.DB import GroupType
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        xm, ym = _num(x, "x"), _num(y, "y")
+        if max(abs(xm), abs(ym)) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        gts = [t for t in FilteredElementCollector(self.doc).OfClass(GroupType) if fix_plan.el_name(t) == _txt(group_name).strip()]
+        if not gts:
+            raise ActionError("no group named %r; groups: %s" % (group_name, ", ".join(sorted(fix_plan.el_name(t) for t in FilteredElementCollector(self.doc).OfClass(GroupType)))[:300] or "none"))
+        g = self.doc.Create.PlaceGroup(XYZ(_ft(xm), _ft(ym), 0), gts[0])
+        return self._record_new(g, "Groups", "copy of group '%s' placed at (%.2f, %.2f) m" % (fix_plan.el_name(gts[0]), xm, ym), "(new group)")
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
