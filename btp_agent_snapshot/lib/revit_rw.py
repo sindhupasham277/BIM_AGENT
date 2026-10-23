@@ -2212,5 +2212,82 @@ class RevitRW(object):
         return base
 
 
+    # ---- Sloped floors and ceilings (create only) ----
+    def _slope_rect(self, level_name, x1, y1, x2, y2, slope_deg, direction):
+        import math
+        from Autodesk.Revit.DB import CurveLoop, Line
+        from System.Collections.Generic import List
+        lv = self._by_name(Level, level_name, "level")
+        xs = [_num(v, "coordinate") for v in (x1, y1, x2, y2)]
+        if max(abs(v) for v in xs) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        sl = _num(slope_deg, "slope_deg")
+        if not 0.5 <= sl <= 45:
+            raise ActionError("slope must be 0.5-45 degrees (for a flat one use create_floor or create_ceiling)")
+        dr = _txt(direction).strip().lower()
+        if dr not in ("north", "south", "east", "west"):
+            raise ActionError("direction must be north, south, east or west (the side that is higher)")
+        xa, xb, ya, yb = min(xs[0], xs[2]), max(xs[0], xs[2]), min(xs[1], xs[3]), max(xs[1], xs[3])
+        if not (0.5 <= xb - xa <= 200 and 0.5 <= yb - ya <= 200):
+            raise ActionError("each side must be 0.5-200 m")
+        z = lv.Elevation
+        pts = [XYZ(_ft(xa), _ft(ya), z), XYZ(_ft(xb), _ft(ya), z), XYZ(_ft(xb), _ft(yb), z), XYZ(_ft(xa), _ft(yb), z)]
+        loop = CurveLoop()
+        for i in range(4):
+            loop.Append(Line.CreateBound(pts[i], pts[(i + 1) % 4]))
+        loops = List[CurveLoop]()
+        loops.Add(loop)
+        cx, cy = (xa + xb) / 2.0, (ya + yb) / 2.0
+        ends = {"east": ((xa, cy), (xb, cy)), "west": ((xb, cy), (xa, cy)), "north": ((cx, ya), (cx, yb)), "south": ((cx, yb), (cx, ya))}[dr]
+        arrow = Line.CreateBound(XYZ(_ft(ends[0][0]), _ft(ends[0][1]), z), XYZ(_ft(ends[1][0]), _ft(ends[1][1]), z))   # horizontal: low edge -> high edge
+        run = (xb - xa) if dr in ("east", "west") else (yb - ya)
+        return lv, loops, arrow, math.tan(math.radians(sl)), sl, dr, xa, xb, ya, yb, run   # Revit's slope is rise/run (verified by measurement)
+
+    def _span(self, el):
+        bb = el.get_BoundingBox(None)
+        return (bb.Max.Z - bb.Min.Z) * 0.3048 if bb is not None else -1
+
+    def create_sloped_floor(self, level_name, x1, y1, x2, y2, slope_deg, direction, floor_type=None, structural=False):
+        from Autodesk.Revit.DB import Floor, FloorType
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        lv, loops, arrow, rad, sl, dr, xa, xb, ya, yb, run = self._slope_rect(level_name, x1, y1, x2, y2, slope_deg, direction)
+        if floor_type:
+            types = list(FilteredElementCollector(self.doc).OfClass(FloorType))
+            want = _txt(floor_type).strip()
+            hits = [t for t in types if fix_plan.el_name(t) == want]
+            if len(hits) != 1:
+                raise ActionError("%s floor type %r; loaded: %s" % ("ambiguous" if hits else "no", want, ", ".join(sorted(fix_plan.el_name(t) for t in types))[:400]))
+            tid = hits[0].Id
+        else:
+            tid = Floor.GetDefaultFloorType(self.doc, bool(structural))
+        f = Floor.Create(self.doc, loops, tid, lv.Id, bool(structural), arrow, rad)
+        self.doc.Regenerate()
+        tname = fix_plan.el_name(self.doc.GetElement(f.GetTypeId()))
+        return self._record_new(f, "Floors", "sloped floor '%s' on %s, %.2f x %.2f m, rising %.1f deg toward the %s over %.2f m (measured height span %.2f m)" % (tname, fix_plan.el_name(lv), xb - xa, yb - ya, sl, dr, run, self._span(f)), "(new floor)")
+
+    def create_sloped_ceiling(self, level_name, x1, y1, x2, y2, height_m, slope_deg, direction, ceiling_type=None):
+        from Autodesk.Revit.DB import Ceiling, CeilingType
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        lv, loops, arrow, rad, sl, dr, xa, xb, ya, yb, run = self._slope_rect(level_name, x1, y1, x2, y2, slope_deg, direction)
+        h = _num(height_m, "height_m")
+        if not 0 <= h <= 20:
+            raise ActionError("height must be 0-20 m above the level")
+        tid = ElementId.InvalidElementId
+        if ceiling_type:
+            types = list(FilteredElementCollector(self.doc).OfClass(CeilingType))
+            want = _txt(ceiling_type).strip()
+            hits = [t for t in types if fix_plan.el_name(t) == want]
+            if len(hits) != 1:
+                raise ActionError("%s ceiling type %r; loaded: %s" % ("ambiguous" if hits else "no", want, ", ".join(sorted(fix_plan.el_name(t) for t in types))[:400]))
+            tid = hits[0].Id
+        c = Ceiling.Create(self.doc, loops, tid, lv.Id, arrow, rad)
+        c.get_Parameter(BuiltInParameter.CEILING_HEIGHTABOVELEVEL_PARAM).Set(_ft(h))
+        self.doc.Regenerate()
+        tname = fix_plan.el_name(self.doc.GetElement(c.GetTypeId()))
+        return self._record_new(c, "Ceilings", "sloped ceiling '%s' on %s from %.2f m, %.2f x %.2f m, rising %.1f deg toward the %s over %.2f m (measured height span %.2f m)" % (tname, fix_plan.el_name(lv), h, xb - xa, yb - ya, sl, dr, run, self._span(c)), "(new ceiling)")
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]
