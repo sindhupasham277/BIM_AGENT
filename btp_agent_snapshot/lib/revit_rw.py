@@ -1,4 +1,5 @@
 # lib/revit_rw.py  (WRITE facade for generated action snippets)
+EXPORT_DIR = r"C:\Users\sindh\OneDrive\Desktop\BTP\Exports"   # the ONLY folder the agent may write PDFs to
 # Records every change it makes. It NEVER starts, commits or rolls back a
 # Transaction: the caller (the preview route or write_functions) owns it.
 # Lengths are in METRES, like the query results.
@@ -1691,6 +1692,44 @@ class RevitRW(object):
             tag = self.doc.Create.NewRoomTag(LinkElementId(r.Id), UV(p.X, p.Y), v.Id)
             self._record_new(tag, "Room Tags", "tag for room %s in view '%s'" % (r.Number, fix_plan.el_name(v)), "(new tag)")
         return len(rooms)
+
+
+    # ---- PDF export of sheets (roadmap feature 5): recorded in the dry run, written only after Confirm commits ----
+    def export_sheets_pdf(self, sheet_numbers, file_name):
+        import os, re
+        from Autodesk.Revit.DB import ViewSheet
+        if not hasattr(self, "_exports"):
+            self._exports = []
+        sheets = sorted(FilteredElementCollector(self.doc).OfClass(ViewSheet), key=lambda s: s.SheetNumber)
+        if _txt(sheet_numbers).strip().lower() == "all":
+            pick = list(sheets)
+        else:
+            want = [_txt(n).strip() for n in (sheet_numbers if isinstance(sheet_numbers, (list, tuple)) else [sheet_numbers])]
+            by = dict((s.SheetNumber, s) for s in sheets)
+            missing = [n for n in want if n not in by]
+            if missing:
+                raise ActionError("no sheet numbered %s; sheets: %s" % (", ".join(missing), ", ".join(s.SheetNumber for s in sheets)[:300]))
+            pick = [by[n] for n in want]
+        if not pick:
+            raise ActionError("no sheets to export")
+        if len(pick) > 50:
+            raise ActionError("at most 50 sheets per export (%d asked)" % len(pick))
+        base = _txt(file_name).strip()
+        if base.lower().endswith(".pdf"):
+            base = base[:-4]
+        if not re.match(r"^[A-Za-z0-9 _.\-]{1,80}$", base) or ".." in base or base.startswith("."):
+            raise ActionError("file name may use letters, digits, spaces and _ - . only (no folders or paths), up to 80 characters")
+        path = os.path.join(EXPORT_DIR, base + ".pdf")
+        if os.path.exists(path) or any(f == base for _, f in self._exports):
+            i = 2
+            while os.path.exists(os.path.join(EXPORT_DIR, "%s-%d.pdf" % (base, i))):
+                i += 1
+            raise ActionError("%s already exists; a free name is %s-%d (files are never overwritten)" % (path, base, i))
+        self._exports.append(([s.Id for s in pick], base))
+        sid = _int(fix_plan.id_int(pick[0].Id))
+        self._record((sid, "(export pdf)", base), {"target_id": sid, "scope": "export", "label": "PDF Export", "param_name": "(export pdf)",
+            "old": "not exported", "new": "export %d sheet(s) (%s) as one PDF to %s - written only after Confirm" % (len(pick), ", ".join(s.SheetNumber for s in pick)[:200], path), "affected": len(pick)})
+        return path
 
 
     def change_list(self):

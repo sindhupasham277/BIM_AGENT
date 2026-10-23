@@ -123,6 +123,31 @@ def _change_key(c):
     return ("new" if c.get("scope") in ("created", "new element") else c["target_id"], c["param_name"], _norm(c["new"]))
 
 
+def _do_pdf_export(doc, ids, base, folder):
+    """Runs ONLY after a committed Confirm (never in a dry run). Writes one combined PDF into the approved folder."""
+    import os
+    from Autodesk.Revit.DB import PDFExportOptions, ElementId
+    from System.Collections.Generic import List
+    path = os.path.join(folder, base + ".pdf")
+    try:
+        if not os.path.isdir(folder):
+            os.makedirs(folder)
+        if os.path.exists(path):
+            return "PDF NOT written: %s already exists (files are never overwritten)" % path
+        opts = PDFExportOptions()
+        opts.FileName = base
+        opts.Combine = True
+        lst = List[ElementId]()
+        for i in ids:
+            lst.Add(i)
+        ok = doc.Export(folder, lst, opts)
+        if ok and os.path.exists(path):
+            return "PDF written: %s (%d sheet(s))" % (path, len(ids))
+        return "PDF export problem: Revit returned %s and the file %s" % (ok, "exists" if os.path.exists(path) else "was not created")
+    except Exception as ex:
+        return "PDF export FAILED: %s" % ex
+
+
 def _run_action(doc, args, expected_old):
     """APPLY: one Transaction; rolled back unless the run matches the preview."""
     action_exec, revit_rw = _action_modules()
@@ -153,7 +178,10 @@ def _run_action(doc, args, expected_old):
         if t.HasStarted() and not t.HasEnded():
             t.RollBack()
         return {"status": "failed", "reason": str(ex)}
-    return {"status": "applied", "changed": changes, "warnings": list(_wh.warnings)}
+    notes = list(_wh.warnings)
+    for ids, base in getattr(rw, "_exports", []):   # PDF export happens only here, after the commit
+        notes.append(_do_pdf_export(doc, ids, base, revit_rw.EXPORT_DIR))
+    return {"status": "applied", "changed": changes, "warnings": notes}
 
 
 def temporary_view(doc, view, ids, mode):
