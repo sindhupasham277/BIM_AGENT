@@ -1,0 +1,128 @@
+[
+ {
+  "id": "SO1",
+  "group": "openings",
+  "prompt": "Cut a 1 m wide, 2 m high opening in wall w-04, 5 m from its start, with a 0.9 m sill.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Wall Openings"
+    }
+   ]
+  }
+ },
+ {
+  "id": "SO2",
+  "group": "openings",
+  "prompt": "Add a 2 x 2 m shaft from L1 to L2 at (0, 0).",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Shaft Openings"
+    }
+   ]
+  }
+ },
+ {
+  "id": "SO3",
+  "group": "openings",
+  "prompt": "Cut a 1 m wide, 2 m high opening in wall w-02, 22.8 m from its start.",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "23"
+   ]
+  }
+ },
+ {
+  "id": "SB1",
+  "group": "framing",
+  "prompt": "Add a W310X21 beam on L2 from (0, 0) to (6, 0).",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Structural Framing",
+     "new_contains": [
+      "beam",
+      "6.00 m"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SB2",
+  "group": "framing",
+  "prompt": "Add a brace of type W200X15 from (0, 0) on L1 to (4, 0) on L2.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Structural Framing",
+     "new_contains": [
+      "brace"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SF1",
+  "group": "roofs",
+  "prompt": "Add a flat roof on L2 over the rectangle from (-12, -10) to (18, 13).",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Roofs",
+     "new_contains": [
+      "flat"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SF2",
+  "group": "roofs",
+  "prompt": "Add a 30 degree hip roof on L2 from (0, 0) to (10, 8) with a 0.5 m overhang.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Roofs",
+     "new_contains": [
+      "30.0 deg",
+      "overhang 0.50"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SF3",
+  "group": "roofs",
+  "prompt": "Add a roof with a 70 degree slope on L2 from (0, 0) to (10, 8).",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "60"
+   ]
+  }
+ }
+]
