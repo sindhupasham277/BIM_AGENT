@@ -2035,5 +2035,78 @@ class RevitRW(object):
         return self._record_new(g, "Groups", "copy of group '%s' placed at (%.2f, %.2f) m" % (fix_plan.el_name(gts[0]), xm, ym), "(new group)")
 
 
+    # ---- Exports: views (pdf, dwg, png, jpg) and model (ifc, nwc); validated here, written only after Confirm ----
+    def _export_name(self, file_name):
+        import os, re
+        if not hasattr(self, "_exports"):
+            self._exports = []
+        base = _txt(file_name).strip()
+        for e in (".pdf", ".dwg", ".png", ".jpg", ".ifc", ".nwc"):
+            if base.lower().endswith(e):
+                base = base[:-len(e)]
+        if not re.match(r"^[A-Za-z0-9 _.\-]{1,80}$", base) or ".." in base or base.startswith("."):
+            raise ActionError("file name may use letters, digits, spaces and _ - . only (no folders or paths), up to 80 characters")
+        taken = os.listdir(EXPORT_DIR) if os.path.isdir(EXPORT_DIR) else []
+        queued = [(x["base"] if isinstance(x, dict) else x[1]).lower() for x in self._exports]
+        if any(f.lower().startswith(base.lower()) for f in taken) or base.lower() in queued:
+            i = 2
+            while any(f.lower().startswith(("%s-%d" % (base, i)).lower()) for f in taken):
+                i += 1
+            raise ActionError("a file starting with %s already exists in %s; a free name is %s-%d (files are never overwritten)" % (base, EXPORT_DIR, base, i))
+        return base
+
+    def _view_or_sheet(self, v):
+        from Autodesk.Revit.DB import ViewSheet
+        key = _txt(v).strip()
+        for s in FilteredElementCollector(self.doc).OfClass(ViewSheet):
+            if s.SheetNumber == key:
+                return s
+        return self._find_view(v)
+
+    def _module_ok(self, method_name):
+        from Autodesk.Revit.DB import OptionalFunctionalityUtils
+        f = getattr(OptionalFunctionalityUtils, method_name, None)
+        return True if f is None else bool(f())
+
+    def export_views(self, format, views, file_name):
+        fmt = _txt(format).strip().lower().lstrip(".")
+        fmt = "jpg" if fmt == "jpeg" else fmt
+        if fmt not in ("pdf", "dwg", "png", "jpg"):
+            raise ActionError("export_views supports pdf, dwg, png and jpg; for the whole model use export_model('ifc' or 'nwc', file_name)")
+        if fmt == "dwg" and not self._module_ok("IsDWGExportAvailable"):
+            raise ActionError("DWG export is not available in this Revit installation")
+        vl = views if isinstance(views, (list, tuple)) else [views]
+        if not 1 <= len(vl) <= 20:
+            raise ActionError("export 1-20 views or sheets at a time")
+        vs = []
+        for v in vl:
+            vw = self._view_or_sheet(v)
+            if not vw.CanBePrinted:
+                raise ActionError("view %r cannot be printed or exported" % fix_plan.el_name(vw))
+            vs.append(vw)
+        base = self._export_name(file_name)
+        self._exports.append({"kind": fmt, "ids": [v.Id for v in vs], "base": base})
+        sid = _int(fix_plan.id_int(vs[0].Id))
+        names = ", ".join(fix_plan.el_name(v) for v in vs)[:200]
+        self._record((sid, "(export)", base), {"target_id": sid, "scope": "export", "label": "Export", "param_name": "(export)", "old": "not exported",
+            "new": "export %d view(s) (%s) as %s named %s to %s - written only after Confirm" % (len(vs), names, fmt.upper(), base, EXPORT_DIR), "affected": len(vs)})
+        return base
+
+    def export_model(self, format, file_name):
+        fmt = _txt(format).strip().lower().lstrip(".")
+        if fmt not in ("ifc", "nwc"):
+            raise ActionError("export_model supports ifc and nwc; for views use export_views(format, views, file_name)")
+        if fmt == "nwc" and not self._module_ok("IsNavisworksExporterAvailable"):
+            raise ActionError("NWC export needs the Navisworks exporter add-in, which is not installed in this Revit")
+        if fmt == "ifc" and not self._module_ok("IsIFCAvailable"):
+            raise ActionError("IFC export is not available in this Revit installation")
+        base = self._export_name(file_name)
+        self._exports.append({"kind": fmt, "ids": [], "base": base})
+        pid = _int(fix_plan.id_int(self.doc.ProjectInformation.Id))
+        self._record((pid, "(export)", base), {"target_id": pid, "scope": "export", "label": "Export", "param_name": "(export)", "old": "not exported",
+            "new": "export the whole model as %s named %s to %s - written only after Confirm" % (fmt.upper(), base, EXPORT_DIR), "affected": 1})
+        return base
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]

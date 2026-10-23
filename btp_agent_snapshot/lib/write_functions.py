@@ -123,6 +123,65 @@ def _change_key(c):
     return ("new" if c.get("scope") in ("created", "new element") else c["target_id"], c["param_name"], _norm(c["new"]))
 
 
+def _do_export(doc, entry, folder):
+    """Runs ONLY after a committed Confirm (never in a dry run). Writes into the approved folder only, never overwriting."""
+    import os
+    from Autodesk.Revit.DB import ElementId
+    from System.Collections.Generic import List
+    kind, base, ids = entry["kind"], entry["base"], entry.get("ids") or []
+    try:
+        if not os.path.isdir(folder):
+            os.makedirs(folder)
+        before = set(os.listdir(folder))
+        if any(f.lower().startswith(base.lower()) for f in before):
+            return "Export NOT written: a file starting with %s already exists in %s (files are never overwritten)" % (base, folder)
+        lst = List[ElementId]()
+        for i in ids:
+            lst.Add(i)
+        ok = None
+        if kind == "pdf":
+            from Autodesk.Revit.DB import PDFExportOptions
+            o = PDFExportOptions()
+            o.FileName = base
+            o.Combine = True
+            ok = doc.Export(folder, lst, o)
+        elif kind == "dwg":
+            from Autodesk.Revit.DB import DWGExportOptions
+            ok = doc.Export(folder, base, lst, DWGExportOptions())
+        elif kind in ("png", "jpg"):
+            from Autodesk.Revit.DB import ImageExportOptions, ExportRange, ImageFileType, ImageResolution, ZoomFitType
+            o = ImageExportOptions()
+            o.ExportRange = ExportRange.SetOfViews
+            o.SetViewsAndSheets(lst)
+            o.FilePath = os.path.join(folder, base)
+            ft = ImageFileType.PNG if kind == "png" else ImageFileType.JPEGLossless
+            o.HLRandWFViewsFileType = ft
+            o.ShadowViewsFileType = ft
+            o.ImageResolution = ImageResolution.DPI_150
+            o.ZoomType = ZoomFitType.FitToPage
+            o.PixelSize = 2000
+            doc.ExportImage(o)
+            ok = True
+        elif kind == "ifc":
+            from Autodesk.Revit.DB import IFCExportOptions, Transaction
+            t = Transaction(doc, "AI Agent: IFC export (rolled back)")
+            t.Start()
+            try:
+                ok = doc.Export(folder, base, IFCExportOptions())
+            finally:
+                if t.HasStarted() and not t.HasEnded():
+                    t.RollBack()
+        elif kind == "nwc":
+            from Autodesk.Revit.DB import NavisworksExportOptions
+            ok = doc.Export(folder, base, NavisworksExportOptions())
+        new = sorted(f for f in os.listdir(folder) if f not in before and f.lower().startswith(base.lower()))
+        if new:
+            return "Export written (%s): %s in %s" % (kind.upper(), ", ".join(new[:10]) + (" ..." if len(new) > 10 else ""), folder)
+        return "Export problem (%s): Revit returned %s but no file starting with %s was created" % (kind.upper(), ok, base)
+    except Exception as ex:
+        return "Export FAILED (%s): %s" % (kind.upper(), ex)
+
+
 def _do_pdf_export(doc, ids, base, folder):
     """Runs ONLY after a committed Confirm (never in a dry run). Writes one combined PDF into the approved folder."""
     import os
@@ -179,8 +238,12 @@ def _run_action(doc, args, expected_old):
             t.RollBack()
         return {"status": "failed", "reason": str(ex)}
     notes = list(_wh.warnings)
-    for ids, base in getattr(rw, "_exports", []):   # PDF export happens only here, after the commit
-        notes.append(_do_pdf_export(doc, ids, base, revit_rw.EXPORT_DIR))
+    for entry in getattr(rw, "_exports", []):   # exports happen only here, after the commit
+        if isinstance(entry, dict):
+            notes.append(_do_export(doc, entry, revit_rw.EXPORT_DIR))
+        else:
+            ids, base = entry
+            notes.append(_do_pdf_export(doc, ids, base, revit_rw.EXPORT_DIR))
     return {"status": "applied", "changed": changes, "warnings": notes}
 
 

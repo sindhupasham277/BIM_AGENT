@@ -252,6 +252,7 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 - Beams and braces: list_family_types('Structural Framing') lists the loaded framing types; create_beam(type_name, level_name, x1, y1, x2, y2) places a beam along a line at the level's elevation; create_brace(type_name, base_level, x1, y1, top_level, x2, y2) places a sloped brace between two levels. Framing families cannot be loaded; if none are loaded, say so.
 - Roofs: create_roof(level_name, x1, y1, x2, y2, slope_deg=0, roof_type=None, overhang_m=0) makes a rectangular footprint roof on a level (0 = flat; otherwise all four edges slope, a hip roof). Only rectangles: for a roof over the building, use the walls' extents and say the roof is rectangular.
 - Wall length: change_wall_length(wall_id, end, by_m) with end 'start' or 'end'; positive extends, negative shortens (refused if it would cut off a door or window). Ceilings: create_ceiling(level_name, x1, y1, x2, y2, height_m=2.7, ceiling_type=None) for a rectangle. Groups: create_group(element_ids, name=None); place_group(group_name, x, y). Grouped elements can no longer be moved or rotated one by one; say so.
+- Exports: export_views(format, views, file_name) with format pdf, dwg, png or jpg and views as names, ids or sheet numbers (1-20); export_model(format, file_name) with format ifc or nwc (NWC needs the Navisworks exporter add-in). Files are written only after Confirm, into the user's approved Exports folder, never overwriting. Tell the user the files are written when they Confirm.
 - delete_elements(element_ids): model elements only (not levels, grids, views or types); at most 20 requested and 100 in total including dependent elements.
 - place_door(wall_id, type_name, distance_m) and place_window(wall_id, type_name, distance_m, sill_height_m=None): distance_m is measured along the host wall from its start and must be inside the wall's length (check get_line(wall_id)); sill 0-10 m.
 - At most 20 new elements and 200 changes per action.
@@ -260,7 +261,7 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 
 MODEL CATEGORIES: Doors, Windows, Rooms, Walls, Columns, and Levels (for queries). 'Columns' is Revit's Structural Columns category, so every element in it is a structural column; do not decide 'structural' from a parameter.
 
-NOT AVAILABLE (say so plainly, then say which part you can do): aligning elements; creating element kinds that none of the listed methods creates; deleting levels, grids, views or types; dimensions, elevation views, view filters and graphic overrides, export other than PDF of sheets, or printing; anything outside the open model.
+NOT AVAILABLE (say so plainly, then say which part you can do): aligning elements; creating element kinds that none of the listed methods creates; deleting levels, grids, views or types; dimensions, elevation views, view filters and graphic overrides, printing; anything outside the open model.
 
 LIMITS ARE SAFETY POLICY:
 - If a request exceeds a limit above, state the limit and ask the user to narrow the request. Never split the request, repeat calls, or chain smaller steps to get past a limit.
@@ -318,7 +319,7 @@ def result_message(p, result, after):
     else:
         msg = "Applied %s = %s (%d target%s)." % (
             p["args"]["param_name"], p["args"]["value"], n, "" if n == 1 else "s")
-    _pdf = ("PDF written", "PDF NOT written", "PDF export")   # export results are not Revit warnings
+    _pdf = ("PDF written", "PDF NOT written", "PDF export", "Export written", "Export NOT written", "Export problem", "Export FAILED")   # export results are not Revit warnings
     _ex = [w for w in (result.get("warnings") or []) if str(w).startswith(_pdf)]
     _wr = [w for w in (result.get("warnings") or []) if not str(w).startswith(_pdf)]
     if _ex:
