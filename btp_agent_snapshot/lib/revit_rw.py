@@ -1732,5 +1732,60 @@ class RevitRW(object):
         return path
 
 
+    # ---- Openings and shafts (modelling MUST #1) ----
+    def create_wall_opening(self, wall_id, distance_m, width_m, height_m, sill_m=0):
+        from Autodesk.Revit.DB import Wall, Line
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        from System import Int64
+        w = self.doc.GetElement(ElementId(Int64(_int(wall_id))))
+        if w is None or not isinstance(w, Wall):
+            raise ActionError("element %s is not a wall" % wall_id)
+        lc = w.Location.Curve if w.Location is not None else None
+        if lc is None or not isinstance(lc, Line):
+            raise ActionError("openings are supported in straight walls only")
+        dist, wid, hei, sill = _num(distance_m, "distance_m"), _num(width_m, "width_m"), _num(height_m, "height_m"), _num(sill_m, "sill_m")
+        if not (0.05 <= wid <= 50 and 0.05 <= hei <= 50 and sill >= 0):
+            raise ActionError("width and height must be 0.05-50 m and the sill 0 m or more")
+        length = lc.Length * 0.3048
+        if dist - wid / 2.0 < 0 or dist + wid / 2.0 > length:
+            raise ActionError("a %.2f m wide opening centred at %.2f m does not fit in the wall (length %.2f m)" % (wid, dist, length))
+        bb = w.get_BoundingBox(None)
+        wall_h = (bb.Max.Z - bb.Min.Z) * 0.3048
+        if sill + hei > wall_h + 1e-6:
+            raise ActionError("sill %.2f m + height %.2f m is above the wall's height (%.2f m)" % (sill, hei, wall_h))
+        p0 = lc.GetEndPoint(0)
+        dv = lc.GetEndPoint(1).Subtract(p0).Normalize()
+        a = p0.Add(dv.Multiply(_ft(dist - wid / 2.0)))
+        b = p0.Add(dv.Multiply(_ft(dist + wid / 2.0)))
+        z0 = bb.Min.Z + _ft(sill)
+        op = self.doc.Create.NewOpening(w, XYZ(a.X, a.Y, z0), XYZ(b.X, b.Y, z0 + _ft(hei)))
+        mark = w.LookupParameter("Mark")
+        wn = (mark.AsString() if mark is not None and mark.HasValue else None) or "id %d" % _int(fix_plan.id_int(w.Id))
+        return self._record_new(op, "Wall Openings", "opening %.2f x %.2f m in wall %s, centred %.2f m from its start, sill %.2f m" % (wid, hei, wn, dist, sill), "(new opening)")
+
+    def create_shaft(self, bottom_level, top_level, x1, y1, x2, y2):
+        from Autodesk.Revit.DB import CurveArray, Line
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        lb = self._by_name(Level, bottom_level, "level")
+        lt = self._by_name(Level, top_level, "level")
+        if lt.Elevation <= lb.Elevation:
+            raise ActionError("the top level (%s) must be above the bottom level (%s)" % (fix_plan.el_name(lt), fix_plan.el_name(lb)))
+        xs = [_num(v, "coordinate") for v in (x1, y1, x2, y2)]
+        if max(abs(v) for v in xs) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        xa, xb, ya, yb = min(xs[0], xs[2]), max(xs[0], xs[2]), min(xs[1], xs[3]), max(xs[1], xs[3])
+        if not (0.1 <= xb - xa <= 100 and 0.1 <= yb - ya <= 100):
+            raise ActionError("a shaft must be 0.1-100 m in each direction")
+        z = lb.Elevation
+        pts = [XYZ(_ft(xa), _ft(ya), z), XYZ(_ft(xb), _ft(ya), z), XYZ(_ft(xb), _ft(yb), z), XYZ(_ft(xa), _ft(yb), z)]
+        prof = CurveArray()
+        for i in range(4):
+            prof.Append(Line.CreateBound(pts[i], pts[(i + 1) % 4]))
+        op = self.doc.Create.NewOpening(lb, lt, prof)
+        return self._record_new(op, "Shaft Openings", "shaft %.2f x %.2f m from %s to %s at (%.2f, %.2f)-(%.2f, %.2f) m" % (xb - xa, yb - ya, fix_plan.el_name(lb), fix_plan.el_name(lt), xa, ya, xb, yb), "(new shaft)")
+
+
     def change_list(self):
         return [dict(self._changes[k]) for k in self._order]

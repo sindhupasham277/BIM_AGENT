@@ -126,7 +126,7 @@ MAX_CODE_CHARS = 4000
 
 
 _KIND_WORDS = {"Floors": ("floor", "slab"), "Ceilings": ("ceiling",), "Text Notes": ("note", "text", "label", "annotat"),
-               "Windows": ("window",), "Doors": ("door",), "Walls": ("wall",), "Sheets": ("sheet",), "Schedules": ("schedule",), "Rooms": ("room",), "Room Tags": ("tag",)}
+               "Windows": ("window",), "Doors": ("door",), "Walls": ("wall",), "Sheets": ("sheet",), "Schedules": ("schedule",), "Rooms": ("room",), "Room Tags": ("tag",), "Wall Openings": ("opening",), "Shaft Openings": ("shaft",)}
 
 
 def _substitution_check(session, changes):
@@ -248,6 +248,7 @@ WHAT propose_action CAN DO (revit_rw methods; all lengths, offsets and coordinat
 - Model health (read-only, no card; use revit_ro in run_generated_snippet): model_health() gives {warnings_total, top_warnings, rooms, duplicate_marks}; get_warnings(max_groups=50) gives Revit's own warnings grouped by description with element ids; find_clashes(category_a, category_b, max_elements=300) gives intersecting pairs, and when complete is false say 'checked N of M'; room_problems() and duplicate_marks(category). A health check never changes the model; offer fixes as a separate card only if asked.
 - Rooms: list_rooms(level_name=None) gives [{id, number, name, level, area_m2, x, y}]; place_room(level_name, x, y, name=None, number=None) places one room in an enclosed area; place_rooms_in_empty_regions(level_name) places a room in every enclosed area without one; renumber_rooms(level_name, start=101, prefix='') numbers rooms top to bottom, then left to right; tag_rooms(view=None) tags untagged rooms in a plan view. Rename rooms with set_param (Name, Number).
 - PDF: export_sheets_pdf(sheet_numbers, file_name) (sheet_numbers is a list like ['A101', 'A102'] or 'all'; file_name without a folder) makes a card; the PDF is written only after Confirm, into the user's approved Exports folder, never overwriting a file. Tell the user the file is written when they Confirm, not before.
+- Openings: create_wall_opening(wall_id, distance_m, width_m, height_m, sill_m=0) cuts a rectangular opening in a straight wall, centred distance_m from the wall's start; create_shaft(bottom_level, top_level, x1, y1, x2, y2) cuts a rectangular shaft through floors, ceilings and roofs between two levels.
 - delete_elements(element_ids): model elements only (not levels, grids, views or types); at most 20 requested and 100 in total including dependent elements.
 - place_door(wall_id, type_name, distance_m) and place_window(wall_id, type_name, distance_m, sill_height_m=None): distance_m is measured along the host wall from its start and must be inside the wall's length (check get_line(wall_id)); sill 0-10 m.
 - At most 20 new elements and 200 changes per action.
