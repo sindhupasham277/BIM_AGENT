@@ -1,0 +1,30 @@
+[
+ {
+  "id": "SW1b",
+  "group": "wall_length",
+  "prompt": "Extend wall w-04 by 2 m at its end point (the end, not the start).",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "param": "(length)",
+     "new_contains": [
+      "32.00 m"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SW2b",
+  "group": "wall_length",
+  "prompt": "Shorten wall w-04 by 2 m at its end point (the end, not the start).",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "105"
+   ]
+  }
+ }
+]
