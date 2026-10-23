@@ -1,0 +1,75 @@
+[
+ {
+  "id": "SW1",
+  "group": "wall_length",
+  "prompt": "Extend wall w-04 by 2 m at its end.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "param": "(length)",
+     "new_contains": [
+      "32.00 m"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SW2",
+  "group": "wall_length",
+  "prompt": "Shorten wall w-04 by 2 m at its end.",
+  "expect": {
+   "kind": "no_proposal_reply",
+   "contains": [
+    "105"
+   ]
+  }
+ },
+ {
+  "id": "SC1",
+  "group": "ceilings",
+  "prompt": "Add a ceiling at 2.7 m on L1 from (0, 0) to (10, 8).",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Ceilings",
+     "new_contains": [
+      "2.70 m",
+      "10.00 x 8.00"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SG1",
+  "group": "groups",
+  "prompt": "Group walls w-04 and w-02.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Groups",
+     "new_contains": [
+      "2 Walls"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SG2",
+  "group": "groups",
+  "prompt": "Place a copy of the group 'No Such Group' at (50, 50).",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ }
+]
