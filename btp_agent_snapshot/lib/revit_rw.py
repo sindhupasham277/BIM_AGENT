@@ -13,7 +13,7 @@ from Autodesk.Revit.DB import Plane
 
 # Family 2: family categories that place_instance / list_family_types understand (names as the agent uses them)
 _FAMILY_CATEGORIES = {}
-for _k, _v in (("Doors", "OST_Doors"), ("Windows", "OST_Windows"), ("Columns", "OST_StructuralColumns"), ("Structural Columns", "OST_StructuralColumns"),   # C35 alias
+for _k, _v in (("Doors", "OST_Doors"), ("Windows", "OST_Windows"), ("Columns", "OST_StructuralColumns"), ("Structural Columns", "OST_StructuralColumns"), ("Structural Framing", "OST_StructuralFraming"),   # C35 alias; framing for beams
               
                ("Architectural Columns", "OST_Columns"), ("Furniture", "OST_Furniture"), ("Furniture Systems", "OST_FurnitureSystems"),
                ("Generic Models", "OST_GenericModel"), ("Casework", "OST_Casework"), ("Plumbing Fixtures", "OST_PlumbingFixtures"),
@@ -646,6 +646,8 @@ class RevitRW(object):
         if not sym.IsActive:
             sym.Activate()
             self.doc.Regenerate()
+        if cat == "Structural Framing":
+            raise ActionError("beams and braces are placed along a line: use create_beam or create_brace")
         st = StructuralType.Column if cat in ("Columns", "Structural Columns") else StructuralType.NonStructural
         inst = self.doc.Create.NewFamilyInstance(XYZ(_ft(xs[0]), _ft(xs[1]), lv.Elevation), sym, lv, st)
         self.doc.Regenerate()
@@ -1785,6 +1787,62 @@ class RevitRW(object):
             prof.Append(Line.CreateBound(pts[i], pts[(i + 1) % 4]))
         op = self.doc.Create.NewOpening(lb, lt, prof)
         return self._record_new(op, "Shaft Openings", "shaft %.2f x %.2f m from %s to %s at (%.2f, %.2f)-(%.2f, %.2f) m" % (xb - xa, yb - ya, fix_plan.el_name(lb), fix_plan.el_name(lt), xa, ya, xb, yb), "(new shaft)")
+
+
+    # ---- Beams and braces (modelling MUST #2) ----
+    def _framing_symbol(self, type_name):
+        syms = list(FilteredElementCollector(self.doc).OfClass(FamilySymbol).OfCategory(BuiltInCategory.OST_StructuralFraming))
+        if not syms:
+            raise ActionError("no Structural Framing types are loaded in this project (loading families is not supported)")
+        want = _txt(type_name).strip()
+        full = lambda s: "%s: %s" % (s.FamilyName, fix_plan.el_name(s))
+        hits = [s for s in syms if full(s) == want] or [s for s in syms if fix_plan.el_name(s) == want]
+        if not hits:
+            raise ActionError("no Structural Framing type %r; loaded: %s" % (want, ", ".join(sorted(full(s) for s in syms))[:500]))
+        if len(hits) > 1:
+            raise ActionError("type name %r is ambiguous: %s; give 'Family: Type'" % (want, ", ".join(full(s) for s in hits)))
+        s = hits[0]
+        if not s.IsActive:
+            s.Activate()
+            self.doc.Regenerate()
+        return s
+
+    def _framing_line(self, p0, p1):
+        from Autodesk.Revit.DB import Line
+        length = p0.DistanceTo(p1) * 0.3048
+        if not 0.3 <= length <= 100:
+            raise ActionError("a beam or brace must be 0.3-100 m long (this one is %.2f m)" % length)
+        return Line.CreateBound(p0, p1), length
+
+    def create_beam(self, type_name, level_name, x1, y1, x2, y2):
+        from Autodesk.Revit.DB.Structure import StructuralType
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        xs = [_num(v, "coordinate") for v in (x1, y1, x2, y2)]
+        if max(abs(v) for v in xs) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        lv = self._by_name(Level, level_name, "level")
+        sym = self._framing_symbol(type_name)
+        z = lv.Elevation
+        line, length = self._framing_line(XYZ(_ft(xs[0]), _ft(xs[1]), z), XYZ(_ft(xs[2]), _ft(xs[3]), z))
+        inst = self.doc.Create.NewFamilyInstance(line, sym, lv, StructuralType.Beam)
+        return self._record_new(inst, "Structural Framing", "beam '%s: %s' on %s from (%.2f, %.2f) to (%.2f, %.2f) m, length %.2f m" % (sym.FamilyName, fix_plan.el_name(sym), fix_plan.el_name(lv), xs[0], xs[1], xs[2], xs[3], length), "(new beam)")
+
+    def create_brace(self, type_name, base_level, x1, y1, top_level, x2, y2):
+        from Autodesk.Revit.DB.Structure import StructuralType
+        if len(self._created) >= MAX_CREATED:
+            raise ActionError("more than %d new elements in one action" % MAX_CREATED)
+        xs = [_num(v, "coordinate") for v in (x1, y1, x2, y2)]
+        if max(abs(v) for v in xs) > MAX_COORD_M:
+            raise ActionError("coordinates must be within +/-%d m" % MAX_COORD_M)
+        lb = self._by_name(Level, base_level, "level")
+        lt = self._by_name(Level, top_level, "level")
+        if lt.Elevation <= lb.Elevation:
+            raise ActionError("the top level (%s) must be above the base level (%s)" % (fix_plan.el_name(lt), fix_plan.el_name(lb)))
+        sym = self._framing_symbol(type_name)
+        line, length = self._framing_line(XYZ(_ft(xs[0]), _ft(xs[1]), lb.Elevation), XYZ(_ft(xs[2]), _ft(xs[3]), lt.Elevation))
+        inst = self.doc.Create.NewFamilyInstance(line, sym, lb, StructuralType.Brace)
+        return self._record_new(inst, "Structural Framing", "brace '%s: %s' from (%.2f, %.2f) on %s to (%.2f, %.2f) on %s, length %.2f m" % (sym.FamilyName, fix_plan.el_name(sym), xs[0], xs[1], fix_plan.el_name(lb), xs[2], xs[3], fix_plan.el_name(lt), length), "(new brace)")
 
 
     def change_list(self):
