@@ -64,3 +64,4 @@ records, inference labelling), C19 (NON-MODEL always labelled, limits first, cop
 - Findings: query engine counts Floors as 0 (bug); clash check slow on large models (95 s); schedule 142 rows vs 149 doors (likely
   Revit's own exclusions).
 - Clash speed on Snowdon Towers (walls x columns, 1,241 walls): before 95.0 s; after 2.5 s / 0.5 s (two runs); pairs unchanged.
+- Clash with the box filter on Snowdon Towers (walls x floors): 102 s, 404 pairs, complete=True.
