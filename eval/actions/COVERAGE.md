@@ -48,3 +48,9 @@ records, inference labelling), C19 (NON-MODEL always labelled, limits first, cop
   -> card (1 item, "built after Confirm as its own step") -> Confirm -> "Stairs created: straight stairs L1 to L2: 21 risers of
   171 mm, treads 275 mm, run 5.50 m from (40.00, 0.00) to (45.50, 0.00) m, width 1.20 m" (matches the preview's trial build);
   stairs in model 0 -> 1; Ctrl+Z -> 0. PASS
+
+## v3.14.1 honesty re-run, 2026-10-24
+- SX7 (ramp): no card; "a sloped floor (explicitly: a sloped floor, not a ramp)" offered as a labelled alternative. PASS (automatic check).
+- SX9 (re-slope existing floor): no card; refused, no delete-and-recreate suggestion; offered a NEW sloped floor (existing untouched).
+  The automatic check flagged the words "deleting & recreating", which appear only inside the refusal (the reply echoes the rule's
+  wording - a known wording weakness). Accepted on the actual reply by the author's decision. PASS (manual).
