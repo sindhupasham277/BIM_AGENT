@@ -38,15 +38,23 @@ def get_warnings(doc, max_groups=50):
 
 def find_clashes(doc, category_a, category_b, max_elements=5000, max_pairs=5000):
     a = _elements(doc, category_a)
+    from Autodesk.Revit.DB import Outline, BoundingBoxIntersectsFilter
     bb = _bic(category_b)
     pairs, seen, checked = [], set(), 0
+    if FilteredElementCollector(doc).OfCategory(bb).WhereElementIsNotElementType().GetElementCount() == 0:   # nothing to clash with
+        return {"category_a": category_a, "category_b": category_b, "checked": len(a), "total": len(a),
+                "pairs": [], "complete": True, "note": "no %s elements in the model" % category_b}
     for el in a[:int(max_elements)]:
         checked += 1
+        box = el.get_BoundingBox(None)
+        if box is None:
+            continue
         try:
             f = ElementIntersectsElementFilter(el)
+            q = BoundingBoxIntersectsFilter(Outline(box.Min, box.Max), 0.01)   # fast box test first; the exact geometry test still decides
         except Exception:
             continue
-        for other in FilteredElementCollector(doc).OfCategory(bb).WhereElementIsNotElementType().WherePasses(f):
+        for other in FilteredElementCollector(doc).OfCategory(bb).WhereElementIsNotElementType().WherePasses(q).WherePasses(f):
             ia, ib = _id(el.Id), _id(other.Id)
             if ia == ib:
                 continue
