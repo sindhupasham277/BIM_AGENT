@@ -24,6 +24,12 @@ CATEGORY_MAP = {
     "Levels": BuiltInCategory.OST_Levels,   # C16
     "Structural Columns": BuiltInCategory.OST_StructuralColumns,   # C35 alias
 } 
+# more model categories (query engine); each is skipped if this Revit version does not have it
+for _qn, _qb in (('Floors', 'OST_Floors'), ('Ceilings', 'OST_Ceilings'), ('Roofs', 'OST_Roofs'), ('Stairs', 'OST_Stairs'), ('Railings', 'OST_StairsRailing'), ('Ramps', 'OST_Ramps'), ('Furniture', 'OST_Furniture'), ('Casework', 'OST_Casework'), ('Structural Framing', 'OST_StructuralFraming'), ('Generic Models', 'OST_GenericModel'), ('Architectural Columns', 'OST_Columns'), ('Curtain Panels', 'OST_CurtainWallPanels'), ('Curtain Wall Mullions', 'OST_CurtainWallMullions'), ('Plumbing Fixtures', 'OST_PlumbingFixtures'), ('Lighting Fixtures', 'OST_LightingFixtures'), ('Electrical Fixtures', 'OST_ElectricalFixtures'), ('Mechanical Equipment', 'OST_MechanicalEquipment'), ('Electrical Equipment', 'OST_ElectricalEquipment'), ('Specialty Equipment', 'OST_SpecialityEquipment')):
+    _qv = getattr(BuiltInCategory, _qb, None)
+    if _qv is not None:
+        CATEGORY_MAP.setdefault(_qn, _qv)
+
  
  
 # ============================================================ 

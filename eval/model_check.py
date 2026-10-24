@@ -1,4 +1,4 @@
-﻿"""Model-independent dry-run check for any open model (no AI credits)."""
+"""Model-independent dry-run check for any open model (no AI credits)."""
 import time, json, requests
 B = "http://127.0.0.1:48884/bim-brain"
 def post(route, body, t=300):
@@ -8,7 +8,11 @@ def post(route, body, t=300):
         return {"status": "HTTP-ERROR", "message": str(ex)}
 def P(code): return post("action_preview", {"code": code})
 def S(code): return post("generated_snippet", {"code": code})
-def Q(cat): return post("query", {"category": cat, "filters": [], "return_fields": []}).get("results", [])
+def Q(cat):
+    r = post("query", {"category": cat, "filters": [], "return_fields": []})
+    if "results" not in r:
+        raise ValueError("query %s failed: %s" % (cat, r.get("error") or r.get("message") or r))
+    return r["results"]
 R = []
 def step(name, fn):
     t0 = time.time()
