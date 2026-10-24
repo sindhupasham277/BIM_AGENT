@@ -265,7 +265,7 @@ class RevitRO(object):
         import health_checks
         return health_checks.get_warnings(self.doc, max_groups)
 
-    def find_clashes(self, category_a, category_b, max_elements=300):
+    def find_clashes(self, category_a, category_b, max_elements=5000):
         import health_checks
         pass
         return health_checks.find_clashes(self.doc, category_a, category_b, max_elements)

@@ -29,7 +29,7 @@ MAX_CREATED = 2000
 MAX_DELETE = 1000
 MAX_DELETE_TOTAL = 5000
 MAX_COORD_M = 30000.0   # Revit's own limit is about 20 miles from the internal origin
-WALL_LENGTH_M = (0.1, 100.0)
+WALL_LENGTH_M = (0.1, 1000.0)
 WALL_HEIGHT_M = (0.5, 30.0)
 
 try:
@@ -1668,7 +1668,7 @@ class RevitRW(object):
         import health_checks
         return health_checks.get_warnings(self.doc, max_groups)
 
-    def find_clashes(self, category_a, category_b, max_elements=300):
+    def find_clashes(self, category_a, category_b, max_elements=5000):
         import health_checks
         self.doc.Regenerate()
         return health_checks.find_clashes(self.doc, category_a, category_b, max_elements)
@@ -2100,8 +2100,8 @@ class RevitRW(object):
         if len(self._created) >= MAX_CREATED:
             raise ActionError("more than %d new elements in one action" % MAX_CREATED)
         ids = element_ids if isinstance(element_ids, (list, tuple)) else [element_ids]
-        if not 1 <= len(ids) <= 100:
-            raise ActionError("a group needs 1-100 elements")
+        if not 1 <= len(ids) <= 1000:
+            raise ActionError("a group needs 1-1000 elements")
         els, kinds = [], {}
         for i in ids:
             el = self._el_by_int(i)
@@ -2183,8 +2183,8 @@ class RevitRW(object):
         if fmt == "dwg" and not self._module_ok("IsDWGExportAvailable"):
             raise ActionError("DWG export is not available in this Revit installation")
         vl = views if isinstance(views, (list, tuple)) else [views]
-        if not 1 <= len(vl) <= 20:
-            raise ActionError("export 1-20 views or sheets at a time")
+        if not 1 <= len(vl) <= 200:
+            raise ActionError("export 1-200 views or sheets at a time")
         vs = []
         for v in vl:
             vw = self._view_or_sheet(v)

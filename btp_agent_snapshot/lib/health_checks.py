@@ -36,7 +36,7 @@ def get_warnings(doc, max_groups=50):
     out = sorted(groups.values(), key=lambda g: -g["count"])
     return {"total": len(ws), "groups": out[:int(max_groups)]}
 
-def find_clashes(doc, category_a, category_b, max_elements=300, max_pairs=200):
+def find_clashes(doc, category_a, category_b, max_elements=5000, max_pairs=5000):
     a = _elements(doc, category_a)
     bb = _bic(category_b)
     pairs, seen, checked = [], set(), 0

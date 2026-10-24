@@ -19,6 +19,22 @@ import proposals
 # ============================================================
 
 app = FastAPI()
+# C34 (+ Revit timeouts): never a bare 500 - say what failed, and that nothing was changed
+from fastapi.responses import JSONResponse as _JSONResponse
+def _error_text(exc):
+    msg = str(exc)
+    low = msg.lower()
+    if ("48884" in msg or "revit" in low) and ("timed out" in low or "timeout" in low or "connection" in low or "refused" in low):
+        return "Revit is not responding; check for an open dialog in Revit (or restart it). Nothing was changed in the model."
+    if "insufficient_quota" in msg or "no credits" in low:
+        return "The AI service refused the request: the API account has no credits left. Nothing was changed in the model."
+    if "429" in msg or "rate limit" in low:
+        return "The AI service is rate-limiting requests right now. Nothing was changed in the model; please try again shortly."
+    return "Something went wrong in the assistant (%s). Nothing was changed in the model." % type(exc).__name__
+@app.exception_handler(Exception)
+async def _any_error(request, exc):
+    return _JSONResponse(status_code=200, content={"response": _error_text(exc), "proposals": [], "error": str(exc)[:300]})
+
 
 client = OpenAI(api_key=os.environ["BTP_API"])
 
