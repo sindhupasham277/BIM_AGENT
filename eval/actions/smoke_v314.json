@@ -1,0 +1,142 @@
+[
+ {
+  "id": "SX1",
+  "group": "delete",
+  "prompt": "Delete level L1.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ },
+ {
+  "id": "SX2",
+  "group": "delete",
+  "prompt": "Delete the wall type Generic - 200mm.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ },
+ {
+  "id": "SX3",
+  "group": "slopes",
+  "prompt": "Create a floor on L1 from (0, 0) to (10, 8) sloping up 10 degrees toward the east.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Floors",
+     "new_contains": [
+      "sloped floor",
+      "10.0 deg",
+      "east"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SX4",
+  "group": "curtain",
+  "prompt": "Create a 10 m wall on L1 from (60, 0) to (70, 0) with the curtain wall type M_Exterior Glazing, then add a vertical curtain grid line 3 m from its start.",
+  "expect": {
+   "kind": "any_of",
+   "options": [
+    {
+     "kind": "items",
+     "count": 2,
+     "match": [
+      {
+       "scope": "created",
+       "label": "Curtain Grids",
+       "new_contains": [
+        "vertical",
+        "3.00 m"
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "items",
+     "count": 3,
+     "match": [
+      {
+       "scope": "created",
+       "label": "Curtain Grids",
+       "new_contains": [
+        "vertical",
+        "3.00 m"
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SX5",
+  "group": "railings",
+  "prompt": "Add a railing on L1 along (0, 0), (5, 0), (5, 3).",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "scope": "created",
+     "label": "Railings",
+     "new_contains": [
+      "8.00 m"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SX6",
+  "group": "stairs",
+  "prompt": "Create straight stairs from L1 to L2 starting at (40, 0) and climbing toward (50, 0).",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "label": "Stairs",
+     "param": "(stairs)"
+    }
+   ]
+  }
+ },
+ {
+  "id": "SX7",
+  "group": "ramps",
+  "prompt": "Create a ramp from L1 to L2.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ },
+ {
+  "id": "SX8",
+  "group": "exports",
+  "prompt": "Export view 32 as a DWG named Smoke-DWG.",
+  "expect": {
+   "kind": "items",
+   "count": 1,
+   "match": [
+    {
+     "label": "Export",
+     "new_contains": [
+      "DWG"
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "id": "SX9",
+  "group": "slopes",
+  "prompt": "Change the slope of the existing floor on L2 to 5 degrees.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ }
+]
