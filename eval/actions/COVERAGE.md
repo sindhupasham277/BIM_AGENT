@@ -65,3 +65,4 @@ records, inference labelling), C19 (NON-MODEL always labelled, limits first, cop
   Revit's own exclusions).
 - Clash speed on Snowdon Towers (walls x columns, 1,241 walls): before 95.0 s; after 2.5 s / 0.5 s (two runs); pairs unchanged.
 - Clash with the box filter on Snowdon Towers (walls x floors): 102 s, 404 pairs, complete=True.
+- Clash, looping over the smaller category, on Snowdon Towers (walls x floors): before 102.0 s / 404 pairs; after 27.6 s / 25.7 s / 404/404 pairs (identical: True).
