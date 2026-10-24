@@ -37,6 +37,16 @@ def get_warnings(doc, max_groups=50):
     return {"total": len(ws), "groups": out[:int(max_groups)]}
 
 def find_clashes(doc, category_a, category_b, max_elements=5000, max_pairs=5000):
+    """Clash pairs [id in category_a, id in category_b]; loops over the smaller category (pairs are symmetric)."""
+    a_n = len(_elements(doc, category_a))
+    b_n = len(_elements(doc, category_b))
+    if category_a != category_b and 0 < b_n < a_n and a_n <= int(max_elements):
+        r = _find_clashes_core(doc, category_b, category_a, max_elements, max_pairs)
+        return {"category_a": category_a, "category_b": category_b, "checked": a_n if r["complete"] else r["checked"], "total": a_n,
+                "pairs": [[q[1], q[0]] for q in r["pairs"]], "complete": r["complete"], "looped_over": category_b}
+    return _find_clashes_core(doc, category_a, category_b, max_elements, max_pairs)
+
+def _find_clashes_core(doc, category_a, category_b, max_elements=5000, max_pairs=5000):
     a = _elements(doc, category_a)
     from Autodesk.Revit.DB import Outline, BoundingBoxIntersectsFilter
     bb = _bic(category_b)
