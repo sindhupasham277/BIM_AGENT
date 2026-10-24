@@ -1,0 +1,18 @@
+[
+ {
+  "id": "SX7",
+  "group": "ramps",
+  "prompt": "Create a ramp from L1 to L2.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ },
+ {
+  "id": "SX9",
+  "group": "slopes",
+  "prompt": "Change the slope of the existing floor on L2 to 5 degrees.",
+  "expect": {
+   "kind": "no_proposal"
+  }
+ }
+]
