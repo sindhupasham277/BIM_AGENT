@@ -1856,7 +1856,10 @@ class RevitRW(object):
         length = lc.Length * 0.3048
         if dist - wid / 2.0 < 0 or dist + wid / 2.0 > length:
             raise ActionError("a %.2f m wide opening centred at %.2f m does not fit in the wall (length %.2f m)" % (wid, dist, length))
+        self.doc.Regenerate()   # a just-created wall has no extent until regenerated
         bb = w.get_BoundingBox(None)
+        if bb is None:
+            raise ActionError("could not read the wall's extent; nothing changed")
         wall_h = (bb.Max.Z - bb.Min.Z) * 0.3048
         if sill + hei > wall_h + 1e-6:
             raise ActionError("sill %.2f m + height %.2f m is above the wall's height (%.2f m)" % (sill, hei, wall_h))
@@ -2315,18 +2318,26 @@ class RevitRW(object):
         p0 = lc.GetEndPoint(0)
         dv = lc.GetEndPoint(1).Subtract(p0).Normalize()
         L = lc.Length * 0.3048
+        self.doc.Regenerate()   # a just-created wall has no extent until regenerated
         bb = w.get_BoundingBox(None)
-        H = (bb.Max.Z - bb.Min.Z) * 0.3048
+        if bb is not None:
+            zmin, zmax = bb.Min.Z, bb.Max.Z
+        else:
+            lvw = self.doc.GetElement(w.LevelId)
+            hp = w.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM)
+            zmin = lvw.Elevation if lvw is not None else 0.0
+            zmax = zmin + (hp.AsDouble() if hp is not None else 0.0)
+        H = (zmax - zmin) * 0.3048
         if o == "vertical":
             if not 0.05 < off < L - 0.05:
                 raise ActionError("a vertical grid line must be inside the wall's length (0-%.2f m)" % L)
             q = p0.Add(dv.Multiply(_ft(off)))
-            pos = XYZ(q.X, q.Y, (bb.Min.Z + bb.Max.Z) / 2.0)
+            pos = XYZ(q.X, q.Y, (zmin + zmax) / 2.0)
         else:
             if not 0.05 < off < H - 0.05:
                 raise ActionError("a horizontal grid line must be inside the wall's height (0-%.2f m)" % H)
             q = p0.Add(dv.Multiply(_ft(L / 2.0)))
-            pos = XYZ(q.X, q.Y, bb.Min.Z + _ft(off))
+            pos = XYZ(q.X, q.Y, zmin + _ft(off))
         want_vertical = (o == "vertical")
         gl, last = None, "no grid line was created"
         for is_u in ((False, True) if want_vertical else (True, False)):
