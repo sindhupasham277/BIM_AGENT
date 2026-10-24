@@ -1,0 +1,92 @@
+[
+ {
+  "step": "read: element counts",
+  "pass": true,
+  "seconds": 3.1
+ },
+ {
+  "step": "read: levels",
+  "pass": true,
+  "seconds": 0.2
+ },
+ {
+  "step": "read: views",
+  "pass": true,
+  "seconds": 0.7
+ },
+ {
+  "step": "read: sheets",
+  "pass": true,
+  "seconds": 0.2
+ },
+ {
+  "step": "read: health report",
+  "pass": true,
+  "seconds": 1.0
+ },
+ {
+  "step": "dry: wall Comments edit",
+  "pass": true,
+  "seconds": 0.3
+ },
+ {
+  "step": "dry: create wall far away",
+  "pass": true,
+  "seconds": 0.9
+ },
+ {
+  "step": "dry: door schedule",
+  "pass": true,
+  "seconds": 1.7
+ },
+ {
+  "step": "dry: plan view",
+  "pass": true,
+  "seconds": 1.1
+ },
+ {
+  "step": "dry: PDF export card",
+  "pass": true,
+  "seconds": 0.6
+ },
+ {
+  "step": "dry: delete an unplaced view",
+  "pass": true,
+  "seconds": 15.7
+ },
+ {
+  "step": "dry: railing",
+  "pass": true,
+  "seconds": 0.7
+ },
+ {
+  "step": "dry: sloped floor",
+  "pass": true,
+  "seconds": 0.7
+ },
+ {
+  "step": "dry: stairs (trial build)",
+  "pass": true,
+  "seconds": 0.8
+ },
+ {
+  "step": "dry: curtain wall + grid line",
+  "pass": true,
+  "seconds": 3.7
+ },
+ {
+  "step": "read: clash walls x columns",
+  "pass": true,
+  "seconds": 95.0
+ },
+ {
+  "step": "read: duplicate door marks",
+  "pass": true,
+  "seconds": 0.7
+ },
+ {
+  "step": "MODEL UNCHANGED after all dry runs",
+  "pass": true,
+  "seconds": 1.4
+ }
+]

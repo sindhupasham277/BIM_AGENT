@@ -54,3 +54,12 @@ records, inference labelling), C19 (NON-MODEL always labelled, limits first, cop
 - SX9 (re-slope existing floor): no card; refused, no delete-and-recreate suggestion; offered a NEW sloped floor (existing untouched).
   The automatic check flagged the words "deleting & recreating", which appear only inside the refusal (the reply echoes the rule's
   wording - a known wording weakness). Accepted on the actual reply by the author's decision. PASS (manual).
+
+## Large-model check, 2026-10-24: Autodesk "Snowdon Towers Sample Architectural" (copy B_working.rvt), 0 AI credits
+- 1,241 walls, 149 doors, 172 windows, 67 rooms, 18 levels, 279 views, 67 sheets, 90 Revit warnings.
+- eval/model_check.py (model-independent, dry runs): 18/18 PASS - reads, health, wall edit, new wall, door schedule (142 rows),
+  plan view, PDF card, view deletion (15.7 s), railing, sloped floor, stairs Parking -> L1 - Block 35 (19 risers of 176 mm = 3.353 m),
+  curtain wall with the model's own "Block 37 Storefront" type + grid line, clash walls x columns (95 s, complete), duplicate marks;
+  model unchanged.
+- Findings: query engine counts Floors as 0 (bug); clash check slow on large models (95 s); schedule 142 rows vs 149 doors (likely
+  Revit's own exclusions).
