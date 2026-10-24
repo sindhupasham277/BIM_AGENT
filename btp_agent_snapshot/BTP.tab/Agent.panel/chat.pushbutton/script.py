@@ -2217,11 +2217,28 @@ def _append_proposal_card(self, p):
         add_label("Action: %s" % args.get("description", ""), height=36)
     else:
         add_label("Set '%s' = '%s' on %s" % (args["param_name"], args["value"], args["category"]))
-    for it in items:
-        add_label(
-            ("- id %s %s [%s] %s:  '%s'  ->  '%s'" % (it.get("target_id"), it.get("label"), it.get("scope"), it.get("param_name"), it.get("old"), it.get("new")) if it.get("param_name") else "- %s [%s]:  '%s'  ->  '%s'" % (it.get("label"), it.get("scope"), it.get("old"), it.get("new"))),
-            height=36
-        )
+    def _line(it):
+        return ("- id %s %s [%s] %s:  '%s'  ->  '%s'" % (it.get("target_id"), it.get("label"), it.get("scope"), it.get("param_name"), it.get("old"), it.get("new")) if it.get("param_name") else "- %s [%s]:  '%s'  ->  '%s'" % (it.get("label"), it.get("scope"), it.get("old"), it.get("new")))
+    if len(items) <= 30:
+        for it in items:
+            add_label(_line(it), height=36)
+    else:   # big card: grouped summary + first 10 items; the full list is kept and re-checked on Confirm
+        groups, order = {}, []
+        for it in items:
+            k = (str(it.get("label")), str(it.get("scope")), str(it.get("param_name") or ""), str(it.get("new"))[:60])
+            if k not in groups:
+                groups[k] = 0
+                order.append(k)
+            groups[k] += 1
+        add_label("Summary of %d changes, grouped:" % len(items), bold=True)
+        for k in sorted(order, key=lambda x: -groups[x])[:15]:
+            add_label("- %d x %s [%s]%s -> '%s'" % (groups[k], k[0], k[1], (" " + k[2]) if k[2] else "", k[3]), height=36)
+        if len(order) > 15:
+            add_label("- ... %d more groups" % (len(order) - 15))
+        add_label("First 10 of %d:" % len(items), bold=True)
+        for it in items[:10]:
+            add_label(_line(it), height=36)
+        add_label("... and %d more (all are checked again on Confirm)" % (len(items) - 10))
     type_total = 0
     has_type = False
     for it in items:
@@ -2392,5 +2409,6 @@ def _show_fake_proposal_if_any(form):
 
 
 chat = ChatForm()
+_show_fake_proposal_if_any(chat)   # test hook: draws logs\fake_proposal.json if present, then deletes it
 
 chat.Show()
