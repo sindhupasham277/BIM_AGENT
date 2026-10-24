@@ -24,11 +24,11 @@ for _k, _v in (("Doors", "OST_Doors"), ("Windows", "OST_Windows"), ("Columns", "
     if _b is not None:
         _FAMILY_CATEGORIES[_k] = _b
 
-MAX_CHANGES = 200
-MAX_CREATED = 20
-MAX_DELETE = 20
-MAX_DELETE_TOTAL = 100
-MAX_COORD_M = 1000.0
+MAX_CHANGES = 5000
+MAX_CREATED = 2000
+MAX_DELETE = 1000
+MAX_DELETE_TOTAL = 5000
+MAX_COORD_M = 30000.0   # Revit's own limit is about 20 miles from the internal origin
 WALL_LENGTH_M = (0.1, 100.0)
 WALL_HEIGHT_M = (0.5, 30.0)
 

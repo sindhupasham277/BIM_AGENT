@@ -1,4 +1,4 @@
-﻿"""Direct regression suite: every capability and safety rule through the Revit bridge. Uses NO AI credits."""
+"""Direct regression suite: every capability and safety rule through the Revit bridge. Uses NO AI credits."""
 import json, sys, requests
 B = "http://127.0.0.1:48884/bim-brain"
 def post(route, body, t=120):
@@ -44,7 +44,8 @@ r = P("revit_rw.set_param(1678957, 'Mark', '100')\nresult = revit_rw.duplicate_m
 r = P("w = revit_rw.create_wall('L1', 10, 5.807, 16, 5.807)\nresult = revit_rw.find_clashes('Walls', 'Columns')"); check("health: planted clash", any(1678294 in pr for pr in (r.get("result") or {}).get("pairs", [])) and len((r.get("result") or {}).get("pairs", [])) == 7, (r.get("result") or {}).get("pairs") or r.get("message"))
 r = P("import os"); check("SAFETY import blocked", r.get("status") == "rejected", r.get("message"))
 r = P("for i in range(1000000000):\n    pass"); check("SAFETY huge range stopped", r.get("status") == "error" and "too large" in str(r.get("message")), r.get("message"))
-r = P("for i in range(21):\n    revit_rw.create_wall('L1', 100 + i, 100, 100 + i, 105)"); check("SAFETY >20 new elements refused", r.get("status") == "error" and "more than 20" in str(r.get("message")), r.get("message"))
+r = P("for i in range(21):\n    revit_rw.create_wall('L1', 100 + i, 100, 100 + i, 105)"); check("LIMIT 21 new walls now allowed", r.get("status") == "ok" and len(r.get("changes", [])) == 21, r.get("status"))
+r = P("revit_rw.create_wall('L1', 40000, 0, 40005, 0)"); check("SAFETY coordinate beyond 30 km refused", r.get("status") == "error" and "30000" in str(r.get("message")), r.get("message"))
 r = P("result = revit_rw.__class__"); check("SAFETY private attribute blocked", r.get("status") == "rejected", r.get("message"))
 r = S("result = revit_ro.get_wall_joins(1674186)"); check("read wall joins", (r.get("result") or {}).get("start") == [1674187], r.get("result"))
 check("query engine (11 walls)", Q("Walls") == 11)

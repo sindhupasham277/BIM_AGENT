@@ -130,7 +130,7 @@ def start_revit_session(session_id):
         json={
             "session_id": session_id
         },
-        timeout=60
+        timeout=300
     )
 
     response.raise_for_status()
@@ -227,7 +227,7 @@ def call_revit_tool(name, arguments):
     response = requests.post(
         endpoint,
         json=arguments,
-        timeout=60
+        timeout=300
     )
 
     print(

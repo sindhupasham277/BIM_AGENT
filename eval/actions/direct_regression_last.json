@@ -108,7 +108,11 @@
   "pass": true
  },
  {
-  "check": "SAFETY >20 new elements refused",
+  "check": "LIMIT 21 new walls now allowed",
+  "pass": true
+ },
+ {
+  "check": "SAFETY coordinate beyond 30 km refused",
   "pass": true
  },
  {

@@ -21,7 +21,7 @@ def _hint(msg):   # C16: say how to fix common snippet mistakes
     return msg
 
 
-def run_action_code(code, rw, timeout_sec=5):
+def run_action_code(code, rw, timeout_sec=120):
     try:
         sandbox_exec.validate_snippet(code)
     except sandbox_exec.SandboxRejected as e:

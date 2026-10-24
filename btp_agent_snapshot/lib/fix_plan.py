@@ -1,7 +1,7 @@
-﻿# lib/fix_plan.py  (READ-ONLY: works out what a fix WOULD change; never modifies the model)
+# lib/fix_plan.py  (READ-ONLY: works out what a fix WOULD change; never modifies the model)
 from Autodesk.Revit.DB import ElementId, Element, StorageType, FilteredElementCollector
 
-MAX_ELEMENTS = 200
+MAX_ELEMENTS = 5000
 SUPPORTED = (StorageType.String, StorageType.Integer, StorageType.Double)
 
 
