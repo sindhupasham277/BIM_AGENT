@@ -117,6 +117,8 @@ def preview_action(doc, code):
         if t.HasStarted() and not t.HasEnded():
             t.RollBack()
     if out.get("status") == "ok" and getattr(rw, "_stairs", None):   # stairs: trial build in their own scope, then cancelled
+        if len(out.get("changes", [])) > 1:   # stairs are their own undo step, so they must be alone on a card
+            return {"status": "error", "message": "stairs must be on a card of their own (they are a separate undo step); make the stairs alone first, then ask for the other changes in a separate request", "changes": out.get("changes", [])}
         checks = []
         for req in rw._stairs:
             try:
