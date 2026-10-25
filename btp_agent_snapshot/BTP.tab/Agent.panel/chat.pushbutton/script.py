@@ -2925,7 +2925,23 @@ def _show_fake_proposal_if_any(form):
             pass
 
 
-chat = ChatForm()
-_show_fake_proposal_if_any(chat)   # test hook: draws logs\fake_proposal.json if present, then deletes it
-
-chat.Show()
+if __name__ == "__main__":
+    # ONE chat window, owned by Revit: stays with Revit, no taskbar entry, never topmost. The button shows / hides it.
+    from System import AppDomain
+    from System.Windows.Forms import NativeWindow
+    _key = "BTP_CHAT_FORM"
+    _existing = AppDomain.CurrentDomain.GetData(_key)
+    if _existing is not None and not _existing.IsDisposed:
+        if _existing.Visible:
+            _existing.Hide()
+        else:
+            _existing.Show()
+            _existing.Activate()
+    else:
+        _owner = NativeWindow()
+        _owner.AssignHandle(__revit__.MainWindowHandle)
+        chat = ChatForm()
+        chat.ShowInTaskbar = False
+        _show_fake_proposal_if_any(chat)
+        chat.Show(_owner)
+        AppDomain.CurrentDomain.SetData(_key, chat)
