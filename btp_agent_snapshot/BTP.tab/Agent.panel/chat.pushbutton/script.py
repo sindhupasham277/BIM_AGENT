@@ -905,17 +905,36 @@ class ChatForm(Form):
         self._round(box, 10)
         return box
 
-    def _nav_click(self, idx, prompt):
+    def _nav_click(self, idx, prompt=None):
         for i, (box, g, s) in enumerate(self._nav):
             on = (i == idx)
             box.BackColor = self.C_NAVON if on else self.C_SIDE
             g.ForeColor = self.C_TEAL if on else self.C_MUTED
             s.ForeColor = self.C_TEAL if on else self.C_MUTED
-        if prompt == "__settings__":
-            from System.Windows.Forms import MessageBox
-            MessageBox.Show("BTP Assistant\n\nBrain: http://127.0.0.1:8000\nRevit bridge: port 48884\n\nNothing is applied to the model until you confirm a card.", "BTP Assistant - Settings")
-        elif prompt:
-            self._prefill(prompt)
+        self._show_view(("chat", "history", "settings")[idx] if 0 <= idx <= 2 else "chat")
+
+    def _show_view(self, name):
+        # the chat controls are only hidden, never cleared, so the current conversation is kept
+        chat_on = (name == "chat")
+        for c in (self.chat_panel, self.input_panel, self.status_label):
+            c.Visible = chat_on
+        try:
+            self._clip_note.Visible = chat_on
+        except Exception:
+            pass
+        self._hist_view.Visible = (name == "history")
+        self._set_view.Visible = (name == "settings")
+        self._view = name
+        try:
+            if name == "history" and hasattr(self, "_render_history"):
+                self._render_history()
+            elif name == "settings" and hasattr(self, "_render_settings"):
+                self._render_settings()
+        except Exception as ex:
+            try:
+                self.status_label.Text = "Could not show %s (%s)" % (name, ex)
+            except Exception:
+                pass
 
     def _build_theme(self):
         from System.Windows.Forms import Cursors, FlatStyle, FormWindowState
@@ -960,10 +979,8 @@ class ChatForm(Form):
         self.Controls.Add(self._sb)
         self._nav = []
         items = [(u"\uE8BD", "Chat", None),
-                 (u"\uE945", "Actions", "What actions can you do in this model?"),
-                 (u"\uEA18", "Audit", "Run a model health report."),
-                 (u"\uF158", "Model", "Summarise this model: counts of walls, doors, windows, rooms, floors, levels, views and sheets."),
-                 (u"\uE713", "Settings", "__settings__")]
+                 (u"\uE81C", "Recent", None),
+                 (u"\uE713", "Settings", None)]
         for i, (gl, name, prompt) in enumerate(items):
             box = Panel()
             box.Size = Size(56, 58)
@@ -978,6 +995,18 @@ class ChatForm(Form):
             self._sb.Controls.Add(box)
             self._round(box, 10)
             self._nav.append((box, g, s))
+        # History and Settings pages (same area as the chat; filled by _render_history / _render_settings)
+        self._hist_view = Panel()
+        self._hist_view.BackColor = self.C_BG
+        self._hist_view.Visible = False
+        self._hist_view.AutoScroll = True
+        self.Controls.Add(self._hist_view)
+        self._set_view = Panel()
+        self._set_view.BackColor = self.C_BG
+        self._set_view.Visible = False
+        self._set_view.AutoScroll = True
+        self.Controls.Add(self._set_view)
+        self._view = "chat"
         # header (existing controls restyled; anything else in it hidden)
         hd = self.header
         keep = (self.logo, self.title_label, self.subtitle_label, self.online_dot, self.online_label)
@@ -1022,13 +1051,17 @@ class ChatForm(Form):
         self._h_cls = self._lbl(hd, u"\uE8BB", 0, 21, 32, 28, mdl, self.C_MUTED, ContentAlignment.MiddleCenter)
         for c in (self._h_set, self._h_min, self._h_cls):
             c.Cursor = Cursors.Hand
-        self._h_set.Click += lambda a, b: self._nav_click(4, "__settings__")
-        self._h_min.Click += lambda a, b: setattr(self, "WindowState", FormWindowState.Minimized)
+        self._h_set.Click += lambda a, b: self._nav_click(2)
+        self._h_min.Click += lambda a, b: self._collapse_to_chip()
         self._h_cls.Click += lambda a, b: self.Close()
+        self._h_new = self._lbl(hd, "+ New chat", 0, 22, 86, 26, Font("Segoe UI", 9.0), self.C_TEAL, ContentAlignment.MiddleCenter)
+        self._h_new.Cursor = Cursors.Hand
+        self._h_new.Click += lambda a, b: self._new_chat()
         # chat area and welcome card
         self.chat_panel.BackColor = self.C_BG
         if self.chat_panel.Controls.Count > 0:
             self.chat_panel.Controls[0].Visible = False
+            self._orig_welcome = self.chat_panel.Controls[0]
         self._welcome = Panel()
         self._welcome.BackColor = self.C_CARD
         self.chat_panel.Controls.Add(self._welcome)
@@ -1075,9 +1108,33 @@ class ChatForm(Form):
                 def w(*a, **kw):
                     r = f(*a, **kw)
                     self._restyle_last(k)
+                    try:
+                        self._record_msg(k, a)
+                    except Exception:
+                        pass
                     return r
                 return w
             setattr(self, nm, mk(orig, kind))
+        self._start_new_conv()
+        self.FormClosing += lambda s, e: self._save_conv(self._conv)   # save on close too
+        # minimise to a chip on the right, loading bubble, retry (flow wrappers only)
+        self._load_bounds()
+        self.Resize += lambda s, e: self._check_minimize()
+        self.VisibleChanged += lambda s, e: self._on_visible()
+        self.FormClosing += lambda s, e: self._on_close_extras()
+        _u = self.append_user_message
+        def _u2(*a, **kw):
+            r = _u(*a, **kw)
+            if not getattr(self, "_replaying", False):
+                try:
+                    self._last_question = u"%s" % a[0]
+                    self._loading_start()
+                except Exception:
+                    pass
+            return r
+        self.append_user_message = _u2
+        _cr = self.check_response
+        self.check_response = lambda s, e: self._check_with_loading(_cr, s, e)
 
     def _lum(self, c):
         return 0.299 * c.R + 0.587 * c.G + 0.114 * c.B
@@ -1211,6 +1268,10 @@ class ChatForm(Form):
         btn.Click += toggle
 
     def _selection_card(self, sel):
+        try:
+            self._record_msg("selection", (sel,))
+        except Exception:
+            pass
         from System.Windows.Forms import Button, FlatStyle, Cursors
         from System.Drawing import ContentAlignment
         n = int(sel.get("count") or 0)
@@ -1280,6 +1341,541 @@ class ChatForm(Form):
         except Exception:
             pass
 
+    # ---- conversations (Recent): record, save to %AppData%\BTP\recent.json, new chat, open, delete ----
+    def _rc_dir(self):
+        d = _os.path.join(_os.environ.get("APPDATA", ""), "BTP")
+        if not _os.path.isdir(d):
+            _os.makedirs(d)
+        return d
+
+    def _now_iso(self):
+        import time as _time
+        return _time.strftime("%Y-%m-%dT%H:%M:%S")
+
+    def _hist_load(self):
+        import io as _io, time as _time
+        d = self._rc_dir()
+        path = _os.path.join(d, "recent.json")
+        src = path if _os.path.exists(path) else _os.path.join(d, "history.json")
+        if not _os.path.exists(src):
+            return []
+        try:
+            with _io.open(src, "r", encoding="utf-8-sig") as f:
+                data = json.load(f)
+            convs = data.get("conversations") if isinstance(data, dict) else None
+            if not isinstance(convs, list):
+                raise ValueError("no conversations list")
+            out = []
+            for c in convs:
+                if isinstance(c, dict) and c.get("id") and c.get("messages"):
+                    c.setdefault("createdAt", c.get("created", ""))
+                    c.setdefault("updatedAt", c.get("updated", c.get("createdAt", "")))
+                    out.append(c)
+            return out
+        except Exception:
+            try:   # keep the unreadable file for inspection; start empty
+                _os.rename(src, _os.path.join(d, "recent.corrupt-%d.json" % int(_time.time())))
+            except Exception:
+                pass
+            return []
+
+    def _hist_save_all(self, convs):
+        import io as _io
+        from System.IO import File
+        path = _os.path.join(self._rc_dir(), "recent.json")
+        tmp = path + ".tmp"
+        with _io.open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps({"version": 2, "conversations": convs}, ensure_ascii=False, indent=1))
+        if File.Exists(path):
+            File.Replace(tmp, path, None)
+        else:
+            File.Move(tmp, path)
+
+    def _save_conv(self, conv):
+        try:
+            if not conv or not conv.get("messages"):
+                return   # never save empty chats
+            convs = [c for c in self._hist_load() if c.get("id") != conv["id"]]
+            convs.append(conv)
+            convs.sort(key=lambda c: c.get("updatedAt", ""), reverse=True)
+            self._hist_save_all(convs)
+        except Exception as ex:
+            try:
+                self.status_label.Text = "Recent not saved (%s)" % ex
+            except Exception:
+                pass
+
+    def _start_new_conv(self):
+        global BRAIN_SESSION_ID
+        import uuid as _uuid
+        cid = str(_uuid.uuid4())
+        now = self._now_iso()
+        self._conv = {"id": cid, "session_id": "revit_btp_" + cid.replace("-", "")[:16], "title": "",
+                      "createdAt": now, "updatedAt": now, "messages": []}
+        BRAIN_SESSION_ID = self._conv["session_id"]
+
+    def _busy(self):
+        try:
+            return not self.send_button.Enabled   # disabled while a request is in flight
+        except Exception:
+            return False
+
+    def _record_msg(self, kind, args):
+        if getattr(self, "_replaying", False) or not getattr(self, "_conv", None):
+            return
+        conv = self._conv
+        m = None
+        if kind == "user" and args:
+            m = {"role": "user", "text": u"%s" % args[0]}
+        elif kind == "assistant" and args:
+            m = {"role": "assistant", "text": u"%s" % args[0]}
+        elif kind == "card" and args:
+            pp = args[0] or {}
+            items = pp.get("items") or []
+            m = {"role": "card", "pid": pp.get("proposal_id"), "description": (pp.get("args") or {}).get("description", ""),
+                 "items": items[:200], "count": len(items), "status": "pending"}
+        elif kind == "selection" and args:
+            ss = args[0] or {}
+            m = {"role": "selection", "category": ss.get("category"), "count": ss.get("count"), "ids": list(ss.get("ids") or [])[:2000]}
+        if m is None:
+            return
+        conv["messages"].append(m)
+        if m["role"] == "user" and not conv.get("title"):
+            tx = m["text"].strip()
+            conv["title"] = tx[:60] + (u"..." if len(tx) > 60 else u"")
+        conv["updatedAt"] = self._now_iso()
+        if m["role"] == "card":
+            card = _PANEL["cards"].get(m["pid"])
+            if card is not None:
+                st = card["status"]
+                st.TextChanged += (lambda mm, cc, ll: (lambda s, e: self._card_status(mm, cc, ll)))(m, conv, st)
+        self._save_conv(conv)
+
+    def _card_status(self, m, conv, label):
+        txt = (label.Text or "").strip()
+        if txt and not getattr(self, "_replaying", False):
+            m["status"] = txt
+            conv["updatedAt"] = self._now_iso()
+            self._save_conv(conv)
+
+    def _clear_chat_ui(self):
+        keep = (getattr(self, "_welcome", None), getattr(self, "_orig_welcome", None))
+        for c in list(self.chat_panel.Controls):
+            if not any(c is k for k in keep if k is not None):
+                self.chat_panel.Controls.Remove(c)
+                try:
+                    c.Dispose()
+                except Exception:
+                    pass
+        for pid, pp in list(_PANEL["proposals"].items()):
+            if pp.get("_state") == "pending":
+                pp["_state"] = "expired"
+        shared["proposals"] = []
+        shared["selection"] = None
+        self.question_box.Text = ""
+        self.pending_images = []
+        try:
+            self.attach_button.Text = self._attach_text0
+            self._clip_note.Text = ""
+        except Exception:
+            pass
+        self.status_label.Text = ""
+
+    def _new_chat(self):
+        if self._busy():
+            self.status_label.Text = "Wait for the current reply to finish, then start a new chat."
+            return
+        self._save_conv(self._conv)
+        self._clear_chat_ui()
+        self._start_new_conv()
+        self._nav_click(0)
+
+    def _open_conv(self, cid):
+        global BRAIN_SESSION_ID
+        if self._busy():
+            self.status_label.Text = "Wait for the current reply to finish."
+            self._nav_click(0)
+            return
+        if getattr(self, "_conv", None) and self._conv.get("id") == cid:
+            self._nav_click(0)
+            return
+        conv = None
+        for c in self._hist_load():
+            if c.get("id") == cid:
+                conv = c
+                break
+        if conv is None:
+            return
+        self._save_conv(self._conv)
+        self._clear_chat_ui()
+        conv.setdefault("session_id", "revit_btp_" + cid.replace("-", "")[:16])
+        self._conv = conv
+        BRAIN_SESSION_ID = conv["session_id"]
+        self._replaying = True
+        try:
+            for n, m in enumerate(conv.get("messages") or []):
+                try:
+                    self._replay(m, n)
+                except Exception:
+                    pass
+        finally:
+            self._replaying = False
+        self._nav_click(0)
+
+    def _replay(self, m, n):
+        r = m.get("role")
+        if r == "user":
+            self.append_user_message(m.get("text", u""), [])
+        elif r == "assistant":
+            self.append_assistant_message(m.get("text", u""))
+        elif r == "selection":
+            self._selection_card({"category": m.get("category"), "count": m.get("count"), "ids": m.get("ids") or []})
+        elif r == "card":
+            pid = m.get("pid") or ("P-OLD%d" % n)
+            p = {"proposal_id": pid, "function": "run_action", "status": "pending",
+                 "args": {"description": m.get("description", ""), "code": "", "expected_changes": []},
+                 "items": m.get("items") or []}
+            self._append_proposal_card(p)
+            pp = _PANEL["proposals"].get(pid)
+            if pp is not None:
+                pp["_state"] = "expired"
+            card = _PANEL["cards"].get(pid)
+            if card is not None:
+                card["confirm"].Enabled = False
+                card["reject"].Enabled = False
+                st = m.get("status") or ""
+                card["status"].Text = st if st in ("Applied", "Not applied", "Rejected") else "Expired - not applicable"
+
+    def _rc_when(self, iso):
+        import datetime as _dt
+        try:
+            d = _dt.datetime.strptime((iso or "").replace(" ", "T")[:16], "%Y-%m-%dT%H:%M")
+        except Exception:
+            return iso or ""
+        today = _dt.date.today()
+        hm = d.strftime("%I:%M %p").lstrip("0")
+        if d.date() == today:
+            return "Today " + hm
+        if d.date() == today - _dt.timedelta(days=1):
+            return "Yesterday " + hm
+        return d.strftime("%d %b %Y")
+
+    def _render_history(self):
+        from System.Windows.Forms import TextBox, Cursors
+        from System.Drawing import ContentAlignment
+        v = self._hist_view
+        w = v.ClientSize.Width
+        if getattr(self, "_rc_search", None) is None:
+            self._lbl(v, "Recent", 20, 14, 200, 28, Font("Segoe UI", 13.0, Enum.ToObject(FontStyle, 1)), self.C_TEXT)
+            sb = TextBox()
+            sb.Location = Point(20, 50)
+            sb.BackColor = self.C_CARD
+            sb.ForeColor = self.C_TEXT
+            sb.BorderStyle = Enum.ToObject(BorderStyle, 1)
+            sb.Font = Font("Segoe UI", 10.0)
+            sb.TextChanged += lambda s, e: self._render_history()
+            v.Controls.Add(sb)
+            self._rc_search = sb
+            lst = Panel()
+            lst.Location = Point(12, 86)
+            lst.AutoScroll = True
+            lst.BackColor = self.C_BG
+            v.Controls.Add(lst)
+            self._rc_list = lst
+        self._rc_search.Size = Size(w - 40, 26)
+        lst = self._rc_list
+        lst.Size = Size(w - 24, max(100, v.ClientSize.Height - 96))
+        for c in list(lst.Controls):
+            lst.Controls.Remove(c)
+            c.Dispose()
+        q = (self._rc_search.Text or "").strip().lower()
+        convs = [c for c in self._hist_load() if q in (c.get("title") or "").lower()]
+        if not convs:
+            self._lbl(lst, "No recent chats yet." if not q else "No chats match your search.", 8, 10, lst.Width - 20, 24, Font("Segoe UI", 9.5), self.C_MUTED)
+            return
+        rw = lst.Width - 26
+        active = self._conv.get("id") if getattr(self, "_conv", None) else None
+        y = 0
+        for c in convs:
+            row = Panel()
+            row.Location = Point(4, y)
+            row.Size = Size(rw, 56)
+            row.BackColor = self.C_NAVON if c.get("id") == active else self.C_CARD
+            title = (c.get("title") or "(untitled)").strip()
+            if len(title) > 40:
+                title = title[:40].rstrip() + u"..."
+            t1 = self._lbl(row, title, 14, 8, rw - 60, 22, Font("Segoe UI", 9.5, Enum.ToObject(FontStyle, 1)), self.C_TEXT)
+            n = len(c.get("messages") or [])
+            t2 = self._lbl(row, u"%s  \u00b7  %d message%s" % (self._rc_when(c.get("updatedAt")), n, "" if n == 1 else "s"), 14, 30, rw - 60, 18, Font("Segoe UI", 8.5), self.C_MUTED)
+            dl = self._lbl(row, u"\uE74D", rw - 40, 14, 28, 28, Font("Segoe MDL2 Assets", 11.0), self.C_MUTED, ContentAlignment.MiddleCenter)
+            cid = c.get("id")
+            op = (lambda k: (lambda s, e: self._open_conv(k)))(cid)
+            for x in (row, t1, t2):
+                x.Cursor = Cursors.Hand
+                x.Click += op
+            dl.Cursor = Cursors.Hand
+            dl.Click += (lambda k, tt: (lambda s, e: self._delete_conv(k, tt)))(cid, title)
+            lst.Controls.Add(row)
+            self._round(row, 10)
+            y += 64
+
+    def _delete_conv(self, cid, title):
+        from System.Windows.Forms import MessageBox, MessageBoxButtons, DialogResult
+        if MessageBox.Show(u"Delete this chat from Recent?\n\n%s" % title, "BTP Assistant", MessageBoxButtons.YesNo) != DialogResult.Yes:
+            return
+        self._hist_save_all([c for c in self._hist_load() if c.get("id") != cid])
+        if getattr(self, "_conv", None) and self._conv.get("id") == cid:
+            self._clear_chat_ui()
+            self._start_new_conv()
+        self._render_history()
+
+    # ---- minimise to a chip on the RIGHT edge (never the bottom-left) ----
+    def _bounds_path(self):
+        return _os.path.join(self._rc_dir(), "window.json")
+
+    def _save_bounds(self):
+        try:
+            from System.Windows.Forms import FormWindowState
+            if self.WindowState != FormWindowState.Normal or not self.Visible:
+                return
+            wa = Screen.FromControl(self).WorkingArea
+            if self.Left + self.Width // 2 < wa.Left + wa.Width // 2:
+                return   # only right-side positions are remembered
+            import io as _io
+            with _io.open(self._bounds_path(), "w", encoding="utf-8") as f:
+                f.write(json.dumps({"x": self.Left, "y": self.Top, "w": self.Width, "h": self.Height}))
+        except Exception:
+            pass
+
+    def _load_bounds(self):
+        try:
+            import io as _io
+            bp = self._bounds_path()
+            if not _os.path.exists(bp):
+                return
+            with _io.open(bp, "r", encoding="utf-8-sig") as f:
+                d = json.load(f)
+            x, y, w, h = int(d["x"]), int(d["y"]), int(d["w"]), int(d["h"])
+            wa = Screen.PrimaryScreen.WorkingArea
+            if w < 360 or h < 300 or x + w // 2 < wa.Left + wa.Width // 2 or x > wa.Right - 100 or y < wa.Top - 10 or y > wa.Bottom - 100:
+                return
+            self.Location = Point(x, y)
+            self.Size = Size(w, h)
+        except Exception:
+            pass
+
+    def _check_minimize(self):
+        from System.Windows.Forms import FormWindowState
+        if self.WindowState == FormWindowState.Minimized:
+            self.WindowState = FormWindowState.Normal
+            self._collapse_to_chip()
+
+    def _collapse_to_chip(self):
+        from System.Windows.Forms import Form, NativeWindow, FormBorderStyle as _FB, FormStartPosition, Cursors, DockStyle
+        from System.Drawing import ContentAlignment
+        self._save_bounds()
+        ch = getattr(self, "_chip", None)
+        if ch is None or ch.IsDisposed:
+            ch = Form()
+            ch.FormBorderStyle = Enum.ToObject(_FB, 0)
+            ch.ShowInTaskbar = False
+            ch.StartPosition = Enum.ToObject(FormStartPosition, 0)
+            ch.Size = Size(56, 56)
+            ch.BackColor = self.C_TEAL
+            lb = Label()
+            lb.Text = "BTP"
+            lb.Dock = DockStyle.Fill
+            lb.Font = Font("Segoe UI", 10.0, Enum.ToObject(FontStyle, 1))
+            lb.ForeColor = self.C_BG
+            lb.TextAlign = ContentAlignment.MiddleCenter
+            lb.Cursor = Cursors.Hand
+            lb.Click += lambda s, e: self._restore_from_chip()
+            ch.Controls.Add(lb)
+            self._round(ch, 14)
+            self._chip = ch
+            self._chip_owner = NativeWindow()
+            self._chip_owner.AssignHandle(__revit__.MainWindowHandle)
+        wa = Screen.FromControl(self).WorkingArea
+        ch.Location = Point(wa.Right - 56 - 14, wa.Bottom - 56 - 90)
+        self.Hide()
+        if not ch.Visible:
+            ch.Show(self._chip_owner)
+
+    def _restore_from_chip(self):
+        from System.Windows.Forms import FormWindowState
+        try:
+            self._chip.Hide()
+        except Exception:
+            pass
+        self.Show()
+        self.WindowState = FormWindowState.Normal
+        self.Activate()
+
+    def _on_visible(self):
+        if self.Visible:
+            try:
+                if getattr(self, "_chip", None) is not None and self._chip.Visible:
+                    self._chip.Hide()
+            except Exception:
+                pass
+
+    def _on_close_extras(self):
+        self._save_bounds()
+        try:
+            if getattr(self, "_chip", None) is not None:
+                self._chip.Close()
+        except Exception:
+            pass
+        self._loading_remove()
+
+    # ---- loading bubble while waiting for a reply ----
+    LD_PHRASES = [u"Thinking\u2026", u"Reading your model\u2026", u"Checking elements\u2026", u"Almost there\u2026"]
+
+    def _loading_start(self):
+        from System.Windows.Forms import Timer, Button, FlatStyle, Cursors, SystemInformation
+        self._loading_remove()
+        self._ld_cancelled = False
+        bw = max(260, min(self.chat_panel.ClientSize.Width - 110, 420))
+        b = Panel()
+        b.BackColor = self.C_CARD
+        b.Size = Size(bw, 64)
+        b.Margin = Padding(0, 2, 0, 12)
+        self._ld_dots = [self._lbl(b, u"\u25CF", 16 + i * 16, 8, 16, 22, Font("Segoe UI", 10.0), self.C_MUTED) for i in range(3)]
+        self._ld_text = self._lbl(b, self.LD_PHRASES[0], 16, 34, bw - 110, 20, Font("Segoe UI", 9.0), self.C_MUTED)
+        st = Button()
+        st.Text = "Stop"
+        st.Size = Size(64, 26)
+        st.Location = Point(bw - 80, 19)
+        st.FlatStyle = FlatStyle.Flat
+        st.BackColor = self.C_CARD
+        st.ForeColor = self.C_TEXT
+        st.FlatAppearance.BorderColor = self.C_LINE
+        st.Cursor = Cursors.Hand
+        st.Click += lambda s, e: self._loading_stop()
+        b.Controls.Add(st)
+        self._ld_stop = st
+        self.chat_panel.Controls.Add(b)
+        self._round(b, 14)
+        self._ld_box = b
+        try:
+            self.scroll_chat_to_bottom()
+        except Exception:
+            pass
+        self._ld_ticks = 0
+        try:
+            self._ld_anim = bool(SystemInformation.UIEffectsEnabled)
+        except Exception:
+            self._ld_anim = True
+        tm = Timer()
+        tm.Interval = 400
+        tm.Tick += lambda s, e: self._loading_tick()
+        tm.Start()
+        self._ld_timer = tm
+
+    def _loading_tick(self):
+        if getattr(self, "_ld_box", None) is None or getattr(self, "_ld_cancelled", False):
+            return
+        self._ld_ticks += 1
+        if not self._ld_anim:
+            return   # reduced motion: static "Thinking..."
+        k = self._ld_ticks % 3
+        for i, d in enumerate(self._ld_dots):
+            d.ForeColor = self.C_TEAL if i == k else self.C_MUTED
+        secs = self._ld_ticks * 0.4
+        if secs >= 10:
+            self._ld_text.Text = u"Still working on it, this one's a bit big\u2026"
+        else:
+            self._ld_text.Text = self.LD_PHRASES[int(secs // 2.5) % len(self.LD_PHRASES)]
+
+    def _loading_stop(self):
+        self._ld_cancelled = True
+        try:
+            for d in self._ld_dots:
+                d.Visible = False
+            self._ld_text.Text = u"Stopping\u2026 the reply will be ignored when it arrives."
+            self._ld_stop.Enabled = False
+        except Exception:
+            pass
+
+    def _loading_remove(self):
+        try:
+            if getattr(self, "_ld_timer", None) is not None:
+                self._ld_timer.Stop()
+                self._ld_timer.Dispose()
+        except Exception:
+            pass
+        self._ld_timer = None
+        b = getattr(self, "_ld_box", None)
+        self._ld_box = None
+        if b is not None:
+            try:
+                self.chat_panel.Controls.Remove(b)
+                b.Dispose()
+            except Exception:
+                pass
+
+    def _check_with_loading(self, orig, sender, args):
+        if not shared.get("finished"):
+            return orig(sender, args)
+        if getattr(self, "_ld_cancelled", False):
+            try:
+                self.check_timer.Stop()
+            except Exception:
+                pass
+            shared["proposals"] = []
+            shared["selection"] = None
+            shared["answer"] = None
+            self._ld_cancelled = False
+            self._loading_remove()
+            for c in (self.question_box, self.send_button, self.attach_button):
+                c.Enabled = True
+            self.status_label.Text = "Stopped. The late reply was ignored."
+            return
+        ans = u"%s" % (shared.get("answer") or "")
+        failed = ("[Connection error]" in ans) or ("[Error] HTTP" in ans)
+        if failed:
+            detail = ans.replace("BTP Assistant: ", "")[:140]
+            shared["answer"] = u"BTP Assistant: Sorry, I couldn't get a reply this time - the assistant may be offline, busy or slow. Nothing was changed in your model. (%s)" % detail
+        self._loading_remove()
+        orig(sender, args)
+        if failed:
+            self._retry_chip(getattr(self, "_last_question", u""))
+
+    def _retry_chip(self, q):
+        from System.Windows.Forms import Button, FlatStyle, Cursors
+        if not q:
+            return
+        b = Panel()
+        b.BackColor = self.C_BG
+        b.Size = Size(200, 40)
+        b.Margin = Padding(0, 0, 0, 12)
+        bt = Button()
+        bt.Text = "Retry"
+        bt.Location = Point(0, 4)
+        bt.Size = Size(90, 30)
+        bt.FlatStyle = FlatStyle.Flat
+        bt.BackColor = self.C_TEAL
+        bt.ForeColor = self.C_BG
+        bt.FlatAppearance.BorderSize = 0
+        bt.Cursor = Cursors.Hand
+        def go(s, e):
+            if self._busy():
+                return
+            try:
+                self.chat_panel.Controls.Remove(b)
+                b.Dispose()
+            except Exception:
+                pass
+            self.question_box.Text = q
+            self.send_question(None, None)   # the same send path as the input box
+        bt.Click += go
+        b.Controls.Add(bt)
+        self.chat_panel.Controls.Add(b)
+        try:
+            self.scroll_chat_to_bottom()
+        except Exception:
+            pass
+
     def _theme_layout_safe(self):
         try:
             self._theme_layout()
@@ -1297,6 +1893,7 @@ class ChatForm(Form):
         self._h_set.Left = w - 116
         self._h_min.Left = w - 82
         self._h_cls.Left = w - 46
+        self._h_new.Left = w - 212
         self.chat_panel.Location = Point(S, HH)
         self.chat_panel.Size = Size(w, ch - HH - IH - SH - 20)
         self.input_panel.Location = Point(S + 12, ch - IH - SH - 10)
@@ -1314,6 +1911,9 @@ class ChatForm(Form):
         self._round(self.send_button, 20)
         self.status_label.Location = Point(S + 14, ch - SH - 4)
         self.status_label.Size = Size(w - 28, SH)
+        for v in (self._hist_view, self._set_view):
+            v.Location = Point(S, HH)
+            v.Size = Size(w, ch - HH)
         self._layout_welcome(w)
 
     def _layout_welcome(self, w):
@@ -2468,7 +3068,7 @@ class ChatForm(Form):
 
         payload = {
             "session_id":
-                "revit_btp_session",
+                BRAIN_SESSION_ID,
 
             "user_message":
                 self.question,
