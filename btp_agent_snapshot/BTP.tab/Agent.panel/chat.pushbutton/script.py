@@ -839,6 +839,7 @@ class ChatForm(Form):
     # ========================================================
 
     def _apply_theme(self):
+        self._log_open("ui built (theme start)")
         try:
             self._build_theme()
             self._show_fake_selection()
@@ -967,6 +968,7 @@ class ChatForm(Form):
                     self.Opacity = _op
         except Exception:
             pass
+        self._target_opacity = self.Opacity   # remembered for the reveal
         work = Screen.PrimaryScreen.WorkingArea
         W = 620
         self.Location = Point(work.Right - W, work.Top)
@@ -2010,13 +2012,11 @@ class ChatForm(Form):
             except Exception:
                 pass
             self._chip_clear_notify()
-            target = getattr(self, "_panel_opacity", 1.0) or 1.0
-            self.Opacity = 0.05 if motion else target
+            self.Opacity = 0.0
             self.Show()
             self.WindowState = FormWindowState.Normal
             self.Activate()
-            if motion:
-                self._fade_in(target)
+            self._reveal()
         if win is not None and win.IsVisible and motion:
             self._chip_anim(win.FindName("chip"), UIElement.OpacityProperty, 0.0, 140)
             self._chip_scale(0.85, 140, done=finish)
@@ -2208,6 +2208,52 @@ class ChatForm(Form):
             self.scroll_chat_to_bottom()
         except Exception:
             pass
+
+    # ---- opening: paint everything while invisible, then fade in (no half-painted flash) ----
+    def _log_open(self, what):
+        _log_open_global(what)
+
+    def _reveal(self):
+        from System.Windows.Forms import Timer, SystemInformation
+        target = getattr(self, "_target_opacity", None) or 1.0
+        self._log_open("shown (invisible)")
+        try:
+            self.PerformLayout()
+            self.Refresh()   # synchronous full paint while opacity is 0
+            self._log_open("painted")
+            try:
+                motion = bool(SystemInformation.UIEffectsEnabled)
+            except Exception:
+                motion = True
+            if not motion:
+                self.Opacity = target
+                self._log_open("revealed (no motion)")
+                return
+            top0 = self.Top
+            self.Top = top0 + 8
+            n = [0]
+            tm = Timer()
+            tm.Interval = 15
+            def tick(s, e):
+                try:
+                    n[0] += 1
+                    f = min(1.0, n[0] / 12.0)
+                    ease = 1.0 - (1.0 - f) ** 3
+                    self.Opacity = target * ease
+                    self.Top = top0 + int(round(8 * (1.0 - ease)))
+                    if n[0] >= 12:
+                        tm.Stop()
+                        tm.Dispose()
+                        self.Top = top0
+                        self.Opacity = target
+                        self._log_open("revealed")
+                except Exception:
+                    tm.Stop()
+                    self.Opacity = target
+            tm.Tick += tick
+            tm.Start()
+        except Exception:
+            self.Opacity = target   # never leave the panel invisible
 
     def _theme_layout_safe(self):
         try:
@@ -3858,6 +3904,19 @@ def _show_fake_proposal_if_any(form):
             pass
 
 
+def _log_open_global(what):
+    # debug timeline of panel opening: %AppData%\BTP\open_log.txt
+    try:
+        import io as _io, time as _time
+        d = _os.path.join(_os.environ.get("APPDATA", ""), "BTP")
+        if not _os.path.isdir(d):
+            _os.makedirs(d)
+        with _io.open(_os.path.join(d, "open_log.txt"), "a", encoding="utf-8") as f:
+            f.write(u"%s.%03d  %s\n" % (_time.strftime("%Y-%m-%d %H:%M:%S"), int((_time.time() % 1) * 1000), what))
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
     # ONE chat window, owned by Revit: stays with Revit, no taskbar entry, never topmost. The button shows / hides it.
     from System import AppDomain
@@ -3868,13 +3927,18 @@ if __name__ == "__main__":
         if _existing.Visible:
             _existing.Hide()
         else:
+            _existing.Opacity = 0.0   # open fully painted, then fade in
             _existing.Show()
             _existing.Activate()
+            _existing._reveal()
     else:
         _owner = NativeWindow()
         _owner.AssignHandle(__revit__.MainWindowHandle)
+        _log_open_global("init start")
         chat = ChatForm()
         chat.ShowInTaskbar = False
         _show_fake_proposal_if_any(chat)
+        chat.Opacity = 0.0   # never show it half-painted
         chat.Show(_owner)
         AppDomain.CurrentDomain.SetData(_key, chat)
+        chat._reveal()
