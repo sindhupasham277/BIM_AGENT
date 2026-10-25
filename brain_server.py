@@ -408,6 +408,8 @@ def _dispatch_core(name, arguments, session):
         if isinstance(session, dict):
             session["_c17_prev_sel"] = _ids
         session["seen_ids"] |= set(int(i) for i in result.get("selected_ids", []))
+        if isinstance(session, dict):   # Action Preview card in the panel
+            session["_turn_selection"] = {"ids": _ids[:5000], "count": len(_ids), "category": arguments.get("category") if isinstance(arguments, dict) else None}
 
     return result
 
@@ -901,7 +903,8 @@ def handle_message(payload: MessagePayload):
     return {
         "status": "success",
         "response": answer,
-        "proposals": pending_cards
+        "proposals": pending_cards,
+        "selection": session.pop("_turn_selection", None) if isinstance(session, dict) else None
     }
 
 

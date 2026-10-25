@@ -841,6 +841,7 @@ class ChatForm(Form):
     def _apply_theme(self):
         try:
             self._build_theme()
+            self._show_fake_selection()
             self.Resize += lambda s, e: self._theme_layout_safe()
         except Exception as ex:
             try:
@@ -1208,6 +1209,76 @@ class ChatForm(Form):
                 btn.Text = "Hide Details"
             self._round(root, 14)
         btn.Click += toggle
+
+    def _selection_card(self, sel):
+        from System.Windows.Forms import Button, FlatStyle, Cursors
+        from System.Drawing import ContentAlignment
+        n = int(sel.get("count") or 0)
+        ids = list(sel.get("ids") or [])
+        w = self.chat_panel.ClientSize.Width - 32 - 24
+        card = Panel()
+        card.BackColor = self.C_CARD
+        card.Width = w
+        card.Margin = Padding(0, 2, 0, 12)
+        self._lbl(card, u"\uE73E", 14, 12, 26, 24, Font("Segoe MDL2 Assets", 12.0), self.C_TEAL, ContentAlignment.MiddleCenter)
+        self._lbl(card, "Action Preview", 44, 12, w - 60, 24, Font("Segoe UI", 10.0, Enum.ToObject(FontStyle, 1)), self.C_TEAL)
+        rows = [("Action", "Select elements"), ("Category", sel.get("category") or "-"), ("Count", "%d element%s" % (n, "" if n == 1 else "s"))]
+        y = 42
+        for k, v in rows:
+            self._lbl(card, k + ":", 44, y, 80, 20, Font("Segoe UI", 9.0), self.C_MUTED)
+            self._lbl(card, v, 124, y, w - 140, 20, Font("Segoe UI", 9.0), self.C_TEXT)
+            y += 22
+        btn = Button()
+        btn.Text = "View in Revit"
+        btn.Location = Point(44, y + 6)
+        btn.Size = Size(130, 30)
+        btn.FlatStyle = FlatStyle.Flat
+        btn.BackColor = self.C_TILE
+        btn.ForeColor = self.C_TEXT
+        btn.FlatAppearance.BorderColor = self.C_LINE
+        btn.Cursor = Cursors.Hand
+        card.Controls.Add(btn)
+        note = self._lbl(card, "The %d element%s selected in the model." % (n, " is" if n == 1 else "s are"), 184, y + 10, w - 200, 22, Font("Segoe UI", 8.5), self.C_MUTED)
+        btn.Click += lambda s, e: self._zoom_to(ids, note)
+        card.Height = y + 48
+        self.chat_panel.Controls.Add(card)
+        self._round(card, 14)
+        try:
+            self.scroll_chat_to_bottom()
+        except Exception:
+            pass
+
+    def _zoom_to(self, ids, note):
+        import threading
+        payload = json.dumps({"action": "zoom", "element_ids": [int(i) for i in ids[:2000]]})
+        def work():
+            url = "http://127.0.0.1:48884/bim-brain/view_action"
+            try:
+                try:
+                    import urllib.request as _u
+                    _u.urlopen(_u.Request(url, data=payload.encode("utf-8"), headers={"Content-Type": "application/json"}), timeout=60).read()
+                except ImportError:
+                    import urllib2 as _u2
+                    _u2.urlopen(_u2.Request(url, payload, {"Content-Type": "application/json"}), timeout=60).read()
+            except Exception:
+                pass
+        th = threading.Thread(target=work)
+        th.daemon = True
+        th.start()
+        note.Text = "Zooming to them in Revit..."
+
+    def _show_fake_selection(self):
+        # test hook: logs\fake_selection.json draws one Action Preview card, then is deleted
+        try:
+            fp = _os.path.join(_os.path.dirname(FAKE_PROPOSAL_FILE), "fake_selection.json")
+            if _os.path.exists(fp):
+                import io as _io
+                with _io.open(fp, "r", encoding="utf-8-sig") as f:
+                    sel = json.load(f)
+                _os.remove(fp)
+                self._selection_card(sel)
+        except Exception:
+            pass
 
     def _theme_layout_safe(self):
         try:
@@ -2439,6 +2510,7 @@ class ChatForm(Form):
             )
 
             shared["proposals"] = result.get("proposals") or []
+            shared["selection"] = result.get("selection")
             answer = result.get(
                 "response",
                 "No response received."
@@ -2516,6 +2588,13 @@ class ChatForm(Form):
         self.append_assistant_message(
             answer
         )
+
+        try:   # Action Preview card when this reply selected elements
+            _sel = shared.pop("selection", None)
+            if _sel and _sel.get("count"):
+                self._selection_card(_sel)
+        except Exception:
+            pass
 
         self.status_label.Text = ""
 
