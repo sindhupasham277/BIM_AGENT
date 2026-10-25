@@ -827,10 +827,384 @@ class ChatForm(Form):
             self._on_form_closing
         )
 
+        self._apply_theme()   # dark theme layer (visual only)
+
 
     # ========================================================
     # ENTER KEY → SEND
     # ========================================================
+
+    # ========================================================
+    # DARK THEME LAYER - visual only; every existing control and handler is kept
+    # ========================================================
+
+    def _apply_theme(self):
+        try:
+            self._build_theme()
+            self.Resize += lambda s, e: self._theme_layout_safe()
+        except Exception as ex:
+            try:
+                self.status_label.Text = "Theme not applied (%s); classic look in use." % ex
+            except Exception:
+                pass
+
+    def _rgb(self, r, g, b):
+        return Color.FromArgb(r, g, b)
+
+    def _round(self, ctrl, r):
+        from System.Drawing.Drawing2D import GraphicsPath
+        from System.Drawing import Region
+        w, h = ctrl.Width, ctrl.Height
+        d = 2 * r
+        if w <= d or h <= d:
+            return
+        gp = GraphicsPath()
+        gp.AddArc(0, 0, d, d, 180, 90)
+        gp.AddArc(w - d - 1, 0, d, d, 270, 90)
+        gp.AddArc(w - d - 1, h - d - 1, d, d, 0, 90)
+        gp.AddArc(0, h - d - 1, d, d, 90, 90)
+        gp.CloseFigure()
+        ctrl.Region = Region(gp)
+
+    def _lbl(self, parent, text, x, y, w, h, font, color, align=None):
+        from System.Drawing import ContentAlignment
+        lb = Label()
+        lb.Text = text
+        lb.Font = font
+        lb.ForeColor = color
+        lb.BackColor = Color.Transparent
+        lb.AutoSize = False
+        lb.Location = Point(x, y)
+        lb.Size = Size(w, h)
+        lb.TextAlign = align if align is not None else ContentAlignment.MiddleLeft
+        parent.Controls.Add(lb)
+        return lb
+
+    def _prefill(self, text):
+        self.question_box.Text = text
+        self.question_box.Focus()
+        self.question_box.SelectionStart = len(text)
+
+    def _tile(self, parent, glyph, text, x, y, w, h, prompt):
+        from System.Windows.Forms import Cursors
+        from System.Drawing import ContentAlignment
+        box = Panel()
+        box.Location = Point(x, y)
+        box.Size = Size(w, h)
+        box.BackColor = self.C_TILE
+        box.Cursor = Cursors.Hand
+        g = self._lbl(box, glyph, 10, 0, 26, h, Font("Segoe MDL2 Assets", 11.0), self.C_TEAL, ContentAlignment.MiddleCenter)
+        s = self._lbl(box, text, 36, 0, w - 40, h, Font("Segoe UI", 8.5), self.C_TEXT)
+        s.AutoEllipsis = True
+        h_ = lambda a, b: self._prefill(prompt)
+        for c in (box, g, s):
+            c.Cursor = Cursors.Hand
+            c.Click += h_
+        parent.Controls.Add(box)
+        self._round(box, 10)
+        return box
+
+    def _nav_click(self, idx, prompt):
+        for i, (box, g, s) in enumerate(self._nav):
+            on = (i == idx)
+            box.BackColor = self.C_NAVON if on else self.C_SIDE
+            g.ForeColor = self.C_TEAL if on else self.C_MUTED
+            s.ForeColor = self.C_TEAL if on else self.C_MUTED
+        if prompt == "__settings__":
+            from System.Windows.Forms import MessageBox
+            MessageBox.Show("BTP Assistant\n\nBrain: http://127.0.0.1:8000\nRevit bridge: port 48884\n\nNothing is applied to the model until you confirm a card.", "BTP Assistant - Settings")
+        elif prompt:
+            self._prefill(prompt)
+
+    def _build_theme(self):
+        from System.Windows.Forms import Cursors, FlatStyle, FormWindowState
+        from System.Drawing import ContentAlignment
+        self.C_BG = self._rgb(23, 21, 31)
+        self.C_SIDE = self._rgb(28, 25, 38)
+        self.C_NAVON = self._rgb(45, 37, 66)
+        self.C_CARD = self._rgb(41, 34, 56)
+        self.C_TILE = self._rgb(33, 29, 45)
+        self.C_LINE = self._rgb(58, 49, 78)
+        self.C_TEAL = self._rgb(167, 139, 250)
+        self.C_TEALD = self._rgb(167, 139, 250)
+        self.C_TEXT = self._rgb(233, 227, 245)
+        self.C_MUTED = self._rgb(154, 146, 173)
+        self.C_OK = self._rgb(69, 214, 181)
+        # palette overrides from theme.json (next to this script); built-in colours are used if it is missing or invalid
+        try:
+            try:
+                _tdir = _os.path.dirname(__file__)
+            except NameError:
+                _tdir = _os.path.join(_os.environ["APPDATA"], "pyRevit", "Extensions", "btp_agent.extension", "BTP.tab", "Agent.panel", "chat.pushbutton")
+            _tp = _os.path.join(_tdir, "theme.json")
+            if _os.path.exists(_tp):
+                with open(_tp, "r") as _tf:
+                    _cfg = json.load(_tf)
+                for _k, _v in _cfg.get("colors", {}).items():
+                    setattr(self, _k, self._rgb(int(_v[0]), int(_v[1]), int(_v[2])))
+                _op = float(_cfg.get("opacity", 1.0))
+                if 0.85 <= _op <= 1.0:
+                    self.Opacity = _op
+        except Exception:
+            pass
+        work = Screen.PrimaryScreen.WorkingArea
+        W = 620
+        self.Location = Point(work.Right - W, work.Top)
+        self.ClientSize = Size(W, work.Height)
+        self.MaximizedBounds = Rectangle(work.Right - W, work.Top, W, work.Height)
+        self.BackColor = self.C_BG
+        # sidebar
+        self._sb = Panel()
+        self._sb.BackColor = self.C_SIDE
+        self.Controls.Add(self._sb)
+        self._nav = []
+        items = [(u"\uE8BD", "Chat", None),
+                 (u"\uE945", "Actions", "What actions can you do in this model?"),
+                 (u"\uEA18", "Audit", "Run a model health report."),
+                 (u"\uF158", "Model", "Summarise this model: counts of walls, doors, windows, rooms, floors, levels, views and sheets."),
+                 (u"\uE713", "Settings", "__settings__")]
+        for i, (gl, name, prompt) in enumerate(items):
+            box = Panel()
+            box.Size = Size(56, 58)
+            box.Location = Point(4, 84 + i * 66)
+            box.Cursor = Cursors.Hand
+            g = self._lbl(box, gl, 0, 6, 56, 26, Font("Segoe MDL2 Assets", 15.0), self.C_MUTED, ContentAlignment.MiddleCenter)
+            s = self._lbl(box, name, 0, 34, 56, 18, Font("Segoe UI", 7.5), self.C_MUTED, ContentAlignment.MiddleCenter)
+            h_ = (lambda k, pr: (lambda a, b: self._nav_click(k, pr)))(i, prompt)
+            for c in (box, g, s):
+                c.Cursor = Cursors.Hand
+                c.Click += h_
+            self._sb.Controls.Add(box)
+            self._round(box, 10)
+            self._nav.append((box, g, s))
+        # header (existing controls restyled; anything else in it hidden)
+        hd = self.header
+        keep = (self.logo, self.title_label, self.subtitle_label, self.online_dot, self.online_label)
+        for c in list(hd.Controls):
+            if c not in keep:
+                c.Visible = False
+        for c in keep:
+            if c.Parent is not hd:
+                hd.Controls.Add(c)
+        hd.BackColor = self.C_SIDE
+        self.logo.Text = "BTP"
+        self.logo.Font = Font("Segoe UI", 10.0, Enum.ToObject(FontStyle, 1))
+        self.logo.ForeColor = self.C_BG
+        self.logo.BackColor = self.C_TEALD
+        self.logo.TextAlign = ContentAlignment.MiddleCenter
+        self.logo.Location = Point(16, 14)
+        self.logo.Size = Size(42, 42)
+        self._round(self.logo, 12)
+        self.title_label.Text = "BTP Assistant"
+        self.title_label.Font = Font("Segoe UI", 13.0, Enum.ToObject(FontStyle, 1))
+        self.title_label.ForeColor = self.C_TEXT
+        self.title_label.BackColor = Color.Transparent
+        self.title_label.Location = Point(70, 10)
+        self.title_label.Size = Size(260, 28)
+        self.subtitle_label.Visible = False
+        self.online_dot.Text = u"\u25CF"
+        self.online_dot.Font = Font("Segoe UI", 8.0)
+        self.online_dot.ForeColor = self.C_OK
+        self.online_dot.BackColor = Color.Transparent
+        self.online_dot.Location = Point(70, 39)
+        self.online_dot.Size = Size(14, 18)
+        self.online_label.Text = "Online"
+        self.online_label.Font = Font("Segoe UI", 9.0)
+        self.online_label.ForeColor = self.C_MUTED
+        self.online_label.BackColor = Color.Transparent
+        self.online_label.TextAlign = ContentAlignment.MiddleLeft
+        self.online_label.Location = Point(84, 38)
+        self.online_label.Size = Size(160, 20)
+        mdl = Font("Segoe MDL2 Assets", 11.0)
+        self._h_set = self._lbl(hd, u"\uE713", 0, 21, 32, 28, mdl, self.C_MUTED, ContentAlignment.MiddleCenter)
+        self._h_min = self._lbl(hd, u"\uE921", 0, 21, 32, 28, mdl, self.C_MUTED, ContentAlignment.MiddleCenter)
+        self._h_cls = self._lbl(hd, u"\uE8BB", 0, 21, 32, 28, mdl, self.C_MUTED, ContentAlignment.MiddleCenter)
+        for c in (self._h_set, self._h_min, self._h_cls):
+            c.Cursor = Cursors.Hand
+        self._h_set.Click += lambda a, b: self._nav_click(4, "__settings__")
+        self._h_min.Click += lambda a, b: setattr(self, "WindowState", FormWindowState.Minimized)
+        self._h_cls.Click += lambda a, b: self.Close()
+        # chat area and welcome card
+        self.chat_panel.BackColor = self.C_BG
+        if self.chat_panel.Controls.Count > 0:
+            self.chat_panel.Controls[0].Visible = False
+        self._welcome = Panel()
+        self._welcome.BackColor = self.C_CARD
+        self.chat_panel.Controls.Add(self._welcome)
+        self.chat_panel.Controls.SetChildIndex(self._welcome, 0)
+        # input bar
+        self.input_panel.BackColor = self.C_CARD
+        self.question_box.BackColor = self.C_CARD
+        self.question_box.ForeColor = self.C_TEXT
+        self.question_box.BorderStyle = Enum.ToObject(BorderStyle, 0)
+        self.question_box.Font = Font("Segoe UI", 10.0)
+        for b in (self.attach_button, self.send_button):
+            b.FlatStyle = FlatStyle.Flat
+            b.FlatAppearance.BorderSize = 0
+            b.Cursor = Cursors.Hand
+        self.attach_button.BackColor = self.C_TILE
+        self.attach_button.ForeColor = self.C_MUTED
+        # the real Attach button stays working but out of view; a paperclip icon clicks it
+        self._clip = self._lbl(self.input_panel, u"\uE723", 10, 12, 40, 40, Font("Segoe MDL2 Assets", 13.0), self.C_MUTED, ContentAlignment.MiddleCenter)
+        self._clip.BackColor = self.C_TILE
+        self._clip.Cursor = Cursors.Hand
+        self._clip.Click += lambda a, b: self.attach_button.PerformClick()
+        self._attach_text0 = self.attach_button.Text
+        self._clip_note = self._lbl(self, "", 0, 0, 300, 16, Font("Segoe UI", 8.0), self.C_TEAL)
+        self._clip_note.BackColor = self.C_BG
+        self.attach_button.TextChanged += lambda a, b: setattr(self._clip_note, "Text", "" if self.attach_button.Text == self._attach_text0 else self.attach_button.Text)
+        self.send_button.BackColor = self.C_TEAL
+        self.send_button.ForeColor = self.C_BG
+        if False:
+            self.attach_button.Text = u"\uE723"
+            self.attach_button.Font = Font("Segoe MDL2 Assets", 13.0)
+        if True:
+            self.send_button.Text = u"\uE724"
+            self.send_button.Font = Font("Segoe MDL2 Assets", 13.0)
+        self.status_label.BackColor = self.C_BG
+        self.status_label.ForeColor = self.C_MUTED
+        self._theme_layout()
+        self._nav_click(0, None)
+        # restyle every new bubble and card right after the original code draws it
+        self.C_UBUB = getattr(self, "C_UBUB", None) or self._rgb(36, 58, 78)
+        self.C_WARN = getattr(self, "C_WARN", None) or self._rgb(236, 128, 120)
+        for nm, kind in (("append_user_message", "user"), ("append_assistant_message", "assistant"), ("_append_proposal_card", "card")):
+            orig = getattr(self, nm)
+            def mk(f, k):
+                def w(*a, **kw):
+                    r = f(*a, **kw)
+                    self._restyle_last(k)
+                    return r
+                return w
+            setattr(self, nm, mk(orig, kind))
+
+    def _lum(self, c):
+        return 0.299 * c.R + 0.587 * c.G + 0.114 * c.B
+
+    def _restyle_last(self, kind):
+        try:
+            n = self.chat_panel.Controls.Count
+            if n == 0:
+                return
+            root = self.chat_panel.Controls[n - 1]
+            if kind == "card":
+                self._restyle_card(root)
+            else:
+                root.BackColor = self.C_BG
+                self._restyle_tree(root, kind)
+        except Exception:
+            pass
+
+    def _restyle_tree(self, ctrl, kind):
+        for c in list(ctrl.Controls):
+            bc, fc = c.BackColor, c.ForeColor
+            txt = (c.Text or "").strip()
+            if bc.A != 0:
+                if bc.B > bc.R + 60 and txt == "BTP":
+                    c.BackColor = self.C_TEAL
+                    c.ForeColor = self.C_BG
+                    self._restyle_tree(c, kind)
+                    continue
+                elif bc.B > bc.R + 60:
+                    c.BackColor = self.C_UBUB
+                elif self._lum(bc) > 200:
+                    c.BackColor = self.C_BG if kind == "user" else self.C_CARD
+            if txt == "You":
+                c.ForeColor = self.C_MUTED
+            elif self._lum(fc) < 110 or (fc.R > 230 and fc.G > 230 and fc.B > 230):
+                c.ForeColor = self.C_TEXT
+            elif self._lum(fc) < 200:
+                c.ForeColor = self.C_MUTED
+            self._restyle_tree(c, kind)
+
+    def _restyle_card(self, root):
+        from System.Windows.Forms import FlatStyle, Button
+        root.BackColor = self.C_CARD
+        for c in list(root.Controls):
+            if isinstance(c, Button):
+                c.FlatStyle = FlatStyle.Flat
+                if (c.Text or "") == "Confirm":
+                    c.Text = "Apply"
+                    c.BackColor = self.C_TEAL
+                    c.ForeColor = self.C_BG
+                    c.FlatAppearance.BorderSize = 0
+                elif (c.Text or "") == "Reject":
+                    c.Text = "Cancel"
+                    c.BackColor = self.C_CARD
+                    c.ForeColor = self.C_TEXT
+                    c.FlatAppearance.BorderColor = self.C_LINE
+                    c.FlatAppearance.BorderSize = 1
+                continue
+            fc = c.ForeColor
+            c.BackColor = self.C_CARD
+            if fc.R > 150 and fc.G < 80 and fc.B < 80:
+                c.ForeColor = self.C_WARN
+            elif (c.Text or "").startswith("PROPOSED CHANGE"):
+                c.ForeColor = self.C_TEAL
+            else:
+                c.ForeColor = self.C_TEXT
+        self._round(root, 14)
+
+    def _theme_layout_safe(self):
+        try:
+            self._theme_layout()
+        except Exception:
+            pass
+
+    def _theme_layout(self):
+        cw, ch = self.ClientSize.Width, self.ClientSize.Height
+        S, HH, IH, SH = 64, 70, 64, 22
+        w = cw - S
+        self._sb.Location = Point(0, 0)
+        self._sb.Size = Size(S, ch)
+        self.header.Location = Point(S, 0)
+        self.header.Size = Size(w, HH)
+        self._h_set.Left = w - 116
+        self._h_min.Left = w - 82
+        self._h_cls.Left = w - 46
+        self.chat_panel.Location = Point(S, HH)
+        self.chat_panel.Size = Size(w, ch - HH - IH - SH - 20)
+        self.input_panel.Location = Point(S + 12, ch - IH - SH - 10)
+        self.input_panel.Size = Size(w - 24, IH)
+        iw = w - 24
+        self.attach_button.Location = Point(-400, 12)
+        self.attach_button.Size = Size(40, 40)
+        self.send_button.Location = Point(iw - 50, 12)
+        self.send_button.Size = Size(40, 40)
+        self.question_box.Location = Point(60, 20)
+        self.question_box.Size = Size(iw - 120, 26)
+        self._round(self.input_panel, 16)
+        self._round(self._clip, 20)
+        self._clip_note.Location = Point(S + 20, ch - IH - SH - 28)
+        self._round(self.send_button, 20)
+        self.status_label.Location = Point(S + 14, ch - SH - 4)
+        self.status_label.Size = Size(w - 28, SH)
+        self._layout_welcome(w)
+
+    def _layout_welcome(self, w):
+        from System.Drawing import ContentAlignment
+        card = self._welcome
+        cw = w - 32 - 24
+        for c in list(card.Controls):
+            card.Controls.Remove(c)
+        card.Width = cw
+        card.Margin = Padding(0, 4, 0, 14)
+        self._lbl(card, u"\uE8BD", 18, 18, 40, 40, Font("Segoe MDL2 Assets", 16.0), self.C_TEAL, ContentAlignment.MiddleCenter)
+        self._lbl(card, "Hello Sindhu", 66, 16, cw - 80, 26, Font("Segoe UI", 12.0, Enum.ToObject(FontStyle, 1)), self.C_TEXT)
+        self._lbl(card, "I'm your BTP Revit Agent. I can help you query your model, find issues, and perform actions directly in Revit.", 66, 44, cw - 84, 40, Font("Segoe UI", 9.0), self.C_MUTED, ContentAlignment.TopLeft)
+        tiles = [(u"\uE721", "Query Model", "How many doors are on L1?"),
+                 (u"\uEA18", "Run Audit", "Run a model health report."),
+                 (u"\uE8B3", "Select Elements", "Select all doors on L1."),
+                 (u"\uE9E9", "Set Parameter", "Set Comments to 'checked' on all doors on L1."),
+                 (u"\uE710", "Create / Modify", "Create a wall on L1 from (0, 0) to (5, 0)."),
+                 (u"\uE712", "More Actions", "What else can you do?")]
+        gap, cols = 10, 3
+        tw = (cw - 36 - gap * (cols - 1)) // cols
+        for i, (g, name, pr) in enumerate(tiles):
+            r, c = divmod(i, cols)
+            self._tile(card, g, name, 18 + c * (tw + gap), 94 + r * 46, tw, 38, pr)
+        card.Height = 94 + 2 * 46 + 12
+        self._round(card, 14)
 
     def question_box_key_down(
         self,
