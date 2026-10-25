@@ -1669,60 +1669,389 @@ class ChatForm(Form):
             self.WindowState = FormWindowState.Normal
             self._collapse_to_chip()
 
+    # ---- minimised launcher chip: a small WPF window with true transparency (the chat panel itself is unchanged) ----
+    CHIP_XAML = u"""<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent" ShowInTaskbar="False"
+        Topmost="False" ResizeMode="NoResize" ShowActivated="False" Width="260" Height="92" Title="BTP Assistant">
+  <Grid Margin="16" HorizontalAlignment="Right" VerticalAlignment="Center">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+    <Border x:Name="pill" Grid.Column="0" Height="40" CornerRadius="20" Margin="0,0,-24,0" Padding="16,0,34,0"
+            VerticalAlignment="Center" Opacity="0" RenderTransformOrigin="1,0.5" IsHitTestVisible="False">
+      <Border.RenderTransform><ScaleTransform x:Name="pillScale" ScaleX="0" ScaleY="1"/></Border.RenderTransform>
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <TextBlock x:Name="pillText" Text="BTP Assistant" FontFamily="Segoe UI" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <TextBlock x:Name="pillChev" Text="&#x2039;" Margin="8,0,0,1" FontSize="15" VerticalAlignment="Center"/>
+      </StackPanel>
+    </Border>
+    <Grid x:Name="chip" Grid.Column="1" Width="56" Height="56" RenderTransformOrigin="0.5,0.5" Focusable="True" Cursor="Hand"
+          AutomationProperties.Name="Open BTP Assistant" ToolTip="BTP Assistant" Background="Transparent">
+      <Grid.RenderTransform><ScaleTransform x:Name="chipScale" ScaleX="1" ScaleY="1"/></Grid.RenderTransform>
+      <Ellipse x:Name="pulse" StrokeThickness="2" Opacity="0" RenderTransformOrigin="0.5,0.5" IsHitTestVisible="False">
+        <Ellipse.RenderTransform><ScaleTransform x:Name="pulseScale" ScaleX="1" ScaleY="1"/></Ellipse.RenderTransform>
+      </Ellipse>
+      <Border x:Name="glow" CornerRadius="18"><Border.Effect><DropShadowEffect x:Name="glowFx" ShadowDepth="0" BlurRadius="22" Opacity="0.45"/></Border.Effect></Border>
+      <Border x:Name="face" CornerRadius="18"><Border.Effect><DropShadowEffect ShadowDepth="3" BlurRadius="14" Opacity="0.45" Color="Black"/></Border.Effect></Border>
+      <Border x:Name="hl" CornerRadius="18" BorderThickness="1" IsHitTestVisible="False"/>
+      <TextBlock x:Name="logo" Text="BTP" FontFamily="Segoe UI" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"
+                 VerticalAlignment="Center" TextOptions.TextFormattingMode="Display" IsHitTestVisible="False"/>
+      <Border x:Name="focusRing" CornerRadius="21" BorderThickness="2" Margin="-4" Visibility="Collapsed" IsHitTestVisible="False"/>
+      <Ellipse x:Name="dot" Width="13" Height="13" StrokeThickness="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-2,-2" IsHitTestVisible="False"/>
+      <Ellipse x:Name="badge" Width="12" Height="12" StrokeThickness="2" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-2,-2,0" Visibility="Collapsed" IsHitTestVisible="False"/>
+    </Grid>
+  </Grid>
+</Window>"""
+
+    def _wc(self, c, a=255):
+        from System.Windows.Media import Color as _WC
+        return _WC.FromArgb(a, c.R, c.G, c.B)
+
+    def _shade(self, c, f):
+        if f >= 0:
+            return Color.FromArgb(int(c.R + (255 - c.R) * f), int(c.G + (255 - c.G) * f), int(c.B + (255 - c.B) * f))
+        f = -f
+        return Color.FromArgb(int(c.R * (1 - f)), int(c.G * (1 - f)), int(c.B * (1 - f)))
+
+    def _build_chip(self):
+        import clr
+        for a in ("PresentationFramework", "PresentationCore", "WindowsBase", "System.Xaml", "WindowsFormsIntegration"):
+            try:
+                clr.AddReference(a)
+            except Exception:
+                pass
+        from System.Windows.Markup import XamlReader
+        from System.Windows.Media import SolidColorBrush, LinearGradientBrush, GradientStop
+        from System.Windows import Point as WP, SystemParameters, Thickness, Visibility
+        from System.Windows.Interop import WindowInteropHelper
+        win = XamlReader.Parse(self.CHIP_XAML)
+        F = win.FindName
+        acc = self.C_TEAL
+        g = LinearGradientBrush()
+        g.StartPoint = WP(0, 0)
+        g.EndPoint = WP(1, 1)
+        g.GradientStops.Add(GradientStop(self._wc(self._shade(acc, 0.22)), 0.0))
+        g.GradientStops.Add(GradientStop(self._wc(self._shade(acc, -0.20)), 1.0))
+        F("face").Background = g
+        F("glow").Background = SolidColorBrush(self._wc(acc))
+        F("glowFx").Color = self._wc(acc)
+        hl = LinearGradientBrush()
+        hl.StartPoint = WP(0.5, 0)
+        hl.EndPoint = WP(0.5, 1)
+        hl.GradientStops.Add(GradientStop(self._wc(Color.White, 110), 0.0))
+        hl.GradientStops.Add(GradientStop(self._wc(Color.White, 0), 0.45))
+        F("hl").BorderBrush = hl
+        F("logo").Foreground = SolidColorBrush(self._wc(self.C_BG))
+        ring = SolidColorBrush(self._wc(self.C_BG))
+        F("dot").Stroke = ring
+        F("badge").Stroke = ring
+        F("badge").Fill = SolidColorBrush(self._wc(self._shade(acc, 0.35)))
+        F("pulse").Stroke = SolidColorBrush(self._wc(acc))
+        F("focusRing").BorderBrush = SolidColorBrush(self._wc(self.C_TEXT))
+        pill = F("pill")
+        pill.Background = SolidColorBrush(self._wc(self.C_CARD))
+        pill.BorderBrush = SolidColorBrush(self._wc(self.C_LINE))
+        pill.BorderThickness = Thickness(1)
+        F("pillText").Foreground = SolidColorBrush(self._wc(self.C_TEXT))
+        F("pillChev").Foreground = SolidColorBrush(self._wc(acc))
+        WindowInteropHelper(win).Owner = __revit__.MainWindowHandle
+        try:
+            from System.Windows.Forms.Integration import ElementHost
+            ElementHost.EnableModelessKeyboardInterop(win)
+        except Exception:
+            pass
+        try:
+            self._chip_motion = bool(SystemParameters.ClientAreaAnimation)
+        except Exception:
+            self._chip_motion = True
+        chip = F("chip")
+        chip.MouseEnter += lambda s, e: self._chip_hover(True)
+        chip.MouseLeave += lambda s, e: self._chip_hover(False)
+        chip.MouseLeftButtonDown += lambda s, e: self._chip_down(e)
+        chip.MouseMove += lambda s, e: self._chip_move(e)
+        chip.MouseLeftButtonUp += lambda s, e: self._chip_up(e)
+        chip.KeyDown += lambda s, e: self._chip_key(e)
+        chip.GotKeyboardFocus += lambda s, e: setattr(F("focusRing"), "Visibility", Visibility.Visible)
+        chip.LostKeyboardFocus += lambda s, e: setattr(F("focusRing"), "Visibility", Visibility.Collapsed)
+        try:
+            win.DpiChanged += lambda s, e: self._chip_place(win.Top)
+        except Exception:
+            pass
+        self._chipwin = win
+        self._drag = None
+        self._chip_set_status(getattr(self, "_chip_state", "online"))
+        return win
+
+    def _chip_anim(self, target, prop, to, ms, frm=None, repeat=None, done=None):
+        from System.Windows.Media.Animation import DoubleAnimation, CubicEase, EasingMode, RepeatBehavior
+        from System.Windows import Duration
+        from System import TimeSpan
+        if not getattr(self, "_chip_motion", True):
+            target.BeginAnimation(prop, None)
+            target.SetValue(prop, float(to))
+            if done is not None:
+                done()
+            return
+        da = DoubleAnimation()
+        if frm is not None:
+            da.From = float(frm)
+        da.To = float(to)
+        da.Duration = Duration(TimeSpan.FromMilliseconds(ms))
+        ez = CubicEase()
+        ez.EasingMode = EasingMode.EaseOut
+        da.EasingFunction = ez
+        if repeat:
+            da.RepeatBehavior = RepeatBehavior(float(repeat))
+        if done is not None:
+            da.Completed += lambda s, e: done()
+        target.BeginAnimation(prop, da)
+
+    def _chip_scale(self, v, ms, done=None):
+        from System.Windows.Media import ScaleTransform
+        sc = self._chipwin.FindName("chipScale")
+        self._chip_anim(sc, ScaleTransform.ScaleXProperty, v, ms)
+        self._chip_anim(sc, ScaleTransform.ScaleYProperty, v, ms, done=done)
+
+    def _chip_dpi(self):
+        try:
+            from System.Windows import PresentationSource
+            src = PresentationSource.FromVisual(self._chipwin)
+            if src is not None:
+                return float(src.CompositionTarget.TransformToDevice.M22)
+        except Exception:
+            pass
+        try:
+            from System.Drawing import Graphics
+            from System import IntPtr
+            gr = Graphics.FromHwnd(IntPtr.Zero)
+            d = gr.DpiY / 96.0
+            gr.Dispose()
+            return d
+        except Exception:
+            return 1.0
+
+    def _chip_work(self):
+        from System.Windows.Forms import Screen as _S
+        wa = _S.FromHandle(__revit__.MainWindowHandle).WorkingArea
+        d = self._chip_dpi()
+        return wa.Left / d, wa.Top / d, wa.Right / d, wa.Bottom / d
+
+    def _chip_path(self):
+        return _os.path.join(self._rc_dir(), "chip.json")
+
+    def _chip_load_y(self):
+        try:
+            import io as _io
+            with _io.open(self._chip_path(), "r", encoding="utf-8-sig") as f:
+                return float(json.load(f).get("y"))
+        except Exception:
+            return None
+
+    def _chip_save_y(self, y):
+        try:
+            import io as _io
+            with _io.open(self._chip_path(), "w", encoding="utf-8") as f:
+                f.write(json.dumps({"y": float(y)}))
+        except Exception:
+            pass
+
+    def _chip_place(self, y=None):
+        win = self._chipwin
+        l, tp, r, b = self._chip_work()
+        if y is None:
+            y = self._chip_load_y()
+        if y is None:
+            y = b - win.Height - 70
+        win.Left = r - win.Width
+        win.Top = max(tp, min(b - win.Height, y))
+
+    def _chip_hover(self, on):
+        from System.Windows.Media import ScaleTransform
+        from System.Windows import UIElement
+        if getattr(self, "_drag", None):
+            return
+        F = self._chipwin.FindName
+        self._chip_scale(1.06 if on else 1.0, 170)
+        self._chip_anim(F("pillScale"), ScaleTransform.ScaleXProperty, 1.0 if on else 0.0, 180)
+        self._chip_anim(F("pill"), UIElement.OpacityProperty, 1.0 if on else 0.0, 180)
+
+    def _chip_down(self, e):
+        from System.Windows.Forms import Cursor as _Cur
+        self._drag = {"y0": _Cur.Position.Y, "top0": self._chipwin.Top, "moved": False}
+        self._chipwin.FindName("chip").CaptureMouse()
+        self._chip_scale(0.96, 80)
+        e.Handled = True
+
+    def _chip_move(self, e):
+        dg = getattr(self, "_drag", None)
+        if not dg:
+            return
+        from System.Windows.Forms import Cursor as _Cur
+        dy = (_Cur.Position.Y - dg["y0"]) / self._chip_dpi()
+        if abs(dy) > 4:
+            dg["moved"] = True
+        if dg["moved"]:
+            l, tp, r, b = self._chip_work()
+            self._chipwin.Top = max(tp, min(b - self._chipwin.Height, dg["top0"] + dy))
+
+    def _chip_up(self, e):
+        dg = getattr(self, "_drag", None)
+        self._drag = None
+        try:
+            self._chipwin.FindName("chip").ReleaseMouseCapture()
+        except Exception:
+            pass
+        e.Handled = True
+        if dg and dg["moved"]:
+            self._chip_place(self._chipwin.Top)   # snap back to the right edge
+            self._chip_save_y(self._chipwin.Top)
+            self._chip_scale(1.06, 120)
+        else:
+            self._chip_scale(1.06, 80)
+            self._restore_from_chip()
+
+    def _chip_key(self, e):
+        from System.Windows.Input import Key
+        if e.Key in (Key.Enter, Key.Space):
+            e.Handled = True
+            self._restore_from_chip()
+
+    def _chip_set_status(self, state):
+        self._chip_state = state
+        win = getattr(self, "_chipwin", None)
+        if win is None:
+            return
+        from System.Windows.Media import SolidColorBrush
+        col = {"online": Color.FromArgb(34, 197, 94), "busy": Color.FromArgb(245, 158, 11), "offline": Color.FromArgb(239, 68, 68)}.get(state, Color.FromArgb(34, 197, 94))
+        win.FindName("dot").Fill = SolidColorBrush(self._wc(col))
+
+    def _chip_notify(self):
+        win = getattr(self, "_chipwin", None)
+        if win is None or not win.IsVisible:
+            return
+        from System.Windows import Visibility, UIElement
+        from System.Windows.Media import ScaleTransform
+        F = win.FindName
+        F("badge").Visibility = Visibility.Visible
+        if getattr(self, "_chip_motion", True):
+            ps = F("pulseScale")
+            self._chip_anim(ps, ScaleTransform.ScaleXProperty, 1.35, 1600, frm=1.0, repeat=3)
+            self._chip_anim(ps, ScaleTransform.ScaleYProperty, 1.35, 1600, frm=1.0, repeat=3)
+            self._chip_anim(F("pulse"), UIElement.OpacityProperty, 0.0, 1600, frm=0.7, repeat=3)
+
+    def _chip_clear_notify(self):
+        win = getattr(self, "_chipwin", None)
+        if win is None:
+            return
+        from System.Windows import Visibility, UIElement
+        F = win.FindName
+        F("badge").Visibility = Visibility.Collapsed
+        F("pulse").BeginAnimation(UIElement.OpacityProperty, None)
+        F("pulse").Opacity = 0.0
+
+    def _chip_health_check(self):
+        import threading
+        win = self._chipwin
+        url = BRAIN_URL.rstrip("/") + "/docs"
+        def work():
+            ok = False
+            try:
+                try:
+                    import urllib.request as _u
+                    _u.urlopen(url, timeout=3).read(64)
+                except ImportError:
+                    import urllib2 as _u2
+                    _u2.urlopen(url, timeout=3).read(64)
+                ok = True
+            except Exception:
+                ok = False
+            try:
+                from System import Action
+                st = "online" if ok else "offline"
+                win.Dispatcher.BeginInvoke(Action(lambda: None if getattr(self, "_chip_state", "") == "busy" else self._chip_set_status(st)))
+            except Exception:
+                pass
+        th = threading.Thread(target=work)
+        th.daemon = True
+        th.start()
+
     def _collapse_to_chip(self):
-        from System.Windows.Forms import Form, NativeWindow, FormBorderStyle as _FB, FormStartPosition, Cursors, DockStyle
-        from System.Drawing import ContentAlignment
+        from System.Windows import UIElement
         self._save_bounds()
-        ch = getattr(self, "_chip", None)
-        if ch is None or ch.IsDisposed:
-            ch = Form()
-            ch.FormBorderStyle = Enum.ToObject(_FB, 0)
-            ch.ShowInTaskbar = False
-            ch.StartPosition = Enum.ToObject(FormStartPosition, 0)
-            ch.Size = Size(56, 56)
-            ch.BackColor = self.C_TEAL
-            lb = Label()
-            lb.Text = "BTP"
-            lb.Dock = DockStyle.Fill
-            lb.Font = Font("Segoe UI", 10.0, Enum.ToObject(FontStyle, 1))
-            lb.ForeColor = self.C_BG
-            lb.TextAlign = ContentAlignment.MiddleCenter
-            lb.Cursor = Cursors.Hand
-            lb.Click += lambda s, e: self._restore_from_chip()
-            ch.Controls.Add(lb)
-            self._round(ch, 14)
-            self._chip = ch
-            self._chip_owner = NativeWindow()
-            self._chip_owner.AssignHandle(__revit__.MainWindowHandle)
-        wa = Screen.FromControl(self).WorkingArea
-        ch.Location = Point(wa.Right - 56 - 14, wa.Bottom - 56 - 90)
-        self.Hide()
-        if not ch.Visible:
-            ch.Show(self._chip_owner)
+        try:
+            if getattr(self, "_chipwin", None) is None:
+                self._build_chip()
+            win = self._chipwin
+            F = win.FindName
+            F("chip").BeginAnimation(UIElement.OpacityProperty, None)
+            F("chip").Opacity = 1.0
+            self._chip_scale(1.0, 1)
+            self._panel_opacity = self.Opacity
+            win.Left = -20000
+            win.Top = -20000
+            self.Hide()
+            win.Show()
+            self._chip_place()
+            self._chip_health_check()
+        except Exception as ex:
+            self.Show()   # never lose the panel
+            try:
+                self.status_label.Text = "Could not minimise (%s)" % ex
+            except Exception:
+                pass
 
     def _restore_from_chip(self):
         from System.Windows.Forms import FormWindowState
-        try:
-            self._chip.Hide()
-        except Exception:
-            pass
-        self.Show()
-        self.WindowState = FormWindowState.Normal
-        self.Activate()
+        from System.Windows import UIElement
+        win = getattr(self, "_chipwin", None)
+        motion = getattr(self, "_chip_motion", True)
+        def finish():
+            try:
+                win.Hide()
+            except Exception:
+                pass
+            self._chip_clear_notify()
+            target = getattr(self, "_panel_opacity", 1.0) or 1.0
+            self.Opacity = 0.05 if motion else target
+            self.Show()
+            self.WindowState = FormWindowState.Normal
+            self.Activate()
+            if motion:
+                self._fade_in(target)
+        if win is not None and win.IsVisible and motion:
+            self._chip_anim(win.FindName("chip"), UIElement.OpacityProperty, 0.0, 140)
+            self._chip_scale(0.85, 140, done=finish)
+        else:
+            finish()
+
+    def _fade_in(self, target):
+        from System.Windows.Forms import Timer
+        tm = Timer()
+        tm.Interval = 30
+        n = [0]
+        def tick(s, e):
+            n[0] += 1
+            self.Opacity = min(target, target * n[0] / 6.0)
+            if n[0] >= 6:
+                tm.Stop()
+                tm.Dispose()
+        tm.Tick += tick
+        tm.Start()
 
     def _on_visible(self):
         if self.Visible:
             try:
-                if getattr(self, "_chip", None) is not None and self._chip.Visible:
-                    self._chip.Hide()
+                win = getattr(self, "_chipwin", None)
+                if win is not None and win.IsVisible:
+                    win.Hide()
+                    self._chip_clear_notify()
             except Exception:
                 pass
 
     def _on_close_extras(self):
         self._save_bounds()
         try:
-            if getattr(self, "_chip", None) is not None:
-                self._chip.Close()
+            if getattr(self, "_chipwin", None) is not None:
+                self._chipwin.Close()
         except Exception:
             pass
         self._loading_remove()
@@ -1731,6 +2060,7 @@ class ChatForm(Form):
     LD_PHRASES = [u"Thinking\u2026", u"Reading your model\u2026", u"Checking elements\u2026", u"Almost there\u2026"]
 
     def _loading_start(self):
+        self._chip_set_status("busy")
         from System.Windows.Forms import Timer, Button, FlatStyle, Cursors, SystemInformation
         self._loading_remove()
         self._ld_cancelled = False
@@ -1829,6 +2159,7 @@ class ChatForm(Form):
             for c in (self.question_box, self.send_button, self.attach_button):
                 c.Enabled = True
             self.status_label.Text = "Stopped. The late reply was ignored."
+            self._chip_set_status("online")
             return
         ans = u"%s" % (shared.get("answer") or "")
         failed = ("[Connection error]" in ans) or ("[Error] HTTP" in ans)
@@ -1837,6 +2168,9 @@ class ChatForm(Form):
             shared["answer"] = u"BTP Assistant: Sorry, I couldn't get a reply this time - the assistant may be offline, busy or slow. Nothing was changed in your model. (%s)" % detail
         self._loading_remove()
         orig(sender, args)
+        self._chip_set_status("offline" if failed else "online")
+        if not self.Visible:
+            self._chip_notify()
         if failed:
             self._retry_chip(getattr(self, "_last_question", u""))
 
