@@ -979,8 +979,7 @@ class ChatForm(Form):
         self.Controls.Add(self._sb)
         self._nav = []
         items = [(u"\uE8BD", "Chat", None),
-                 (u"\uE81C", "Recent", None),
-                 (u"\uE713", "Settings", None)]
+                 (u"\uE81C", "Recent", None)]
         for i, (gl, name, prompt) in enumerate(items):
             box = Panel()
             box.Size = Size(56, 58)
@@ -1051,7 +1050,7 @@ class ChatForm(Form):
         self._h_cls = self._lbl(hd, u"\uE8BB", 0, 21, 32, 28, mdl, self.C_MUTED, ContentAlignment.MiddleCenter)
         for c in (self._h_set, self._h_min, self._h_cls):
             c.Cursor = Cursors.Hand
-        self._h_set.Click += lambda a, b: self._nav_click(2)
+        self._h_set.Visible = False   # Settings page removed from the panel
         self._h_min.Click += lambda a, b: self._collapse_to_chip()
         self._h_cls.Click += lambda a, b: self.Close()
         self._h_new = self._lbl(hd, "+ New chat", 0, 22, 86, 26, Font("Segoe UI", 9.0), self.C_TEAL, ContentAlignment.MiddleCenter)
