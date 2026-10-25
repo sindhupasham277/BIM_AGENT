@@ -1143,7 +1143,71 @@ class ChatForm(Form):
                 c.ForeColor = self.C_TEAL
             else:
                 c.ForeColor = self.C_TEXT
+        try:
+            self._add_details(root)
+        except Exception:
+            pass
         self._round(root, 14)
+
+    def _add_details(self, root):
+        import re as _re
+        from System.Windows.Forms import Button, FlatStyle, TextBox, ScrollBars, Cursors
+        pid = None
+        for c in root.Controls:
+            m = _re.search(r"\((P-[A-Za-z0-9]+)\)", c.Text or "")
+            if m:
+                pid = m.group(1)
+                break
+        p = _PANEL["proposals"].get(pid) if pid else None
+        card = _PANEL["cards"].get(pid) if pid else None
+        if p is None or card is None:
+            return
+        items = p.get("items") or []
+        conf, st = card["confirm"], card["status"]
+        btn = Button()
+        btn.Text = "Show Details"
+        btn.Location = Point(250, conf.Top)
+        btn.Size = Size(110, conf.Height)
+        btn.FlatStyle = FlatStyle.Flat
+        btn.BackColor = self.C_CARD
+        btn.ForeColor = self.C_TEAL
+        btn.FlatAppearance.BorderColor = self.C_LINE
+        btn.Cursor = Cursors.Hand
+        root.Controls.Add(btn)
+        st.Location = Point(370, st.Top)
+        st.Size = Size(max(60, root.Width - 382), st.Height)
+        lines = []
+        for it in items:
+            if it.get("param_name"):
+                lines.append(u"id %s  %s [%s] %s:  '%s' -> '%s'" % (it.get("target_id"), it.get("label"), it.get("scope"), it.get("param_name"), it.get("old"), it.get("new")))
+            else:
+                lines.append(u"%s [%s]:  '%s' -> '%s'" % (it.get("label"), it.get("scope"), it.get("old"), it.get("new")))
+        box = TextBox()
+        box.Multiline = True
+        box.ReadOnly = True
+        box.ScrollBars = ScrollBars.Vertical
+        box.Text = u"\r\n".join(lines) if lines else u"(no items)"
+        box.BackColor = self.C_TILE
+        box.ForeColor = self.C_TEXT
+        box.BorderStyle = Enum.ToObject(BorderStyle, 0)
+        box.Font = Font("Consolas", 8.5)
+        h = min(240, 16 * max(1, len(lines)) + 14)
+        base_h = root.Height
+        box.Location = Point(12, base_h - 2)
+        box.Size = Size(root.Width - 24, h)
+        box.Visible = False
+        root.Controls.Add(box)
+        def toggle(s, e):
+            if box.Visible:
+                box.Visible = False
+                root.Height = base_h
+                btn.Text = "Show Details"
+            else:
+                box.Visible = True
+                root.Height = base_h + h + 10
+                btn.Text = "Hide Details"
+            self._round(root, 14)
+        btn.Click += toggle
 
     def _theme_layout_safe(self):
         try:
