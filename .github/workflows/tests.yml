@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  push:
+    branches: [main, agent-actions, "polish/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-checks:
+    name: Offline checks (no Revit, no AI credits)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Compile all Python sources
+        run: python -m compileall -q src tests eval
+
+      - name: Brain server imports cleanly
+        working-directory: src/nexo
+        env:
+          BTP_API: ci-placeholder-not-a-key
+        run: python -c "import brain_server; print('brain_server imported')"
+
+      - name: Memory database checks
+        run: |
+          python tests/check_memory.py | tee memory.txt
+          grep -q "ALL PASSED" memory.txt
