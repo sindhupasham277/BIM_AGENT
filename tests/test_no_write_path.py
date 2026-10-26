@@ -1,7 +1,7 @@
 ﻿# tests/test_no_write_path.py  (Step 6 automated code review)
 import ast, pathlib, re, sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SNAP = ROOT / "btp_agent_snapshot"
+SNAP = ROOT / "revit_extension"
 PANEL = SNAP / "BTP.tab" / "Agent.panel"
 FORBIDDEN_IN_SANDBOX = {"write_functions", "fix_handler", "fix_plan", "proposals"}
 TX = re.compile(r"\b(?:Sub)?Transaction(?:Group)?\s*\(")
@@ -26,7 +26,7 @@ for f in ("sandbox_exec.py", "revit_ro.py"):
     check("sandbox file %s cannot import the write layer" % f, not bad, bad or "")
 
 tx = [str(p.relative_to(ROOT)) for p in SNAP.rglob("*.py") if TX.search(p.read_text(encoding="utf-8-sig"))]
-check("Transaction( appears only in lib/write_functions.py", tx == [str(pathlib.Path("btp_agent_snapshot/lib/write_functions.py"))], tx)
+check("Transaction( appears only in lib/write_functions.py", tx == [str(pathlib.Path("revit_extension/lib/write_functions.py"))], tx)
 
 imp = sorted(str(p.relative_to(SNAP)) for p in SNAP.rglob("*.py")
              if re.search(r"^\s*(import|from)\s+write_functions", p.read_text(encoding="utf-8-sig"), re.M))
