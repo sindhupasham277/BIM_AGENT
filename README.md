@@ -1,4 +1,6 @@
-# BTP BIM Agent
+# Agent NEXO
+
+*Previously named BTP Assistant.*
 
 **A conversational AI assistant that lives inside Autodesk Revit.** Ask about your model in plain language, get exact answers, and make changes safely: every change is previewed as a dry run and applied only after you confirm it.
 

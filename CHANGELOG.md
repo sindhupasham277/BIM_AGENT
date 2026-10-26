@@ -1,6 +1,14 @@
 # Changelog
 
-All notable releases of the BTP BIM Agent, newest first. Each version matches a Git tag.
+All notable releases of the Agent NEXO, newest first. Each version matches a Git tag.
+
+---
+
+## Agent NEXO naming (26 Oct 2026)
+
+- Window title **AI Agent**, header **Agent NEXO**, header badge **Agent** (fits on one line).
+- Minimised chip: badge **Agent**, hover label **Nexo**.
+- Fix: the panel button now shows a window created by an older script version plainly, instead of failing and leaving it invisible.
 
 ---
 

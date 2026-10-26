@@ -1,6 +1,6 @@
 # Architecture
 
-How the BTP BIM Agent is put together: the components, how a request flows through them, and where safety is enforced.
+How the Agent NEXO is put together: the components, how a request flows through them, and where safety is enforced.
 
 ## Components
 
