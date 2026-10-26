@@ -1,6 +1,6 @@
 ﻿# tests/check_outcomes.py  (result/reject handling; read-only against Revit)
 import sys, pathlib
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src" / "nexo"))
 import proposals
 
 results = []

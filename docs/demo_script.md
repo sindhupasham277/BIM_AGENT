@@ -8,7 +8,7 @@ Sources: eval/results/PHASE6_SUMMARY.md. Beats use only questions that worked in
 2. Open Revit, then A_working.rvt. Title bar must say A_working.rvt.
 3. Check http://127.0.0.1:48884/bim-brain/model_info returns A_working (pyRevit Routes server on).
 4. Start the brain server on a demo database, not an evaluation one:
-   $env:BTP_MEMORY_DB = "...\eval\results\demo_memory.db" ; python brain_server.py
+   $env:BTP_MEMORY_DB = "...\eval\results\demo_memory.db" ; python src/nexo/brain_server.py
 5. Open the chat panel. Have the backup video ready on another screen.
 
 ## Part 1: Model A (ASK and code-gen fallback)

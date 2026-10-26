@@ -1,0 +1,4 @@
+# Tests, evaluation scripts and figures.
+-r requirements.txt
+RestrictedPython>=7.0
+matplotlib>=3.8

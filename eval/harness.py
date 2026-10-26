@@ -38,7 +38,7 @@ def open_db(path):
     p = Path(path)
     if not p.exists():
         sys.exit("ERROR: eval DB not found: %s\n"
-                 "Start the brain server (python brain_server.py) from a window where "
+                 "Start the brain server (python src/nexo/brain_server.py) from a window where "
                  "BTP_MEMORY_DB is set to this path." % p)
     con = sqlite3.connect(str(p))
     con.execute("PRAGMA query_only=ON")

@@ -1,6 +1,6 @@
 # tests/check_memory.py  (temporary database; no Revit, no LLM)
 import sys, pathlib, tempfile, os, sqlite3
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src" / "nexo"))
 import memory
 tmp = os.path.join(tempfile.mkdtemp(), "t.db")
 memory.init(tmp)

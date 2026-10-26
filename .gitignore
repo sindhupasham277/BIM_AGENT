@@ -1,42 +1,63 @@
+# ---------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---------------------------------------------------------------
+# Secrets and local configuration (never commit)
+# ---------------------------------------------------------------
 .env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------
+# Editors and operating system
+# ---------------------------------------------------------------
 .vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
 
-# Revit files
+# ---------------------------------------------------------------
+# Revit models and backups (client data, never commit)
+# ---------------------------------------------------------------
 *.rvt
 *.rfa
 *_backup/
-
-# Agent memory
-agent_memory.db
-
-chat_crash_log.txt
-logs/
-schema_output.json
-step5_full_log.txt
-step5_results.csv
-*.rvt
-*.rfa
-*_backup/
-agent_memory.db
-
-agent_memory_dev_*.db
-*.db-wal
-*.db-shm
-
-agent_memory_dev_*.db
-*.db-wal
-*.db-shm
-
-# eval Revit models
 eval/models/*.rvt
 eval/models/*.rvt.*
 eval/models/working/
-eval/results/eval_memory.db*
-eval/results/*.db
 
-# local backups, logs and test databases
-*.bak_before_*
+# ---------------------------------------------------------------
+# Agent memory databases
+# ---------------------------------------------------------------
+agent_memory.db
+agent_memory_dev_*.db
+*.db-wal
+*.db-shm
+eval/results/*.db
+eval/results/eval_memory.db*
+
+# ---------------------------------------------------------------
+# Logs, run output and local backups
+# ---------------------------------------------------------------
+logs/
+*.log
 brain_log.txt
+chat_crash_log.txt
+step5_full_log.txt
+step5_results.csv
+schema_output.json
+*.bak_before_*
 New Text Document.txt

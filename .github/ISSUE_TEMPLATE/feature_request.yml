@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest a new capability for the agent or the panel.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do in Revit?
+      description: Describe the task in your own words, as you would ask the agent.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: How should the agent handle it?
+      description: What it should read or change, and what the preview card should show.
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety considerations
+      description: Anything that could delete, overwrite or break model elements, and how it should be guarded.

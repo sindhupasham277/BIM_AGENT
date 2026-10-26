@@ -1,124 +1,247 @@
 # Changelog
 
-All notable releases of the Agent NEXO, newest first. Each version matches a Git tag.
+All notable changes to Agent NEXO are documented here.
 
----
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Each version is a Git tag (`actions-vX.Y`); the research phases before the action agent are listed at the end.
 
-## Agent NEXO naming (26 Oct 2026)
+## [Unreleased]
 
-- Window title **AI Agent**, header **Agent NEXO**, header badge **Agent** (fits on one line).
-- Minimised chip: badge **Agent**, hover label **Nexo**.
-- Fix: the panel button now shows a window created by an older script version plainly, instead of failing and leaving it invisible.
+### Changed
+- Repository reorganised: the brain server lives in `src/nexo/`, the pyRevit extension in `revit_extension/` (previously `btp_agent_snapshot/`), and every test under `tests/`.
+- The brain server now starts with `python src/nexo/brain_server.py`.
+- README rewritten; `.gitignore` grouped and de-duplicated.
 
----
+### Added
+- `requirements.txt`, `requirements-dev.txt` and `.env.example`.
+- GitHub Actions workflow running the offline checks.
+- `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request templates, MIT `LICENSE`.
 
-## Panel experience (25 Oct 2026)
+## [actions-v3.24] - 2026-10-26
 
-### actions-v3.23: Smooth opening
-- The panel is painted while invisible, then fades in over 180 ms with a short upward slide; no half-painted white blocks.
-- Restoring from the launcher chip uses the same reveal.
+### Changed
+- Renamed to **Agent NEXO**: window title *AI Agent*, header *Agent NEXO*, header badge *Agent*, launcher chip label *Nexo*.
+- Documentation renamed to match.
+
+### Fixed
+- The panel button now shows a window created by an older script version instead of failing and leaving it invisible.
+
+## [actions-v3.23] - 2026-10-25
+
+### Added
+- Smooth opening: the panel is painted while invisible, then fades in over 180 ms with a short upward slide. Restoring from the launcher chip uses the same reveal.
 - Opening timeline logged to `%AppData%\BTP\open_log.txt`.
-- Known: the first open after Revit starts waits about 2 s before the fade.
 
-### actions-v3.22: Launcher chip
-- Minimising collapses the panel to a transparent WPF chip on the right edge: gradient squircle with the BTP monogram, highlight, shadow and accent glow.
-- Status dot (online, loading, unreachable), unread badge with a 3× pulse, hover pill.
-- Vertical drag with right-edge snap and remembered position; keyboard and screen-reader support; reduced-motion aware.
+### Known issues
+- The first open after Revit starts waits about 2 s before the fade.
 
-### actions-v3.21: Conversations
-- Sidebar: Chat and Recent.
-- New chat clears all state and starts a fresh brain session.
-- Recent conversations saved to `%AppData%\BTP\recent.json` (atomic, corrupt-file safe): search, open with every message and card restored (pending cards expired), delete, auto-save.
+## [actions-v3.22] - 2026-10-25
+
+### Added
+- Launcher chip: minimising collapses the panel to a transparent WPF chip on the right edge, with status dot (online, loading, unreachable), unread badge with pulse and hover pill.
+- Vertical drag with right-edge snap and remembered position; keyboard, screen-reader and reduced-motion support.
+
+## [actions-v3.21] - 2026-10-25
+
+### Added
+- Sidebar with **Chat** and **Recent**.
+- **New chat** clears all state and starts a fresh brain session.
+- Recent conversations saved to `%AppData%\BTP\recent.json` (atomic and corrupt-file safe): search, reopen with every message and card restored (pending cards expired), delete, auto-save.
 - Loading bubble with rotating status text, Stop, and a friendly error with Retry.
 
-### actions-v3.20: Revit-owned window
-- One chat window owned by Revit: no taskbar entry, no duplicates, stays in place when clicking in Revit.
+## [actions-v3.20] - 2026-10-25
 
-### actions-v3.19: Action Preview
-- Action Preview card for selections, with View in Revit.
+### Changed
+- A single chat window owned by Revit: no taskbar entry, no duplicates, stays in place when clicking in Revit.
+
+## [actions-v3.19] - 2026-10-25
+
+### Added
+- Action Preview card for selections, with **View in Revit**.
+
+### Fixed
 - When a level filter matches nothing, the agent retries with the model's real level names.
 
-### actions-v3.18: Panel redesign
-- Dark theme, sidebar, header with status, welcome card with six quick actions, themed bubbles.
-- Proposed Change card with Apply, Cancel and Show Details.
-- Palette in `theme.json`; the agent knows 19 more query categories.
+## [actions-v3.18] - 2026-10-25
 
----
+### Added
+- Redesigned panel: dark theme, sidebar, status header, welcome card with six quick actions, themed bubbles.
+- Proposed Change card with **Apply**, **Cancel** and **Show Details**; palette in `theme.json`.
+- The agent knows the 19 new query categories.
 
-## Advanced modelling and scale (24 Oct 2026)
+## [actions-v3.17] - 2026-10-24
 
-### actions-v3.17: Large-model verification
-- Model-independent check 18/18 on Autodesk *Snowdon Towers* (1,241 walls, 18 levels).
-- Query engine gains Floors and 18 more categories.
-- Clash check speed-up with identical results.
+### Added
+- Query engine covers Floors and 18 more model categories; errors are no longer hidden as zero counts.
+- Model-independent check: 18/18 on Autodesk *Snowdon Towers* (1,241 walls, 18 levels).
 
-### actions-v3.16: Reviewability
-- Big cards shown as a grouped summary; stairs alone on a card (one Ctrl+Z); clear error replies.
+### Changed
+- Clash check speed-up with identical results (102 s to about 26 s for walls × floors).
 
-### actions-v3.15: Raised limits
-- 2,000 new / 5,000 changed elements per card, deletions up to 1,000, coordinates ±30 km.
+## [actions-v3.16] - 2026-10-24
 
-### actions-v3.14.1: Honesty rules
-- No delete-and-recreate suggestions; alternatives only if non-destructive and correctly named.
+### Changed
+- Big cards are shown as a grouped summary; stairs are alone on a card (one Ctrl+Z).
+- Clear error replies for Revit not responding, no credits and rate limits.
 
-### actions-v3.14: Exports, deletion, slopes, curtain walls, stairs
-- Exports: PDF, DWG, PNG/JPG of views and sheets; IFC. NWC refused when the exporter is absent.
-- Safe deletion of levels, grids, views, sheets and types.
+## [actions-v3.15] - 2026-10-24
+
+### Changed
+- Raised limits: 2,000 new and 5,000 changed elements per card, deletions up to 1,000 (5,000 with dependents), coordinates ±30 km, action time 120 s.
+
+## [actions-v3.14.1] - 2026-10-24
+
+### Changed
+- Honesty rules: no delete-and-recreate suggestions; alternatives offered only when non-destructive and correctly named.
+
+## [actions-v3.14] - 2026-10-24
+
+### Added
+- Exports: PDF, DWG, PNG and JPG of views and sheets; IFC of the model. NWC is refused when the exporter is absent.
+- Safe deletion of levels, grids, views, sheets and types, with dependents listed first.
 - Sloped floors and ceilings; curtain grid lines, mullions and spacing; railings; straight stairs.
 
----
+## [actions-v3.13] - 2026-10-23
 
-## Documentation and modelling (22-23 Oct 2026)
+### Added
+- Change wall length (protects hosted doors and windows), ceilings by rectangle, groups (create, place copy).
 
-| Version | Added |
-|---|---|
-| **v3.13** | Change wall length (protects hosted doors/windows), ceilings by rectangle, groups |
-| **v3.12** | Wall openings and shafts, beams and braces, rectangular roofs |
-| **v3.11.1** | Export results labelled in the Confirm message |
-| **v3.11** | PDF export of sheets (written only after Confirm, never overwriting) |
-| **v3.10** | Rooms: list, place, renumber, tag |
-| **v3.9** | Model health report: warnings, clashes, room problems, duplicate marks |
-| **v3.8** | Views and sheet sets: plans, sections, 3D, duplicates, templates, scale |
-| **v3.7.1** | Card replies always state that nothing has changed until Confirm |
-| **v3.7** | Complete schedules: edit fields, sort, filters, place on sheet |
-| **v3.6** | Schedules (create, read) and the direct regression suite |
+## [actions-v3.12] - 2026-10-23
 
----
+### Added
+- Wall openings and shafts, beams and braces, rectangular roofs (flat or hip, with overhang).
 
-## Capability families and hardening (19-22 Oct 2026)
+## [actions-v3.11.1] - 2026-10-23
 
-| Version | Added |
-|---|---|
-| **v3.5** | Current selection, clear AI-service errors, Structural Columns alias (136/136 tests) |
-| **v3.4** | Rules C24-C32 (136/136 tests) |
-| **v3.3.1** | Wording rule for parameter vs position |
-| **v3.3** | Undo = Ctrl+Z; only the newest card can be confirmed |
-| **v3.2** | Revit join records, non-model labelling, limits first |
-| **v3.1** | Levels queries, choice parameters as text |
-| **v3** | Seven capability families: rotate/mirror, any family, levels/grids, floors/ceilings, views, joins, documentation |
-| **v2** | Per-request limits, one proposal per message, capability inventory |
+### Changed
+- Export results are labelled *Export:* in the Confirm message.
 
----
+## [actions-v3.11] - 2026-10-23
 
-## Action agent (18 Oct 2026)
+### Added
+- PDF export of sheets: written only after Confirm, to an approved folder, never overwriting.
 
-| Version | Added |
-|---|---|
-| **v1.1** | Revit warnings handled in the write path; select-then-act verified |
-| **v1** | Select, set parameters, create walls, change type, move, copy, delete, place doors/windows; dry run, Confirm, verify, undo (milestones M1-M6) |
+## [actions-v3.10] - 2026-10-22
 
----
+### Added
+- Rooms: list, place by point, place in empty enclosed areas, renumber, tag.
 
-## Research phases (Sep-Oct 2026)
+## [actions-v3.9] - 2026-10-22
+
+### Added
+- Model health report (read-only): Revit warnings grouped, clashes between categories, room problems, duplicate marks.
+
+## [actions-v3.8] - 2026-10-22
+
+### Added
+- Views and sheet sets: plans, sections, 3D, duplicates, templates, scale, placing on sheets.
+
+## [actions-v3.7.1] - 2026-10-22
+
+### Changed
+- Replies with a card always state that nothing has changed until Confirm.
+
+## [actions-v3.7] - 2026-10-22
+
+### Added
+- Complete schedules: edit fields, sort, filters, place on sheet.
+
+## [actions-v3.6] - 2026-10-22
+
+### Added
+- Schedules: list, read, create with fields, sort and filters.
+- Direct regression suite (no AI credits).
+
+## [actions-v3.5] - 2026-10-22
+
+### Added
+- Current selection as a tool; clear AI-service errors; Structural Columns alias. 136/136 tests.
+
+## [actions-v3.4] - 2026-10-22
+
+### Changed
+- Rules C24-C32. 136/136 tests.
+
+## [actions-v3.3.1] - 2026-10-21
+
+### Changed
+- Wording rule for parameter versus position.
+
+## [actions-v3.3] - 2026-10-20
+
+### Added
+- Undo is a single Ctrl+Z; only the newest card can be confirmed.
+
+## [actions-v3.2] - 2026-10-20
+
+### Changed
+- Revit join records, non-model results always labelled, limits stated first.
+
+## [actions-v3.1] - 2026-10-20
+
+### Added
+- Levels queries; choice parameters shown as text.
+
+## [actions-v3] - 2026-10-20
+
+### Added
+- Seven capability families: rotate and mirror, place any family, levels and grids, floors and ceilings, view actions, joins, documentation.
+
+## [actions-v2] - 2026-10-19
+
+### Added
+- Per-request limits, one proposal per message, capability inventory, validator fixes.
+
+## [actions-v1.1] - 2026-10-18
+
+### Changed
+- Revit warnings handled in the write path (accepted and reported; errors still roll back). Select-then-act verified.
+
+## [actions-v1] - 2026-10-18
+
+### Added
+- Action agent: select, set parameters, create walls, change type, move, copy, delete, place doors and windows, with dry run, Confirm, verify and undo.
+
+## Research phases
 
 | Tag | Date | Milestone |
 |---|---|---|
-| `phase7-complete` | 18 Oct | Demo and report finished |
-| `phase7-draft` | 18 Oct | Demo script, rehearsals, videos, architecture diagram, report chapters 2-8 |
-| `phase6-complete` | 17 Oct | Evaluation complete |
-| `phase6-freeze` | 12 Oct | Frozen state for evaluation runs |
-| `phase5-complete` | 9 Oct | Frozen system for Phase 6 evaluation |
-| `phase5-step7-done` | 8 Oct | SQLite memory and change log |
-| `phase5-step6-done` | 7 Oct | Sandbox firewall and safety evidence |
-| `phase5-step5-done` | 6 Oct | Confirm, reject and stale verified live |
-| `phase4-done` | 30 Sep | Phases 1-4 frozen before the write path |
+| [`phase7-complete`](https://github.com/sindhupasham277/BIM_AGENT/releases/tag/phase7-complete) | 2026-10-18 | Demo and report finished |
+| [`phase7-draft`](https://github.com/sindhupasham277/BIM_AGENT/releases/tag/phase7-draft) | 2026-10-18 | Demo script, rehearsals, videos, architecture diagram, report chapters 2-8 |
+| [`phase6-complete`](https://github.com/sindhupasham277/BIM_AGENT/releases/tag/phase6-complete) | 2026-10-17 | Evaluation complete |
+| [`phase6-freeze`](https://github.com/sindhupasham277/BIM_AGENT/releases/tag/phase6-freeze) | 2026-10-12 | Frozen state for evaluation runs |
+| [`phase5-complete`](https://github.com/sindhupasham277/BIM_AGENT/releases/tag/phase5-complete) | 2026-10-09 | Safe write path frozen for evaluation |
+| *(untagged)* | 2026-09 | Phases 1-4: read-only assistant, query engine, sandboxed code generation, LLM tool calling |
+
+[Unreleased]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.24...HEAD
+[actions-v3.24]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.23...actions-v3.24
+[actions-v3.23]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.22...actions-v3.23
+[actions-v3.22]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.21...actions-v3.22
+[actions-v3.21]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.20...actions-v3.21
+[actions-v3.20]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.19...actions-v3.20
+[actions-v3.19]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.18...actions-v3.19
+[actions-v3.18]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.17...actions-v3.18
+[actions-v3.17]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.16...actions-v3.17
+[actions-v3.16]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.15...actions-v3.16
+[actions-v3.15]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.14.1...actions-v3.15
+[actions-v3.14.1]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.14...actions-v3.14.1
+[actions-v3.14]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.13...actions-v3.14
+[actions-v3.13]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.12...actions-v3.13
+[actions-v3.12]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.11.1...actions-v3.12
+[actions-v3.11.1]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.11...actions-v3.11.1
+[actions-v3.11]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.10...actions-v3.11
+[actions-v3.10]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.9...actions-v3.10
+[actions-v3.9]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.8...actions-v3.9
+[actions-v3.8]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.7.1...actions-v3.8
+[actions-v3.7.1]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.7...actions-v3.7.1
+[actions-v3.7]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.6...actions-v3.7
+[actions-v3.6]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.5...actions-v3.6
+[actions-v3.5]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.4...actions-v3.5
+[actions-v3.4]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.3.1...actions-v3.4
+[actions-v3.3.1]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.3...actions-v3.3.1
+[actions-v3.3]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.2...actions-v3.3
+[actions-v3.2]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.1...actions-v3.2
+[actions-v3.1]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3...actions-v3.1
+[actions-v3]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v2...actions-v3
+[actions-v2]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v1.1...actions-v2
+[actions-v1.1]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v1...actions-v1.1
+[actions-v1]: https://github.com/sindhupasham277/BIM_AGENT/compare/phase7-complete...actions-v1

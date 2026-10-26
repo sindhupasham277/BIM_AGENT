@@ -16,7 +16,7 @@ MANIFEST = ROOT / "eval" / "audit" / "injected_issues.json"
 
 
 def find_base():
-    txt = (ROOT / "proposals.py").read_text(encoding="utf-8", errors="replace")
+    txt = (ROOT / "src" / "nexo" / "proposals.py").read_text(encoding="utf-8", errors="replace")
     m = re.search(r"REVIT_BASE\s*=\s*[\"']([^\"']+)[\"']", txt)
     return (m.group(1) if m else "http://127.0.0.1:48884/bim-brain").rstrip("/")
 

@@ -2,7 +2,7 @@
 import os, sys, pathlib
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 os.chdir(ROOT)
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "src" / "nexo"))
 import brain_server as b
 import proposals
 

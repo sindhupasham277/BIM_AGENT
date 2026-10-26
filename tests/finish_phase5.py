@@ -4,7 +4,7 @@ import requests
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 os.chdir(str(ROOT))
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "src" / "nexo"))
 os.environ.pop("BTP_MEMORY_DB", None)
 REV = "http://127.0.0.1:48884/bim-brain"
 LINES, RES = [], []
