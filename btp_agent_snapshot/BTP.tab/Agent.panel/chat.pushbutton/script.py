@@ -134,7 +134,7 @@ class ChatForm(Form):
 
         Form.__init__(self)
 
-        self.Text = "BTP Assistant"
+        self.Text = "AI Agent"
 
         self.ClientSize = Size(500, 520)
 
@@ -1018,15 +1018,16 @@ class ChatForm(Form):
             if c.Parent is not hd:
                 hd.Controls.Add(c)
         hd.BackColor = self.C_SIDE
-        self.logo.Text = "BTP"
-        self.logo.Font = Font("Segoe UI", 10.0, Enum.ToObject(FontStyle, 1))
+        self.logo.Text = "Agent"
+        self.logo.Font = Font("Segoe UI", 7.0, Enum.ToObject(FontStyle, 1))
+        self.logo.Padding = Padding(0)
         self.logo.ForeColor = self.C_BG
         self.logo.BackColor = self.C_TEALD
         self.logo.TextAlign = ContentAlignment.MiddleCenter
         self.logo.Location = Point(16, 14)
         self.logo.Size = Size(42, 42)
         self._round(self.logo, 12)
-        self.title_label.Text = "BTP Assistant"
+        self.title_label.Text = "Agent NEXO"
         self.title_label.Font = Font("Segoe UI", 13.0, Enum.ToObject(FontStyle, 1))
         self.title_label.ForeColor = self.C_TEXT
         self.title_label.BackColor = Color.Transparent
@@ -1682,7 +1683,7 @@ class ChatForm(Form):
             VerticalAlignment="Center" Opacity="0" RenderTransformOrigin="1,0.5" IsHitTestVisible="False">
       <Border.RenderTransform><ScaleTransform x:Name="pillScale" ScaleX="0" ScaleY="1"/></Border.RenderTransform>
       <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-        <TextBlock x:Name="pillText" Text="BTP Assistant" FontFamily="Segoe UI" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        <TextBlock x:Name="pillText" Text="Nexo" FontFamily="Segoe UI" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
         <TextBlock x:Name="pillChev" Text="&#x2039;" Margin="8,0,0,1" FontSize="15" VerticalAlignment="Center"/>
       </StackPanel>
     </Border>
@@ -1695,7 +1696,7 @@ class ChatForm(Form):
       <Border x:Name="glow" CornerRadius="18"><Border.Effect><DropShadowEffect x:Name="glowFx" ShadowDepth="0" BlurRadius="22" Opacity="0.45"/></Border.Effect></Border>
       <Border x:Name="face" CornerRadius="18"><Border.Effect><DropShadowEffect ShadowDepth="3" BlurRadius="14" Opacity="0.45" Color="Black"/></Border.Effect></Border>
       <Border x:Name="hl" CornerRadius="18" BorderThickness="1" IsHitTestVisible="False"/>
-      <TextBlock x:Name="logo" Text="BTP" FontFamily="Segoe UI" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center"
+      <TextBlock x:Name="logo" Text="Agent" FontFamily="Segoe UI" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center"
                  VerticalAlignment="Center" TextOptions.TextFormattingMode="Display" IsHitTestVisible="False"/>
       <Border x:Name="focusRing" CornerRadius="21" BorderThickness="2" Margin="-4" Visibility="Collapsed" IsHitTestVisible="False"/>
       <Ellipse x:Name="dot" Width="13" Height="13" StrokeThickness="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-2,-2" IsHitTestVisible="False"/>
@@ -3927,10 +3928,17 @@ if __name__ == "__main__":
         if _existing.Visible:
             _existing.Hide()
         else:
-            _existing.Opacity = 0.0   # open fully painted, then fade in
-            _existing.Show()
-            _existing.Activate()
-            _existing._reveal()
+            _rev = getattr(_existing, "_reveal", None)
+            if _rev is not None:
+                _existing.Opacity = 0.0   # open fully painted, then fade in
+                _existing.Show()
+                _existing.Activate()
+                _rev()
+            else:
+                # window created by an older version of this script (code changed while open): show it plainly
+                _existing.Opacity = 1.0
+                _existing.Show()
+                _existing.Activate()
     else:
         _owner = NativeWindow()
         _owner.AssignHandle(__revit__.MainWindowHandle)
