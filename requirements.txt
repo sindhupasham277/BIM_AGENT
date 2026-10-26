@@ -1,0 +1,8 @@
+# Brain server runtime (Python 3.10+).
+# Ranges are the versions this code is written against. For an exactly
+# reproducible setup, replace them with the output of `pip freeze`.
+fastapi>=0.110,<1.0
+uvicorn>=0.29,<1.0
+pydantic>=2.0,<3.0
+openai>=1.40,<3.0
+requests>=2.31,<3.0
