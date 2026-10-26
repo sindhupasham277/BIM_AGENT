@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in the agent or the panel does not work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please do **not** paste API keys, client model files or private project data.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you asked the agent, what it replied, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a model with ...
+        2. Ask "..."
+        3. Click Apply
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Release tag or commit, e.g. actions-v3.24
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: Revit version, pyRevit version, Python version of the brain server
+      placeholder: Revit 2027, pyRevit 6.5.4, Python 3.11
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error text or logs
+      description: The panel's error message, or the brain server console output (remove any keys or paths you do not want to share).
+      render: text
