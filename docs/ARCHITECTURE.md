@@ -7,7 +7,7 @@ How the Agent NEXO is put together: the components, how a request flows through 
 ```mermaid
 flowchart TB
     subgraph Revit["Autodesk Revit 2027 (pyRevit extension)"]
-        PANEL["Chat panel<br/>chat.pushbutton/script.py<br/>(Windows Forms, IronPython)"]
+        PANEL["Chat panel<br/>chat.pushbutton/script.py<br/>(Windows Forms, CPython)"]
         CHIP["Launcher chip<br/>(WPF, transparent)"]
         ROUTES["Bridge routes<br/>routes.py, port 48884"]
         RO["Read path<br/>revit_ro.py, query engine,<br/>sandbox_exec.py"]
@@ -15,7 +15,7 @@ flowchart TB
         HC["Model health<br/>lib/health_checks.py"]
     end
     subgraph Brain["Brain server (Python, port 8000)"]
-        API["brain_server.py<br/>/chat, /proposals/*"]
+        API["src/nexo/brain_server.py<br/>/chat, /proposals/*"]
         PROP["proposals.py<br/>rules, validation"]
         MEM[("memory.py<br/>SQLite")]
         LLM["LLM provider<br/>llm_config.py"]
