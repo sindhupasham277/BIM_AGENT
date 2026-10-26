@@ -36,14 +36,14 @@ routes = (PANEL / "routes.py").read_text(encoding="utf-8-sig")
 check("routes.py never references apply/write layer", not re.search(r"apply_fix|write_functions|Transaction", routes))
 check("no /apply route", "/apply" not in routes)
 
-brain = (ROOT / "proposals.py").read_text(encoding="utf-8-sig") + (ROOT / "brain_server.py").read_text(encoding="utf-8-sig")
+brain = (ROOT / "src" / "nexo" / "proposals.py").read_text(encoding="utf-8-sig") + (ROOT / "src" / "nexo" / "brain_server.py").read_text(encoding="utf-8-sig")
 check("brain never references apply_fix/write_functions/Transaction", not re.search(r"apply_fix|write_functions|Transaction\(", brain))
 
 panel = (PANEL / "chat.pushbutton" / "script.py").read_text(encoding="utf-8-sig")
 check("panel never references write_functions/apply_fix", not re.search(r"write_functions|apply_fix", panel))
 check("apply_event.Raise only in on_confirm", len(re.findall(r'_PANEL\["event"\]\.Raise', panel)) == 1)
 
-sys.path.insert(0, str(ROOT)); import os; os.chdir(ROOT)
+sys.path.insert(0, str(ROOT / "src" / "nexo")); import os; os.chdir(ROOT)
 import brain_server as b
 for bad in ("delete_elements", "apply_fix", "set_parameter"):
     r = b.dispatch_tool(bad, {}, {"messages": [], "seen_ids": set(), "pending": {}, "outbox": [], "schema": None})

@@ -7,7 +7,7 @@ import pathlib
 import datetime
 from contextlib import closing
 
-DB = pathlib.Path(os.environ.get("BTP_MEMORY_DB") or (pathlib.Path(__file__).resolve().parent / "agent_memory.db"))
+DB = pathlib.Path(os.environ.get("BTP_MEMORY_DB") or (pathlib.Path(__file__).resolve().parents[2] / "agent_memory.db"))
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS interactions (

@@ -4,7 +4,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 tmp = os.path.join(tempfile.mkdtemp(), "chat.db")
 os.environ["BTP_MEMORY_DB"] = tmp
 os.chdir(ROOT)
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "src" / "nexo"))
 import memory
 memory.init()
 import brain_server as b

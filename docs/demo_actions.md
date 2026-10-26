@@ -11,7 +11,7 @@ Model_A_clean.rvt. Expected durations are from the evaluation run (prompt to car
 4. Check the bridge: `Invoke-RestMethod http://127.0.0.1:48884/bim-brain/model_info -TimeoutSec 30` prints A_working.
    If it cannot connect: close Revit, confirm 0 processes, start again (Routes server sometimes fails after a force-kill).
 5. Start the brain on a demo log:
-   `$env:BTP_MEMORY_DB = "<repo>\eval\results\demo_actions_memory.db"; python brain_server.py`
+   `$env:BTP_MEMORY_DB = "<repo>\eval\results\demo_actions_memory.db"; python src/nexo/brain_server.py`
 6. Open the chat panel and send one warm-up question (not part of the demo): `How many walls are there?`
 
 ## Beats

@@ -43,7 +43,7 @@ client = OpenAI(api_key=os.environ["BTP_API"])
 # Load tool schemas
 # ============================================================
 
-with open("tool_schemas.json", "r") as f:
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "tool_schemas.json"), "r") as f:
     TOOL_SCHEMAS = json.load(f)
 
 
