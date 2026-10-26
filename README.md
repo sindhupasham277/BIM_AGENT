@@ -15,10 +15,7 @@ An AI agent that lives inside Autodesk Revit: plain-language questions get exact
 
 </div>
 
-<!--
-  Screenshot: save a capture of the panel as docs/images/panel.png and remove this comment's markers.
-  <p align="center"><img src="docs/images/panel.png" alt="Agent NEXO panel inside Revit" width="820"></p>
--->
+<p align="center"><img src="docs/images/panel.png" alt="Agent NEXO panel inside Revit" width="820"></p>
 
 ---
 
