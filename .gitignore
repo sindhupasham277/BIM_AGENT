@@ -35,3 +35,8 @@ eval/models/*.rvt.*
 eval/models/working/
 eval/results/eval_memory.db*
 eval/results/*.db
+
+# local backups, logs and test databases
+*.bak_before_*
+brain_log.txt
+New Text Document.txt
