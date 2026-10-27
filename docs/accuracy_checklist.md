@@ -16,9 +16,13 @@ To find the true value, click the element and read **Properties**, or use a Revi
 | 6 | Select some doors, ask *set the comments of the selected doors to TEST* | Show a card with one line per door, new value TEST | Click **Apply**: each door's Comments shows TEST. Then Ctrl+Z. | |
 | 7 | Ask *how many doors have no fire rating* | Give the exact number | Door schedule filtered on an empty Fire Rating | |
 | 8 | Ask *set the Mark of wall w-01 to w-01* | Say it is already set, with no card | Properties: Mark | |
-| 9 | Select a wall whose top is attached to a roof, ask *make it 5 m high* | Refuse with the reason (top attached) and the next step (Detach Top/Base), with no card | Properties: Top is Attached = Yes | |
-| 10 | Detach that wall's top in Revit, then ask again *make it 5 m high* | Now show a card. It must notice the change without being told. | Properties: Top is Attached = No | |
+| 9 | Select a wall whose top is attached to a roof, ask *make it 5 m high* | Say the top is attached and ask whether to detach it, with no card | Properties: Top is Attached = Yes | |
+| 10 | Answer *yes, detach it* | Show one card: Top is Attached Yes → No and Unconnected Height → 5000 | Click **Apply**: Top is Attached = No and the wall is visibly 5 m in 3D. Then Ctrl+Z. | |
+| 10b | Detach a wall top yourself in Revit (Modify &#124; Walls > Detach Top/Base), **don't save**, then ask *is the selected wall's top attached* | Answer **No** straight away, with no save needed | Properties: Top is Attached = No | |
+| 10c | Change a wall's Comments in Properties and press **Enter** (**don't save**), then ask *what are the comments of the selected wall* | Give the new text | Properties: Comments | |
 | 11 | Ask *what did this building cost to build* | Say it cannot answer, with no number and no card | — | |
 | 12 | Clear the selection, ask *make it bigger* | Ask one short question, with no card | — | |
+
+**Note:** an edit in the Properties palette is part of the model only after **Enter** or **Apply**, and sketch edits only after **Finish**. Revit's own rule, not the agent's.
 
 **Pass rule:** every answer matches the true value, no card appears where none is expected, and nothing changes in the model unless you clicked Apply.

@@ -95,8 +95,21 @@ if attached:
     w = attached[0]
     r = P("revit_rw.set_param(%d, 'Top Constraint', 'none')\nrevit_rw.set_param(%d, 'Unconnected Height', 5.0)" % (w[0], w[0]))
     check("attached top is refused with the reason (wall %s)" % w[1], r.get("status") != "ok" and "attached" in str(r.get("message")), r.get("message"))
+    r = P("result = revit_rw.get_param(%d, 'Top is Attached')" % w[0])
+    check("yes/no is read as a number (1 = attached)", r.get("result") == 1, repr(r.get("result")))
+    r = P("revit_rw.detach_wall(%d, 'top')" % w[0])
+    ch = [(c.get("param_name"), c.get("old"), c.get("new")) for c in (r.get("changes") or [])]
+    check("detach top: card shows Top is Attached Yes -> No", r.get("status") == "ok" and any(c[0] == "Top is Attached" and c[1] != c[2] for c in ch), r.get("message") or ch)
+    r = P("revit_rw.detach_wall(%d, 'top')\nrevit_rw.set_param(%d, 'Top Constraint', 'none')\nrevit_rw.set_param(%d, 'Unconnected Height', 5.0)" % (w[0], w[0], w[0]))
+    uh = [c for c in (r.get("changes") or []) if c.get("param_name") == "Unconnected Height"]
+    check("detach + 5 m in one card", r.get("status") == "ok" and len(uh) == 1 and bool(num(uh[0]["old"])) and abs(num(uh[0]["new"]) / num(uh[0]["old"]) - 5.0 / w[4]) < 1e-3, uh and "%s -> %s" % (uh[0]["old"], uh[0]["new"]) or r.get("message"))
 else:
     check("attached top is refused with the reason", None, "no wall with an attached top in this model")
+if tied:
+    r = P("result = revit_rw.get_param(%d, 'Top is Attached')" % tied[0][0])
+    check("yes/no is read as a number (0 = not attached)", r.get("result") == 0, repr(r.get("result")))
+    r = P("revit_rw.detach_wall(%d, 'top')" % tied[0][0])
+    check("detach on a wall that is not attached is refused", r.get("status") != "ok" and "not attached" in str(r.get("message")), r.get("message"))
 check("model unchanged after the dry runs", state() == before, "%s -> %s" % (before, state()))
 
 # ---------------------------------------------------------------- part 2: the agent (uses AI credits)
