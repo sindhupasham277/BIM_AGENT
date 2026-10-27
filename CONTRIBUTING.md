@@ -55,8 +55,10 @@ Thanks for your interest. This project changes real building models, so every co
 | Memory database | Python only | `python tests/check_memory.py` |
 | Direct regression suite | Revit with a model open | `python eval/direct_regression.py` |
 | Model-independent check | Revit with any model open | `python eval/model_check.py` |
+| Live-model test | Python only | `python tests/check_live_data.py` |
+| Accuracy check | Revit with a model open | `python eval/accuracy_check.py` |
 
-The first two run automatically on every push in GitHub Actions. Run the Revit checks before opening a pull request that touches the extension or the brain.
+The first two and the live-model test run automatically on every push in GitHub Actions. Run the Revit checks before opening a pull request that touches the extension or the brain.
 
 ## Reporting problems
 

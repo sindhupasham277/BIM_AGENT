@@ -6,15 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Changed
-- Repository reorganised: the brain server lives in `src/nexo/`, the pyRevit extension in `revit_extension/` (previously `btp_agent_snapshot/`), and every test under `tests/`.
-- The brain server now starts with `python src/nexo/brain_server.py`.
-- README rewritten; `.gitignore` grouped and de-duplicated.
+## [actions-v3.25] - 2026-10-27
+
+### Fixed
+- The agent answered from chat memory instead of reading the model: every turn now starts with a tool call, so answers come from the live, unsaved model.
+- A plain number such as 3.5 was written as 3.5 mm in a millimetre project; it now means 3.5 m, and reading a length returns metres.
+- Both model readers return the same value types (yes/no as 0 or 1, lengths in metres); a text-vs-number mismatch made actions skip walls that had changed.
+- Clear, true reasons when a change is not possible (a height locked by a level, a wall top attached to a roof), instead of a vague error or an invented reason.
+- Walls with an attached top no longer get a height change that has no visible effect.
 
 ### Added
-- `requirements.txt`, `requirements-dev.txt` and `.env.example`.
-- GitHub Actions workflow running the offline checks.
-- `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request templates, MIT `LICENSE`.
+- Detach a wall's top or base through a card (Revit's Detach Top/Base), shown as *Top is Attached Yes -> No* and applied only after **Apply**.
+- After **Apply**, every changed value is read back from the model; anything Revit did not keep is reported.
+- `eval/accuracy_check.py` (compares the agent with values read straight from Revit), `tests/check_live_data.py` (runs in CI) and `docs/accuracy_checklist.md`.
+- README screenshot of the panel.
+
+### Changed
+- Short, plain replies: answers first, no notes or extra offers, no "BTP Assistant:" prefix; card replies end with *Nothing changes until you click Apply.*
+- Repository reorganised: the brain server lives in `src/nexo/` (start it with `python src/nexo/brain_server.py`), the pyRevit extension in `revit_extension/` (previously `btp_agent_snapshot/`), and every test under `tests/`.
+- README rewritten; `.gitignore` grouped and de-duplicated; requirements pinned to the tested versions.
+- Added `requirements.txt`, `requirements-dev.txt`, `.env.example`, a GitHub Actions workflow, `CONTRIBUTING.md`, `SECURITY.md`, issue and pull request templates, and the MIT `LICENSE`.
 
 ## [actions-v3.24] - 2026-10-26
 
@@ -212,7 +223,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 | [`phase5-complete`](https://github.com/sindhupasham277/BIM_AGENT/releases/tag/phase5-complete) | 2026-10-09 | Safe write path frozen for evaluation |
 | *(untagged)* | 2026-09 | Phases 1-4: read-only assistant, query engine, sandboxed code generation, LLM tool calling |
 
-[Unreleased]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.24...HEAD
+[Unreleased]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.25...HEAD
+[actions-v3.25]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.24...actions-v3.25
 [actions-v3.24]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.23...actions-v3.24
 [actions-v3.23]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.22...actions-v3.23
 [actions-v3.22]: https://github.com/sindhupasham277/BIM_AGENT/compare/actions-v3.21...actions-v3.22

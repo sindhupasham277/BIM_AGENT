@@ -15,7 +15,11 @@ An AI agent that lives inside Autodesk Revit: plain-language questions get exact
 
 </div>
 
-<p align="center"><img src="docs/images/panel.png" alt="Agent NEXO panel inside Revit" width="820"></p>
+<p align="center">
+  <img src="docs/images/panel.png" alt="Agent NEXO previewing a change: two walls to 5 m, shown on a card before anything changes" width="49%">
+  <img src="docs/images/panel_applied.png" alt="After Apply: the two walls are 5 m high in the Revit model" width="49%">
+</p>
+<p align="center"><sub><b>Left:</b> the agent previews the change on a card, and nothing changes yet. <b>Right:</b> after <b>Apply</b>, the walls are 5 m high in Revit.</sub></p>
 
 ---
 
@@ -172,8 +176,10 @@ BIM_AGENT/
 | Memory database | Python | `python tests\check_memory.py` |
 | Direct regression suite (35 checks, no AI credits) | Revit with a model open | `python eval\direct_regression.py` |
 | Model-independent dry-run check | Revit with any model open | `python eval\model_check.py` |
+| Every chat turn reads the live model | Python | `python tests\check_live_data.py` |
+| Accuracy check against Revit (`--agent` also asks the agent; uses AI credits) | Revit with a model open | `python eval\accuracy_check.py` |
 
-The offline checks run on every push in [GitHub Actions](.github/workflows/tests.yml). AI test sets and their scoring are in `eval/actions/`.
+The offline checks run on every push in [GitHub Actions](.github/workflows/tests.yml). AI test sets and their scoring are in `eval/actions/`; a manual checklist is in [`docs/accuracy_checklist.md`](docs/accuracy_checklist.md).
 
 ## Results
 
