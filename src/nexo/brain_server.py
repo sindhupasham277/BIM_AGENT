@@ -87,7 +87,7 @@ _sessions = {}
 
 # C37: whenever a reply comes with a card, state the truth in code (the AI once said 'Change applied' for a pending card)
 import functools as _functools
-C37_NOTE = "Nothing has been changed yet: review the card and click Confirm to apply it, or Reject."
+C37_NOTE = "Nothing changes until you click Apply."
 def _c37_card_note(fn):
     @_functools.wraps(fn)
     def wrapper(*args, **kwargs):
@@ -688,14 +688,16 @@ def handle_message(payload: MessagePayload):
         # Existing text/tool path
         # ----------------------------------------------------
 
+        _first_round = True   # every turn starts with a tool call, so answers come from the live model
         while True:
 
             response = client.chat.completions.create(
                 model=LLM_MODEL,
                 messages=messages,
                 tools=OPENAI_TOOLS,
-                tool_choice="auto"
+                tool_choice=("required" if _first_round else "auto")
             )
+            _first_round = False
 
             message = response.choices[0].message
 

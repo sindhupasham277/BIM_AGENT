@@ -5,6 +5,14 @@ MAX_ELEMENTS = 5000
 SUPPORTED = (StorageType.String, StorageType.Integer, StorageType.Double)
 
 
+def _is_length(p):
+    try:
+        from Autodesk.Revit.DB import SpecTypeId
+        return p.StorageType == StorageType.Double and p.Definition.GetDataType().Equals(SpecTypeId.Length)
+    except Exception:
+        return False
+
+
 def make_id(n):
     """int/long -> ElementId. Revit 2024+ needs a 64-bit value."""
     try:
@@ -76,6 +84,9 @@ def plan_set_parameter(doc, category, element_ids, param_name, value):
         p, scope, owner = find_param(doc, el, param_name)
         if p is None or p.IsReadOnly or p.StorageType not in SUPPORTED:
             plan["errors"].append("id %s: '%s' missing, read-only or unsupported" % (raw, param_name))
+            continue
+        if _is_length(p):   # lengths go through propose_action (metres, dry run, wall checks)
+            plan["errors"].append("id %s: '%s' is a length; use propose_action with revit_rw.set_param (value in metres) instead" % (raw, param_name))
             continue
         tid = id_int(owner.Id)
         if tid in seen:
