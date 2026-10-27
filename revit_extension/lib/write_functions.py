@@ -95,7 +95,7 @@ def _set_parameter(doc, args, expected_old):
         if t.HasStarted():
             t.RollBack()
         return {"status": "failed", "reason": str(ex)}
-    return {"status": "applied", "changed": plan["items"], "warnings": list(_wh.warnings)}
+    return _verified(doc, {"status": "applied", "changed": plan["items"], "warnings": list(_wh.warnings)}, args["param_name"])
 
 
 def _action_modules():
@@ -130,6 +130,38 @@ def preview_action(doc, code):
             checks.append(info["summary"])
         out["result"] = {"snippet_result": out.get("result"), "stairs_check": checks}
     return out
+
+
+def _not_kept(doc, changes, param_name=None):
+    """After the commit: parameter changes whose value still equals the old value (Revit did not keep them)."""
+    bad = []
+    for c in changes:
+        name = c.get("param_name") or param_name
+        if c.get("scope") not in ("instance", "type") or not name:
+            continue
+        try:
+            el = doc.GetElement(fix_plan.make_id(c["target_id"]))
+            p = el.LookupParameter(name) if el is not None else None
+            if p is None:
+                continue
+            now = p.AsValueString() or p.AsString() or u""
+        except Exception:
+            continue
+        if _norm(now) == _norm(c.get("old")) and _norm(c.get("old")) != _norm(c.get("new")):
+            bad.append("%s on id %s" % (name, c["target_id"]))
+    return bad
+
+
+def _verified(doc, result, param_name=None):
+    """Applied results are checked against the model; values Revit did not keep are reported, never hidden."""
+    if result.get("status") != "applied":
+        return result
+    bad = _not_kept(doc, result.get("changed") or [], param_name)
+    if bad and len(bad) == len([c for c in result.get("changed") or [] if c.get("scope") in ("instance", "type")]):
+        return {"status": "failed", "reason": "Revit did not keep the new values (" + "; ".join(bad)[:300] + "). Press Ctrl+Z to remove the empty step."}
+    if bad:
+        result = dict(result, warnings=list(result.get("warnings") or []) + ["Not kept by Revit: " + "; ".join(bad)[:300]])
+    return result
 
 
 def _change_key(c):
@@ -322,7 +354,7 @@ def _run_action(doc, args, expected_old):
         except Exception as ex:
             info = {"error": str(ex)}
         notes.append(("Stairs FAILED: " + info["error"]) if info.get("error") else ("Stairs created: " + info["summary"]))
-    return {"status": "applied", "changed": changes, "warnings": notes}
+    return _verified(doc, {"status": "applied", "changed": changes, "warnings": notes})
 
 
 def temporary_view(doc, view, ids, mode):
