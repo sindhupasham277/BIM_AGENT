@@ -2166,7 +2166,7 @@ class ChatForm(Form):
         failed = ("[Connection error]" in ans) or ("[Error] HTTP" in ans)
         if failed:
             detail = ans.replace("BTP Assistant: ", "")[:140]
-            shared["answer"] = u"BTP Assistant: Sorry, I couldn't get a reply this time - the assistant may be offline, busy or slow. Nothing was changed in your model. (%s)" % detail
+            shared["answer"] = u"Sorry, I couldn't get a reply this time - the assistant may be offline, busy or slow. Nothing was changed in your model. (%s)" % detail
         self._loading_remove()
         orig(sender, args)
         self._chip_set_status("offline" if failed else "online")
@@ -3497,8 +3497,7 @@ class ChatForm(Form):
             )
 
             shared["answer"] = (
-                "BTP Assistant: "
-                + str(answer)
+                str(answer)
             )
 
         except urllib.error.HTTPError as e:
@@ -3516,7 +3515,6 @@ class ChatForm(Form):
                 error_body = str(e)
 
             shared["answer"] = (
-                "BTP Assistant: "
                 "[Error] HTTP "
                 + str(e.code)
                 + " - "
@@ -3526,7 +3524,6 @@ class ChatForm(Form):
         except Exception as e:
 
             shared["answer"] = (
-                "BTP Assistant: "
                 "[Connection error] "
                 + str(e)
             )
@@ -3557,7 +3554,6 @@ class ChatForm(Form):
         if answer is None:
 
             answer = (
-                "BTP Assistant: "
                 "No response received."
             )
 
@@ -3812,7 +3808,7 @@ def _on_report_tick(self, sender, args):
             else:
                 p["_state"] = "not applied"
                 card["status"].Text = "Not applied"
-        self.append_assistant_message("BTP Assistant: " + it["text"])
+        self.append_assistant_message(it["text"])
 
 
 def _on_confirm(self, pid):
@@ -3833,7 +3829,7 @@ def _on_confirm(self, pid):
         card["confirm"].Enabled = False
         card["reject"].Enabled = False
         card["status"].Text = "Not applied"
-        self.append_assistant_message("BTP Assistant: This card can no longer be applied (%s). Only the newest proposal can be confirmed; ask again if you still want this change." % _st)
+        self.append_assistant_message("This card can no longer be applied (%s). Only the newest proposal can be confirmed; ask again if you still want this change." % _st)
         return
     p["_state"] = "applying"
     card["confirm"].Enabled = False
@@ -3883,7 +3879,7 @@ def _check_response_with_cards(self, sender, args):
             try:
                 self._append_proposal_card(p)
             except Exception as ex:
-                self.append_assistant_message("BTP Assistant: [Card error] " + str(ex))
+                self.append_assistant_message("[Card error] " + str(ex))
 
 
 ChatForm.check_response = _check_response_with_cards
@@ -3900,7 +3896,7 @@ def _show_fake_proposal_if_any(form):
         form._append_proposal_card(p)
     except Exception as ex:
         try:
-            form.append_assistant_message("BTP Assistant: [Fake proposal error] " + str(ex))
+            form.append_assistant_message("[Fake proposal error] " + str(ex))
         except Exception:
             pass
 
