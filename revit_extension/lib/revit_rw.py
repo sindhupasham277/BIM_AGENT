@@ -68,6 +68,35 @@ def _m(ft):
     return UnitUtils.ConvertFromInternalUnits(ft, UnitTypeId.Meters)
 
 
+# Lengths are metres in this facade: a plain number on a length parameter means metres
+# (text with a unit, such as '3500 mm', is still parsed by Revit).
+def _is_length(p):
+    try:
+        from Autodesk.Revit.DB import SpecTypeId
+        return p.StorageType == StorageType.Double and p.Definition.GetDataType().Equals(SpecTypeId.Length)
+    except Exception:
+        return False
+
+
+def _plain_metres(p, value):
+    if isinstance(value, bool) or not _is_length(p):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _read_only_reason(doc, el, element_id, name):
+    if name == "Unconnected Height" and isinstance(el, Wall):
+        tc = el.get_Parameter(BuiltInParameter.WALL_HEIGHT_TYPE)
+        if tc is not None and fix_plan.id_int(tc.AsElementId()) != -1:
+            lv = doc.GetElement(tc.AsElementId())
+            return ("id %s: 'Unconnected Height' is read-only because the wall's Top Constraint is tied to level %s; "
+                    "set 'Top Constraint' to 'none' first in the same action" % (_int(element_id), fix_plan.el_name(lv) if lv is not None else "a level"))
+    return "id %s: '%s' is read-only on this element" % (_int(element_id), name)
+
+
 def _set(p, value):
     st = p.StorageType
     if st == StorageType.String:
@@ -130,6 +159,8 @@ class RevitRW(object):
                     return fix_plan.el_name(_t)
         if p is None:
             return None
+        if _is_length(p) and p.HasValue:
+            return _txt(round(_m(p.AsDouble()), 6))
         return p.AsValueString() or p.AsString() or u""
 
     def list_levels(self):
@@ -143,13 +174,27 @@ class RevitRW(object):
     def set_param(self, element_id, name, value):
         el = self._element(element_id)
         p, scope, owner = fix_plan.find_param(self.doc, el, name)
-        if p is None or p.IsReadOnly or p.StorageType not in tuple(fix_plan.SUPPORTED) + (StorageType.ElementId,):
-            raise ActionError("id %s: '%s' missing, read-only or unsupported" % (_int(element_id), name))
+        if p is None:
+            raise ActionError("id %s: no parameter named '%s'" % (_int(element_id), name))
+        if p.IsReadOnly:
+            raise ActionError(_read_only_reason(self.doc, el, element_id, name))
+        if name in ("Unconnected Height", "Top Offset") and isinstance(el, Wall):
+            _bip = getattr(BuiltInParameter, "WALL_TOP_IS_ATTACHED", None)
+            _tia = el.get_Parameter(_bip) if _bip is not None else el.LookupParameter("Top is Attached")
+            if _tia is not None and _tia.AsInteger() == 1:
+                raise ActionError("id %s: the top of this wall is attached to another element (such as a roof or floor), so its height follows that element and changing '%s' would have no visible effect. Detach the wall's top in Revit first (select the wall, then Modify | Walls > Detach Top/Base), then ask again" % (_int(element_id), name))
+        if p.StorageType not in tuple(fix_plan.SUPPORTED) + (StorageType.ElementId,):
+            raise ActionError("id %s: '%s' cannot be set here (unsupported value type)" % (_int(element_id), name))
         tid = _int(fix_plan.id_int(owner.Id))
         affected = 1
         if scope == "type":
             affected = fix_plan.count_instances_of_type(self.doc, el.Category, owner.Id)
         target_value = value
+        _len = _plain_metres(p, value)
+        if _len is not None:
+            target_value = _ft(_len)
+            if abs(p.AsDouble() - target_value) < 1e-6:
+                return False
         if p.StorageType == StorageType.ElementId:   # family 6: level-reference parameters
             target_value, value = self._id_value(value)
         # no-op changes are skipped: nothing recorded, nothing set (cards list only real changes)
@@ -167,8 +212,11 @@ class RevitRW(object):
             "new": _txt(value),
             "affected": int(affected),
         })
-        if not _set(p, target_value):
+        _ok = p.Set(float(target_value)) if _len is not None else _set(p, target_value)
+        if not _ok:
             raise ActionError("Revit refused to set '%s' on id %s" % (name, tid))
+        if _len is not None and (tid, name) in self._changes:
+            self._changes[(tid, name)]["new"] = p.AsValueString() or _txt(value)
         return True
 
     def create_wall(self, level_name, x1, y1, x2, y2, wall_type_name=None, height_m=3.0):
