@@ -78,6 +78,14 @@ def _is_length(p):
         return False
 
 
+def _is_yes_no(p):
+    try:
+        from Autodesk.Revit.DB import SpecTypeId
+        return p.StorageType == StorageType.Integer and p.Definition.GetDataType().Equals(SpecTypeId.Boolean.YesNo)
+    except Exception:
+        return False
+
+
 def _plain_metres(p, value):
     if isinstance(value, bool) or not _is_length(p):
         return None
@@ -159,8 +167,10 @@ class RevitRW(object):
                     return fix_plan.el_name(_t)
         if p is None:
             return None
-        if _is_length(p) and p.HasValue:
-            return _txt(round(_m(p.AsDouble()), 6))
+        if _is_length(p) and p.HasValue:   # same types as revit_ro: lengths as metres, yes/no as 0 or 1
+            return round(_m(p.AsDouble()), 6)
+        if _is_yes_no(p) and p.HasValue:
+            return p.AsInteger()
         return p.AsValueString() or p.AsString() or u""
 
     def list_levels(self):
@@ -1068,6 +1078,54 @@ class RevitRW(object):
         self._record((aid, "(join %s)" % bid), {
             "target_id": aid, "scope": "new element" if aid in self._created else "instance", "label": "Walls",
             "param_name": "(join)", "old": "joined with id %s at %s" % (bid, " and ".join(done)), "new": text, "affected": 1})
+        return True
+
+    def _attachment_candidates(self, wall):
+        bb = wall.get_BoundingBox(None)
+        out = []
+        for cat in (BuiltInCategory.OST_Roofs, BuiltInCategory.OST_Floors, BuiltInCategory.OST_Ceilings):
+            for e in FilteredElementCollector(self.doc).OfCategory(cat).WhereElementIsNotElementType():
+                b = e.get_BoundingBox(None)
+                if bb is None or b is None or (b.Min.X <= bb.Max.X and b.Max.X >= bb.Min.X and b.Min.Y <= bb.Max.Y and b.Max.Y >= bb.Min.Y):
+                    out.append(e)
+        return out
+
+    def detach_wall(self, wall_id, where="top"):   # Revit's Detach Top/Base
+        try:
+            from Autodesk.Revit.DB import AttachmentLocation
+        except Exception:
+            raise ActionError("detaching walls is not available in this Revit version (Wall.RemoveAttachment is missing)")
+        el = self._element(wall_id)
+        if not isinstance(el, Wall):
+            raise ActionError("id %s is not a wall" % _int(wall_id))
+        wid = _int(fix_plan.id_int(el.Id))
+        ends = {"top": ["Top"], "base": ["Base"], "both": ["Top", "Base"]}.get(_txt(where).strip().lower())
+        if ends is None:
+            raise ActionError("where must be 'top', 'base' or 'both'")
+        done = False
+        for end in ends:
+            bip = getattr(BuiltInParameter, "WALL_TOP_IS_ATTACHED" if end == "Top" else "WALL_BOTTOM_IS_ATTACHED", None)
+            p = el.get_Parameter(bip) if bip is not None else el.LookupParameter("%s is Attached" % end)
+            if p is None or p.AsInteger() != 1:
+                continue
+            old = p.AsValueString() or u"Yes"
+            loc = getattr(AttachmentLocation, end)
+            for t in self._attachment_candidates(el):
+                try:
+                    el.RemoveAttachment(t.Id, loc)
+                except Exception:
+                    continue
+                self.doc.Regenerate()
+                if p.AsInteger() != 1:
+                    break
+            if p.AsInteger() == 1:
+                raise ActionError("id %s: Revit did not detach the wall %s (it is not attached to a roof, floor or ceiling found above it)" % (wid, end.lower()))
+            self._record((wid, "%s is Attached" % end), {
+                "target_id": wid, "scope": "instance", "label": fix_plan.el_name(el),
+                "param_name": "%s is Attached" % end, "old": old, "new": p.AsValueString() or u"No", "affected": 1})
+            done = True
+        if not done:
+            raise ActionError("id %s: the wall %s is not attached to anything" % (wid, " and ".join(e.lower() for e in ends)))
         return True
 
     def unjoin_wall(self, wall_id):   # family 6: Disallow Join at both ends
